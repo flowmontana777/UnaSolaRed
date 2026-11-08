@@ -1,4 +1,3 @@
-
 import os
 import logging
 
@@ -143,37 +142,37 @@ def banks_menu():
     keyboard = [
         [
             InlineKeyboardButton(
-                "JPMorgan Chase",
+                "🏦 JPMorgan Chase",
                 callback_data="bank_chase",
             )
         ],
         [
             InlineKeyboardButton(
-                "Bank of America",
+                "🏦 Bank of America",
                 callback_data="bank_boa",
             )
         ],
         [
             InlineKeyboardButton(
-                "Wells Fargo",
+                "🏦 Wells Fargo",
                 callback_data="bank_wells",
             )
         ],
         [
             InlineKeyboardButton(
-                "Citibank",
+                "🏦 Citibank",
                 callback_data="bank_citi",
             )
         ],
         [
             InlineKeyboardButton(
-                "Capital One",
+                "🏦 Capital One",
                 callback_data="bank_capital",
             )
         ],
         [
             InlineKeyboardButton(
-                "Credit Union",
+                "🏦 Credit Union",
                 callback_data="bank_credit",
             )
         ],
@@ -279,7 +278,7 @@ def tools_menu():
 
 
 # =====================================
-# INICIO DEL BOT
+# INICIO DEL BOT CON PORTADA
 # =====================================
 
 async def start(
@@ -290,16 +289,35 @@ async def start(
     context.user_data.clear()
 
     welcome = (
-        "💚 BIENVENIDO A UNARED\n\n"
-        "LA RED QUE MUEVE TU DINERO.\n\n"
-        "Selecciona el servicio que necesitas.\n\n"
-        "📩 Nuestro equipo recibirá tu solicitud."
+        "💚 UNARED | LA RED QUE MUEVE TU DINERO\n\n"
+        "Todos tus servicios en un solo lugar.\n"
+        "Selecciona la opción que necesitas y nuestro equipo "
+        "recibirá tu solicitud.\n\n"
+        "🔒 No compartas contraseñas ni códigos de seguridad."
     )
 
-    await update.message.reply_text(
-        welcome,
-        reply_markup=main_menu(),
+    photo_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "assets",
+        "unared_portada.jpeg",
     )
+
+    if os.path.isfile(photo_path):
+
+        with open(photo_path, "rb") as photo:
+
+            await update.effective_message.reply_photo(
+                photo=photo,
+                caption=welcome,
+                reply_markup=main_menu(),
+            )
+
+    else:
+
+        await update.effective_message.reply_text(
+            welcome,
+            reply_markup=main_menu(),
+        )
 
 
 # =====================================
@@ -316,7 +334,7 @@ async def ask_for_details(
     context.user_data["waiting_detail"] = True
 
     await query.message.reply_text(
-        f"✅ Seleccionaste: {service}\n\n"
+        f"💚 UNA RED | {service}\n\n"
         "Escribe qué necesitas y nuestro equipo "
         "recibirá tu solicitud.\n\n"
         "⚠️ No envíes contraseñas, números completos "
@@ -348,7 +366,8 @@ async def select_option(
         context.user_data.clear()
 
         await query.message.reply_text(
-            "💚 MENÚ PRINCIPAL DE UNARED",
+            "💚 UNARED | MENÚ PRINCIPAL\n\n"
+            "LA RED QUE MUEVE TU DINERO.",
             reply_markup=main_menu(),
         )
 
@@ -359,7 +378,8 @@ async def select_option(
     if choice == "menu_banks":
 
         await query.message.reply_text(
-            "🏦 Selecciona tu banco:",
+            "🏦 UNARED | SERVICIOS BANCARIOS\n\n"
+            "Selecciona tu banco:",
             reply_markup=banks_menu(),
         )
 
@@ -370,7 +390,8 @@ async def select_option(
     if choice == "menu_tools":
 
         await query.message.reply_text(
-            "🧰 Selecciona una herramienta:",
+            "🧰 UNARED | CENTRO DE HERRAMIENTAS\n\n"
+            "Selecciona una herramienta:",
             reply_markup=tools_menu(),
         )
 
@@ -385,13 +406,15 @@ async def select_option(
         bank_name = BANKS.get(bank_id)
 
         if not bank_name:
+
             await query.message.reply_text(
                 "Banco no disponible."
             )
+
             return
 
         await query.message.reply_text(
-            f"🏦 {bank_name}\n\n"
+            f"🏦 UNARED | {bank_name}\n\n"
             "Selecciona el servicio que necesitas:",
             reply_markup=bank_services_menu(bank_id),
         )
@@ -414,9 +437,11 @@ async def select_option(
         bank_service = BANK_SERVICES.get(service_id)
 
         if not bank_name or not bank_service:
+
             await query.message.reply_text(
                 "Servicio no disponible."
             )
+
             return
 
         await ask_for_details(
@@ -436,12 +461,15 @@ async def select_option(
         service = TOOLS.get(tool_id)
 
         if service:
+
             await ask_for_details(
                 query,
                 context,
                 service,
             )
+
         else:
+
             await query.message.reply_text(
                 "Herramienta no disponible."
             )
@@ -512,7 +540,7 @@ async def receive_request(
     )
 
     message = (
-        "📩 NUEVA SOLICITUD - UNARED\n\n"
+        "💚 NUEVA SOLICITUD - UNARED\n\n"
         f"📌 Servicio: {service}\n"
         f"👤 Cliente: {user.full_name}\n"
         f"🔹 Usuario: @{user.username or 'Sin usuario'}\n"
@@ -588,11 +616,13 @@ async def error_handler(
 def main():
 
     if not TOKEN:
+
         raise RuntimeError(
             "Falta configurar TELEGRAM_BOT_TOKEN en Railway."
         )
 
     if not ADMIN_CHAT_ID:
+
         raise RuntimeError(
             "Falta configurar ADMIN_CHAT_ID en Railway."
         )
