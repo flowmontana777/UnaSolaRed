@@ -49,7 +49,7 @@ SERVICES = {
 
 def main_menu():
     keyboard = [
-        [InlineKeyboardButton("💚 Ser Parte de UnaRed", url=GROUP_LINK)],
+        [InlineKeyboardButton("💚 Ser Parte de UnaRed", url="https://t.me/+slI1SJL6HIQ4Nzcx")],
         [
             InlineKeyboardButton("🏦 Bancos", callback_data="menu_banks"),
             InlineKeyboardButton("💸 Envíos y remesas", callback_data="remesas"),
