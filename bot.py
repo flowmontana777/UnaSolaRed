@@ -483,9 +483,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # BANCOS
 
     if choice == "menu_banks":
-        await query.message.reply_text(
-            "🏦 UNARED | SERVICIOS BANCARIOS\n\n"
-            "Selecciona tu banco:",
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/MJ1T4RZ/photo-2026-11-09-00-00-22.jpg",
+            caption=(
+                "🏦 UNARED | SERVICIOS BANCARIOS\n\n"
+                "Selecciona tu banco:"
+            ),
             reply_markup=banks_menu(),
         )
         return
@@ -735,9 +738,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # DIGITAL MONEY
 
     if choice == "digital":
-        await query.message.reply_text(
-            "📟 UNARED | MODO DIGITAL\n\n"
-            "PRÓXIMAMENTE.",
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/n8ZjJ5dL/photo-2026-11-09-00-00-25.jpg",
+            caption=(
+                "📟 UNARED | MODO DIGITAL\n\n"
+                "PRÓXIMAMENTE."
+            ),
             reply_markup=back_button(),
         )
         return
