@@ -558,11 +558,21 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text("Banco no disponible.")
             return
 
-        await query.message.reply_text(
-            f"🏦 UNARED | {bank_name}\n\n"
-            "Selecciona el servicio que necesitas:",
-            reply_markup=bank_services_menu(bank_id),
-        )
+        if bank_id == "chase":
+            await query.message.reply_photo(
+                photo="https://i.ibb.co/gLRfjxkT/Green-financial-brand-display-a05f13b3-2-K.jpg",
+                caption=(
+                    f"🏦 UNARED | {bank_name}\n\n"
+                    "Selecciona el servicio que necesitas:"
+                ),
+                reply_markup=bank_services_menu(bank_id),
+            )
+        else:
+            await query.message.reply_text(
+                f"🏦 UNARED | {bank_name}\n\n"
+                "Selecciona el servicio que necesitas:",
+                reply_markup=bank_services_menu(bank_id),
+            )
         return
 
     # AMAZON
