@@ -109,6 +109,7 @@ TOOLS = {
     "auth": "Soporte de autenticación y seguridad",
     "ssn_info": "Orientación sobre SSN y protección de identidad",
     "giftcards": "Tarjetas de regalo y pagos autorizados",
+    "edit_upload": "Editar y subir documentos o papeles",
 }
 
 # =====================================
@@ -401,6 +402,7 @@ def tools_menu():
         [InlineKeyboardButton("🔐 Soporte VoIP", callback_data="tool_auth")],
         [InlineKeyboardButton("🪪 SSN", callback_data="tool_ssn_info")],
         [InlineKeyboardButton("💳 Tarjetas", callback_data="tool_giftcards")],
+        [InlineKeyboardButton("📄 Quiero Editar y Subir Papel", callback_data="tool_edit_upload")],
         more_button("tools"),
         back_button(),
     ]
