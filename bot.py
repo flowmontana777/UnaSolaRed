@@ -399,7 +399,7 @@ def tools_menu():
     keyboard = [
         [InlineKeyboardButton("📞 Alquilar Línea Dayler", callback_data="tool_dayler")],
         [InlineKeyboardButton("🤖 Comprar Bot", callback_data="tool_bots")],
-        [InlineKeyboardButton("🔐 Soporte SIP y autenticación", callback_data="tool_auth")],
+        [InlineKeyboardButton("🔐 Soporte VoIP", callback_data="tool_auth")],
         [InlineKeyboardButton("🪪 SSN", callback_data="tool_ssn_info")],
         [InlineKeyboardButton("💳 Tarjetas", callback_data="tool_giftcards")],
         more_button("tools"),
