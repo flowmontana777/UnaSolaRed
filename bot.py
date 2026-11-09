@@ -322,6 +322,36 @@ def remittances_menu():
     return InlineKeyboardMarkup(keyboard)
 
 
+def remittance_options_menu(app_id):
+    keyboard = [
+        [InlineKeyboardButton("Obtener", callback_data=f"remit_action_{app_id}_obtener")],
+        [InlineKeyboardButton("Tiene Historial", callback_data=f"remit_action_{app_id}_historial")],
+        back_button("remesas"),
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def dayler_payment_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("💳 Pagar US$150", callback_data="dayler_pay")]
+    ])
+
+
+def dayler_receipt_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Ya realicé el pago", callback_data="dayler_paid")]
+    ])
+
+
+def bot_catalog_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Bot de atención al cliente", callback_data="botproduct_support")],
+        [InlineKeyboardButton("Bot de gestión de pedidos", callback_data="botproduct_orders")],
+        [InlineKeyboardButton("Bot de notificaciones", callback_data="botproduct_alerts")],
+        back_button("menu_tools"),
+    ])
+
+
 # =====================================
 # MENU DE PAGOS
 # =====================================
@@ -366,34 +396,14 @@ def payment_types_menu():
 
 def tools_menu():
     keyboard = [
-        [
-            InlineKeyboardButton(
-                "📞 Alquilar línea virtual",
-                callback_data="tool_line",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🔐 Soporte de autenticación",
-                callback_data="tool_auth",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🪪 Orientación sobre SSN",
-                callback_data="tool_ssn_info",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "💳 Compra de tarjetas de regalo autorizadas",
-                callback_data="tool_giftcards",
-            )
-        ],
+        [InlineKeyboardButton("📞 Alquilar Línea Dayler", callback_data="tool_dayler")],
+        [InlineKeyboardButton("🤖 Comprar Bot", callback_data="tool_bots")],
+        [InlineKeyboardButton("🔐 Soporte SIP y autenticación", callback_data="tool_auth")],
+        [InlineKeyboardButton("🪪 Protección de identidad", callback_data="tool_ssn_info")],
+        [InlineKeyboardButton("💳 Tarjetas de regalo autorizadas", callback_data="tool_giftcards")],
         more_button("tools"),
         back_button(),
     ]
-
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -585,15 +595,27 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    if choice.startswith("remit_action_"):
+        parts = choice.split("_")
+        if len(parts) == 4:
+            app_id, action = parts[2], parts[3]
+            app_name = REMITTANCE_APPS.get(app_id)
+            if app_name and action in ("obtener", "historial"):
+                action_label = "Obtener" if action == "obtener" else "Tiene Historial"
+                await ask_for_details(
+                    query,
+                    context,
+                    f"{app_name} - {action_label}",
+                )
+        return
+
     if choice.startswith("remit_"):
         app_id = choice.replace("remit_", "", 1)
         app_name = REMITTANCE_APPS.get(app_id)
-
         if app_name:
-            await ask_for_details(
-                query,
-                context,
-                f"Envíos y remesas - {app_name}",
+            await query.message.reply_text(
+                f"💸 UNARED | {app_name}\n\nSelecciona una opción:",
+                reply_markup=remittance_options_menu(app_id),
             )
         return
 
@@ -649,15 +671,57 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Selecciona el servicio que necesitas:",
             reply_markup=tools_menu(),
         )
+        return
 
-        # El método de pago aparece después de los botones.
-        await query.message.reply_text(PAYMENT_MESSAGE)
+    if choice == "tool_dayler":
+        context.user_data.clear()
+        context.user_data["dayler_step"] = "username"
+        await query.message.reply_text(
+            "📞 UNARED | ALQUILAR LÍNEA DAYLER\n\n"
+            "Escribe el nombre de usuario que deseas para tu cuenta SIP.\n"
+            "No envíes contraseñas de otras cuentas."
+        )
+        return
+
+    if choice == "dayler_pay":
+        await query.message.reply_text(
+            "💚 UNARED | PAGO LÍNEA DAYLER\n\n"
+            "Total: US$150 (pago en USDT por la red TRON/TRC20).\n\n"
+            + PAYMENT_MESSAGE,
+            reply_markup=dayler_receipt_menu(),
+        )
+        return
+
+    if choice == "dayler_paid":
+        context.user_data["dayler_step"] = "receipt"
+        await query.message.reply_text(
+            "Envía el hash o referencia de la transacción para que nuestro equipo pueda verificar el pago.\n"
+            "La configuración SIP se entregará después de verificarlo."
+        )
+        return
+
+    if choice == "tool_bots":
+        await query.message.reply_text(
+            "🤖 UNARED | CATÁLOGO DE BOTS\n\n"
+            "Selecciona el tipo de automatización que necesitas:",
+            reply_markup=bot_catalog_menu(),
+        )
+        return
+
+    if choice.startswith("botproduct_"):
+        products = {
+            "botproduct_support": "Bot de atención al cliente",
+            "botproduct_orders": "Bot de gestión de pedidos",
+            "botproduct_alerts": "Bot de notificaciones",
+        }
+        product = products.get(choice)
+        if product:
+            await ask_for_details(query, context, product)
         return
 
     if choice.startswith("tool_"):
         tool_id = choice.replace("tool_", "", 1)
         service = TOOLS.get(tool_id)
-
         if service:
             await ask_for_details(query, context, service)
         else:
@@ -704,6 +768,52 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =====================================
 
 async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dayler_step = context.user_data.get("dayler_step")
+    if dayler_step == "username":
+        username = update.message.text.strip()
+        if not username or len(username) > 40:
+            await update.message.reply_text("Escribe un nombre de usuario válido (máximo 40 caracteres).")
+            return
+        context.user_data["dayler_username"] = username
+        context.user_data["dayler_step"] = "payment"
+        await update.message.reply_text(
+            "💚 UNARED | RESUMEN DE TU ORDEN\n\n"
+            f"Servicio: Alquiler de Línea Dayler / SIP\n"
+            f"Usuario solicitado: {username}\n"
+            "Total: US$150\n\n"
+            "Pulsa el botón para ver el método de pago.",
+            reply_markup=dayler_payment_menu(),
+        )
+        return
+
+    if dayler_step == "receipt":
+        reference = update.message.text.strip()
+        if not reference or len(reference) > 500:
+            await update.message.reply_text("Envía una referencia de pago válida.")
+            return
+        user = update.effective_user
+        admin_message = (
+            "💚 NUEVA ORDEN DAYLER - UNARED\n\n"
+            f"Cliente: {user.full_name}\n"
+            f"Usuario Telegram: @{user.username or 'Sin usuario'}\n"
+            f"ID Telegram: {user.id}\n"
+            f"Usuario SIP solicitado: {context.user_data.get('dayler_username', 'No indicado')}\n"
+            f"Referencia de pago: {reference}\n"
+            "Estado: pendiente de verificación manual."
+        )
+        try:
+            await context.bot.send_message(chat_id=int(ADMIN_CHAT_ID), text=admin_message)
+            context.user_data.clear()
+            await update.message.reply_text(
+                "✅ Recibimos tu referencia de pago.\n\n"
+                "Nuestro equipo verificará la transacción. Después de confirmarla, "
+                "te enviaremos la configuración para ingresar al sistema SIP."
+            )
+        except Exception:
+            logger.exception("Error enviando orden Dayler al administrador.")
+            await update.message.reply_text("No pudimos enviar tu orden. Inténtalo más tarde.")
+        return
+
     if not context.user_data.get("waiting_detail"):
         await update.message.reply_text(
             "Selecciona primero un servicio:",
