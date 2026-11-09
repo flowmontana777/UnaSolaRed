@@ -1,3 +1,4 @@
+
 import os
 import logging
 
@@ -24,7 +25,9 @@ ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID", "5864523026")
 
 GROUP_LINK = "https://t.me/+sI1SJL6HIQ4Nzcx"
 
+# =====================================
 # METODO DE PAGO UNARED
+# =====================================
 
 PAYMENT_WALLET = "TQnHr5uVKkeKVRU4DQzr2pukPCdwh2yt7q"
 
@@ -41,13 +44,16 @@ PAYMENT_MESSAGE = (
     "comprobante para verificarlo con nuestro equipo."
 )
 
+# =====================================
+# REGISTRO
+# =====================================
+
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
 )
 
 logger = logging.getLogger(__name__)
-
 
 # =====================================
 # BANCOS
@@ -70,7 +76,6 @@ BANK_SERVICES = {
     "online": "Banca en línea y soporte",
     "other": "Otra consulta bancaria",
 }
-
 
 # =====================================
 # OTROS SERVICIOS
@@ -106,13 +111,11 @@ TOOLS = {
     "giftcards": "Tarjetas de regalo y pagos autorizados",
 }
 
-
 # =====================================
 # BOTONES AUXILIARES
 # =====================================
 
 def more_button(service_id):
-
     return [
         InlineKeyboardButton(
             "ℹ️ Necesito saber más de la vuelta",
@@ -122,10 +125,9 @@ def more_button(service_id):
 
 
 def back_button(destination="menu_home"):
-
     return [
         InlineKeyboardButton(
-            "⬅️ Volver",
+            "⬅️ Volver al menú principal",
             callback_data=destination,
         )
     ]
@@ -136,7 +138,6 @@ def back_button(destination="menu_home"):
 # =====================================
 
 def main_menu():
-
     keyboard = [
         [
             InlineKeyboardButton(
@@ -160,7 +161,7 @@ def main_menu():
         ],
         [
             InlineKeyboardButton(
-                "📱 Apple",
+                "🍎 Apple",
                 callback_data="apple",
             ),
             InlineKeyboardButton(
@@ -194,44 +195,13 @@ def main_menu():
 # =====================================
 
 def banks_menu():
-
     keyboard = [
-        [
-            InlineKeyboardButton(
-                "🏦 JPMorgan Chase",
-                callback_data="bank_chase",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🏦 Bank of America",
-                callback_data="bank_boa",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🏦 Wells Fargo",
-                callback_data="bank_wells",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🏦 Citibank",
-                callback_data="bank_citi",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🏦 Capital One",
-                callback_data="bank_capital",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🏦 Credit Union",
-                callback_data="bank_credit",
-            )
-        ],
+        [InlineKeyboardButton("🏦 JPMorgan Chase", callback_data="bank_chase")],
+        [InlineKeyboardButton("🏦 Bank of America", callback_data="bank_boa")],
+        [InlineKeyboardButton("🏦 Wells Fargo", callback_data="bank_wells")],
+        [InlineKeyboardButton("🏦 Citibank", callback_data="bank_citi")],
+        [InlineKeyboardButton("🏦 Capital One", callback_data="bank_capital")],
+        [InlineKeyboardButton("🏦 Credit Union", callback_data="bank_credit")],
         more_button("banks"),
         back_button(),
     ]
@@ -244,44 +214,13 @@ def banks_menu():
 # =====================================
 
 def bank_services_menu(bank_id):
-
     keyboard = [
-        [
-            InlineKeyboardButton(
-                "🏦 Cuentas",
-                callback_data=f"bankservice_{bank_id}_account",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "💳 Tarjetas",
-                callback_data=f"bankservice_{bank_id}_cards",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "💸 Transferencias",
-                callback_data=f"bankservice_{bank_id}_transfers",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "📄 Estados de cuenta",
-                callback_data=f"bankservice_{bank_id}_statements",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🔐 Banca en línea y soporte",
-                callback_data=f"bankservice_{bank_id}_online",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "📩 Otra consulta",
-                callback_data=f"bankservice_{bank_id}_other",
-            )
-        ],
+        [InlineKeyboardButton("🏦 Cuentas", callback_data=f"bankservice_{bank_id}_account")],
+        [InlineKeyboardButton("💳 Tarjetas", callback_data=f"bankservice_{bank_id}_cards")],
+        [InlineKeyboardButton("💸 Transferencias", callback_data=f"bankservice_{bank_id}_transfers")],
+        [InlineKeyboardButton("📄 Estados de cuenta", callback_data=f"bankservice_{bank_id}_statements")],
+        [InlineKeyboardButton("🔐 Banca en línea y soporte", callback_data=f"bankservice_{bank_id}_online")],
+        [InlineKeyboardButton("📩 Otra consulta", callback_data=f"bankservice_{bank_id}_other")],
         more_button(f"bank_{bank_id}"),
         back_button("menu_banks"),
     ]
@@ -294,7 +233,6 @@ def bank_services_menu(bank_id):
 # =====================================
 
 def amazon_menu():
-
     keyboard = [
         [
             InlineKeyboardButton(
@@ -320,7 +258,6 @@ def amazon_menu():
 # =====================================
 
 def apple_menu():
-
     keyboard = [
         [
             InlineKeyboardButton(
@@ -346,7 +283,6 @@ def apple_menu():
 # =====================================
 
 def flights_menu():
-
     keyboard = [
         [
             InlineKeyboardButton(
@@ -371,50 +307,14 @@ def flights_menu():
 # =====================================
 
 def remittances_menu():
-
     keyboard = [
-        [
-            InlineKeyboardButton(
-                "Remitly",
-                callback_data="remit_remitly",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "Western Union",
-                callback_data="remit_western",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "TapTap",
-                callback_data="remit_taptap",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "PayPal",
-                callback_data="remit_paypal",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "MoneyGram",
-                callback_data="remit_moneygram",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "Boss Money",
-                callback_data="remit_boss",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "Ria",
-                callback_data="remit_ria",
-            )
-        ],
+        [InlineKeyboardButton("Remitly", callback_data="remit_remitly")],
+        [InlineKeyboardButton("Western Union", callback_data="remit_western")],
+        [InlineKeyboardButton("TapTap", callback_data="remit_taptap")],
+        [InlineKeyboardButton("PayPal", callback_data="remit_paypal")],
+        [InlineKeyboardButton("MoneyGram", callback_data="remit_moneygram")],
+        [InlineKeyboardButton("Boss Money", callback_data="remit_boss")],
+        [InlineKeyboardButton("Ria", callback_data="remit_ria")],
         more_button("remesas"),
         back_button(),
     ]
@@ -427,7 +327,6 @@ def remittances_menu():
 # =====================================
 
 def bills_menu():
-
     keyboard = [
         [
             InlineKeyboardButton(
@@ -453,44 +352,13 @@ def bills_menu():
 # =====================================
 
 def payment_types_menu():
-
     keyboard = [
-        [
-            InlineKeyboardButton(
-                "🏠 Casa",
-                callback_data="pay_house",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🚗 Carro",
-                callback_data="pay_car",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "📱 Teléfono",
-                callback_data="pay_phone",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "💳 Tarjeta",
-                callback_data="pay_card",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "💰 Préstamo",
-                callback_data="pay_loan",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "💡 Luz",
-                callback_data="pay_light",
-            )
-        ],
+        [InlineKeyboardButton("🏠 Casa", callback_data="pay_house")],
+        [InlineKeyboardButton("🚗 Carro", callback_data="pay_car")],
+        [InlineKeyboardButton("📱 Teléfono", callback_data="pay_phone")],
+        [InlineKeyboardButton("💳 Tarjeta", callback_data="pay_card")],
+        [InlineKeyboardButton("💰 Préstamo", callback_data="pay_loan")],
+        [InlineKeyboardButton("💡 Luz", callback_data="pay_light")],
         more_button("pagos"),
         back_button("pagos"),
     ]
@@ -503,11 +371,10 @@ def payment_types_menu():
 # =====================================
 
 def tools_menu():
-
     keyboard = [
         [
             InlineKeyboardButton(
-                "📞 Línea virtual para uso legítimo",
+                "📞 Alquilar línea virtual",
                 callback_data="tool_line",
             )
         ],
@@ -525,7 +392,7 @@ def tools_menu():
         ],
         [
             InlineKeyboardButton(
-                "💳 Tarjetas de regalo autorizadas",
+                "💳 Compra de tarjetas de regalo autorizadas",
                 callback_data="tool_giftcards",
             )
         ],
@@ -540,12 +407,7 @@ def tools_menu():
 # SOLICITAR DETALLES
 # =====================================
 
-async def ask_for_details(
-    query,
-    context,
-    service,
-):
-
+async def ask_for_details(query, context, service):
     context.user_data["service"] = service
     context.user_data["waiting_detail"] = True
 
@@ -564,11 +426,7 @@ async def ask_for_details(
 # INICIO DEL BOT CON PORTADA
 # =====================================
 
-async def start(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
 
     welcome = (
@@ -586,17 +444,13 @@ async def start(
     )
 
     if os.path.isfile(photo_path):
-
         with open(photo_path, "rb") as photo:
-
             await update.effective_message.reply_photo(
                 photo=photo,
                 caption=welcome,
                 reply_markup=main_menu(),
             )
-
     else:
-
         await update.effective_message.reply_text(
             welcome,
             reply_markup=main_menu(),
@@ -604,16 +458,11 @@ async def start(
 
 
 # =====================================
-# BOTONES
+# BOTONES Y NAVEGACION
 # =====================================
 
-async def select_option(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-
+async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-
     await query.answer()
 
     choice = query.data
@@ -621,7 +470,6 @@ async def select_option(
     # VOLVER AL MENU PRINCIPAL
 
     if choice == "menu_home":
-
         context.user_data.clear()
 
         await query.message.reply_text(
@@ -629,256 +477,19 @@ async def select_option(
             "LA RED QUE MUEVE TU DINERO.",
             reply_markup=main_menu(),
         )
-
         return
 
-    # MENU DE BANCOS
+    # BANCOS
 
     if choice == "menu_banks":
-
         await query.message.reply_text(
             "🏦 UNARED | SERVICIOS BANCARIOS\n\n"
             "Selecciona tu banco:",
             reply_markup=banks_menu(),
         )
-
         return
-
-    # MENU DE HERRAMIENTAS
-
-    if choice == "menu_tools":
-
-        await query.message.reply_text(
-            "🧰 UNARED | CENTRO DE HERRAMIENTAS\n\n"
-            "Selecciona el servicio que necesitas:\n\n"
-            + PAYMENT_MESSAGE,
-            reply_markup=tools_menu(),
-        )
-
-        return
-
-    # AMAZON
-
-    if choice == "amazon":
-
-        await query.message.reply_text(
-            "🛒 UNARED | AMAZON\n\n"
-            "Selecciona una opción:",
-            reply_markup=amazon_menu(),
-        )
-
-        return
-
-    if choice == "amazon_have":
-
-        await ask_for_details(
-            query,
-            context,
-            "Amazon - Tengo Amazon",
-        )
-
-        return
-
-    if choice == "amazon_info":
-
-        await ask_for_details(
-            query,
-            context,
-            "Amazon - Tengo Amazon, necesito más información",
-        )
-
-        return
-
-    # APPLE
-
-    if choice == "apple":
-
-        await query.message.reply_text(
-            "🍎 UNARED | APPLE\n\n"
-            "Selecciona una opción:",
-            reply_markup=apple_menu(),
-        )
-
-        return
-
-    if choice == "apple_have":
-
-        await ask_for_details(
-            query,
-            context,
-            "Apple - Tengo Apple",
-        )
-
-        return
-
-    if choice == "apple_info":
-
-        await ask_for_details(
-            query,
-            context,
-            "Apple - Tengo Apple, necesito más información",
-        )
-
-        return
-
-    # VUELOS
-
-    if choice == "vuelos":
-
-        await query.message.reply_text(
-            "✈️ UNARED | SERVICIOS DE VUELOS\n\n"
-            "¿Qué necesitas?",
-            reply_markup=flights_menu(),
-        )
-
-        return
-
-    if choice == "flight_request":
-
-        await ask_for_details(
-            query,
-            context,
-            "Solicitud de vuelo",
-        )
-
-        return
-
-    # ENVIOS Y REMESAS
-
-    if choice == "remesas":
-
-        await query.message.reply_text(
-            "💸 UNARED | ENVÍOS Y REMESAS\n\n"
-            "Selecciona la aplicación:",
-            reply_markup=remittances_menu(),
-        )
-
-        return
-
-    if choice.startswith("remit_"):
-
-        app_id = choice.replace("remit_", "", 1)
-
-        app_name = REMITTANCE_APPS.get(app_id)
-
-        if app_name:
-
-            await ask_for_details(
-                query,
-                context,
-                f"Envíos y remesas - {app_name}",
-            )
-
-        return
-
-    # PAGOS DE SERVICIOS
-
-    if choice == "pagos":
-
-        await query.message.reply_text(
-            "🧾 UNARED | PAGO DE SERVICIOS\n\n"
-            "Pago de Bill.\n"
-            "Selecciona una opción:",
-            reply_markup=bills_menu(),
-        )
-
-        return
-
-    if choice == "bill_info":
-
-        await ask_for_details(
-            query,
-            context,
-            "Información sobre Pago de Bill",
-        )
-
-        return
-
-    if choice == "bill_pay":
-
-        await query.message.reply_text(
-            "💳 UNARED | QUIERO PAGAR\n\n"
-            "Selecciona qué deseas pagar:",
-            reply_markup=payment_types_menu(),
-        )
-
-        return
-
-    if choice.startswith("pay_"):
-
-        payment_id = choice.replace("pay_", "", 1)
-
-        payment_name = PAYMENT_TYPES.get(payment_id)
-
-        if payment_name:
-
-            await ask_for_details(
-                query,
-                context,
-                payment_name,
-            )
-
-        return
-
-    # DIGITAL MONEY
-
-    if choice == "digital":
-
-        await ask_for_details(
-            query,
-            context,
-            "Digital Money",
-        )
-
-        return
-
-    # MAS INFORMACION
-
-    if choice.startswith("more_"):
-
-        section = choice.replace("more_", "", 1)
-
-        descriptions = {
-            "banks": "Información general sobre servicios bancarios",
-            "remesas": "Información sobre envíos y remesas",
-            "pagos": "Información sobre pagos de servicios",
-            "amazon": "Información sobre Amazon",
-            "apple": "Información sobre Apple",
-            "flights": "Información sobre vuelos",
-            "tools": "Información sobre herramientas",
-        }
-
-        # Información de bancos individuales
-
-        if section.startswith("bank_"):
-
-            bank_id = section.replace("bank_", "", 1)
-            bank_name = BANKS.get(bank_id)
-
-            if bank_name:
-                description = f"Más información sobre {bank_name}"
-            else:
-                description = "Más información sobre bancos"
-
-        else:
-
-            description = descriptions.get(
-                section,
-                "Información general de UnaRed",
-            )
-
-        await ask_for_details(
-            query,
-            context,
-            description,
-        )
-
-        return
-
-    # SERVICIOS ESPECIFICOS DE LOS BANCOS
 
     if choice.startswith("bankservice_"):
-
         parts = choice.split("_")
 
         if len(parts) != 3:
@@ -891,11 +502,7 @@ async def select_option(
         bank_service = BANK_SERVICES.get(service_id)
 
         if not bank_name or not bank_service:
-
-            await query.message.reply_text(
-                "Servicio no disponible."
-            )
-
+            await query.message.reply_text("Servicio no disponible.")
             return
 
         await ask_for_details(
@@ -903,23 +510,14 @@ async def select_option(
             context,
             f"{bank_name} - {bank_service}",
         )
-
         return
 
-    # SELECCIONAR BANCO
-
     if choice.startswith("bank_"):
-
         bank_id = choice.replace("bank_", "", 1)
-
         bank_name = BANKS.get(bank_id)
 
         if not bank_name:
-
-            await query.message.reply_text(
-                "Banco no disponible."
-            )
-
+            await query.message.reply_text("Banco no disponible.")
             return
 
         await query.message.reply_text(
@@ -927,73 +525,211 @@ async def select_option(
             "Selecciona el servicio que necesitas:",
             reply_markup=bank_services_menu(bank_id),
         )
+        return
 
+    # AMAZON
+
+    if choice == "amazon":
+        await query.message.reply_text(
+            "🛒 UNARED | AMAZON\n\n"
+            "Selecciona una opción:",
+            reply_markup=amazon_menu(),
+        )
+        return
+
+    if choice == "amazon_have":
+        await ask_for_details(query, context, "Amazon - Tengo Amazon")
+        return
+
+    if choice == "amazon_info":
+        await ask_for_details(
+            query,
+            context,
+            "Amazon - Tengo Amazon, necesito más información",
+        )
+        return
+
+    # APPLE
+
+    if choice == "apple":
+        await query.message.reply_text(
+            "🍎 UNARED | APPLE\n\n"
+            "Selecciona una opción:",
+            reply_markup=apple_menu(),
+        )
+        return
+
+    if choice == "apple_have":
+        await ask_for_details(query, context, "Apple - Tengo Apple")
+        return
+
+    if choice == "apple_info":
+        await ask_for_details(
+            query,
+            context,
+            "Apple - Tengo Apple, necesito más información",
+        )
+        return
+
+    # VUELOS
+
+    if choice == "vuelos":
+        await query.message.reply_text(
+            "✈️ UNARED | SERVICIOS DE VUELOS\n\n"
+            "¿Qué necesitas?",
+            reply_markup=flights_menu(),
+        )
+        return
+
+    if choice == "flight_request":
+        await ask_for_details(query, context, "Solicitud de vuelo")
+        return
+
+    # ENVIOS Y REMESAS
+
+    if choice == "remesas":
+        await query.message.reply_text(
+            "💸 UNARED | ENVÍOS Y REMESAS\n\n"
+            "Selecciona la aplicación:",
+            reply_markup=remittances_menu(),
+        )
+        return
+
+    if choice.startswith("remit_"):
+        app_id = choice.replace("remit_", "", 1)
+        app_name = REMITTANCE_APPS.get(app_id)
+
+        if app_name:
+            await ask_for_details(
+                query,
+                context,
+                f"Envíos y remesas - {app_name}",
+            )
+        return
+
+    # PAGOS DE SERVICIOS
+
+    if choice == "pagos":
+        await query.message.reply_text(
+            "🧾 UNARED | PAGO DE SERVICIOS\n\n"
+            "Selecciona una opción:",
+            reply_markup=bills_menu(),
+        )
+        return
+
+    if choice == "bill_info":
+        await ask_for_details(
+            query,
+            context,
+            "Información sobre Pago de Bill",
+        )
+        return
+
+    if choice == "bill_pay":
+        await query.message.reply_text(
+            "💳 UNARED | QUIERO PAGAR\n\n"
+            "Selecciona qué deseas pagar:",
+            reply_markup=payment_types_menu(),
+        )
+        return
+
+    if choice.startswith("pay_"):
+        payment_id = choice.replace("pay_", "", 1)
+        payment_name = PAYMENT_TYPES.get(payment_id)
+
+        if payment_name:
+            await ask_for_details(query, context, payment_name)
+        return
+
+    # DIGITAL MONEY
+
+    if choice == "digital":
+        await ask_for_details(query, context, "Digital Money")
         return
 
     # HERRAMIENTAS
 
+    if choice == "menu_tools":
+        await query.message.reply_text(
+            "🧰 UNARED | CENTRO DE HERRAMIENTAS\n\n"
+            "Selecciona el servicio que necesitas:",
+            reply_markup=tools_menu(),
+        )
+
+        # El método de pago aparece después de los botones.
+        await query.message.reply_text(PAYMENT_MESSAGE)
+        return
+
     if choice.startswith("tool_"):
-
         tool_id = choice.replace("tool_", "", 1)
-
         service = TOOLS.get(tool_id)
 
         if service:
-
-            await ask_for_details(
-                query,
-                context,
-                service,
-            )
-
+            await ask_for_details(query, context, service)
         else:
-
-            await query.message.reply_text(
-                "Herramienta no disponible."
-            )
-
+            await query.message.reply_text("Herramienta no disponible.")
         return
 
-    await query.message.reply_text(
-        "Opción no disponible."
-    )
+    # NECESITO MAS INFORMACION
+
+    if choice.startswith("more_"):
+        section = choice.replace("more_", "", 1)
+
+        descriptions = {
+            "banks": "Información general sobre servicios bancarios",
+            "remesas": "Información sobre envíos y remesas",
+            "pagos": "Información sobre pagos de servicios",
+            "amazon": "Información sobre Amazon",
+            "apple": "Información sobre Apple",
+            "flights": "Información sobre vuelos",
+            "tools": "Información sobre herramientas",
+        }
+
+        if section.startswith("bank_"):
+            bank_id = section.replace("bank_", "", 1)
+            bank_name = BANKS.get(bank_id)
+
+            if bank_name:
+                description = f"Más información sobre {bank_name}"
+            else:
+                description = "Más información sobre bancos"
+        else:
+            description = descriptions.get(
+                section,
+                "Información general de UnaRed",
+            )
+
+        await ask_for_details(query, context, description)
+        return
+
+    await query.message.reply_text("Opción no disponible.")
 
 
 # =====================================
 # RECIBIR SOLICITUDES
 # =====================================
 
-async def receive_request(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-
+async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.user_data.get("waiting_detail"):
-
         await update.message.reply_text(
             "Selecciona primero un servicio:",
             reply_markup=main_menu(),
         )
-
         return
 
     detail = update.message.text.strip()
 
     if not detail:
-
         await update.message.reply_text(
             "Escribe los detalles de tu solicitud."
         )
-
         return
 
     if len(detail) > 3000:
-
         await update.message.reply_text(
             "Tu mensaje es demasiado largo. "
             "Envíalo en menos de 3000 caracteres."
         )
-
         return
 
     user = update.effective_user
@@ -1013,7 +749,6 @@ async def receive_request(
     )
 
     try:
-
         await context.bot.send_message(
             chat_id=int(ADMIN_CHAT_ID),
             text=message,
@@ -1029,7 +764,6 @@ async def receive_request(
         )
 
     except Exception:
-
         logger.exception(
             "Error enviando solicitud al administrador."
         )
@@ -1044,11 +778,7 @@ async def receive_request(
 # CANCELAR SOLICITUD
 # =====================================
 
-async def cancel(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
 
     await update.message.reply_text(
@@ -1062,11 +792,7 @@ async def cancel(
 # ERRORES
 # =====================================
 
-async def error_handler(
-    update: object,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(
         "Error procesando una actualización:",
         exc_info=context.error,
@@ -1078,15 +804,12 @@ async def error_handler(
 # =====================================
 
 def main():
-
     if not TOKEN:
-
         raise RuntimeError(
             "Falta configurar TELEGRAM_BOT_TOKEN en Railway."
         )
 
     if not ADMIN_CHAT_ID:
-
         raise RuntimeError(
             "Falta configurar ADMIN_CHAT_ID en Railway."
         )
@@ -1097,17 +820,9 @@ def main():
         .build()
     )
 
-    app.add_handler(
-        CommandHandler("start", start)
-    )
-
-    app.add_handler(
-        CommandHandler("cancel", cancel)
-    )
-
-    app.add_handler(
-        CallbackQueryHandler(select_option)
-    )
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("cancel", cancel))
+    app.add_handler(CallbackQueryHandler(select_option))
 
     app.add_handler(
         MessageHandler(
