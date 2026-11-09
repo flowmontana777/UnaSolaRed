@@ -814,6 +814,21 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await ask_for_details(query, context, product)
         return
 
+    if choice == "tool_giftcards":
+        service = TOOLS.get("giftcards")
+        context.user_data["service"] = service
+        context.user_data["waiting_detail"] = True
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/CKrKQLYH/photo-2026-11-09-00-54-29.jpg",
+            caption=(
+                f"💚 UNARED | {service}\n\n"
+                "Escribe qué necesitas y nuestro equipo "
+                "recibirá tu solicitud.\n\n"
+                "Escribe /cancel para cancelar."
+            ),
+        )
+        return
+
     if choice.startswith("tool_"):
         tool_id = choice.replace("tool_", "", 1)
         service = TOOLS.get(tool_id)
