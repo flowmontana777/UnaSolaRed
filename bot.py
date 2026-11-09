@@ -353,7 +353,7 @@ def payment_types_menu():
         [InlineKeyboardButton("💳 Tarjeta", callback_data="pay_card")],
         [InlineKeyboardButton("💰 Préstamo", callback_data="pay_loan")],
         [InlineKeyboardButton("💡 Luz", callback_data="pay_light")],
-        [InlineKeyboardButton("ℹ️ Necesito saber más de la vuelta", url="https://t.me/flowmontana777")],
+        more_button("pagos"),
         back_button("pagos"),
     ]
 
