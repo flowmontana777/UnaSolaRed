@@ -215,16 +215,11 @@ def banks_menu():
 
 def bank_services_menu(bank_id):
     keyboard = [
-        [InlineKeyboardButton("🏦 Cuentas", callback_data=f"bankservice_{bank_id}_account")],
-        [InlineKeyboardButton("💳 Tarjetas", callback_data=f"bankservice_{bank_id}_cards")],
-        [InlineKeyboardButton("💸 Transferencias", callback_data=f"bankservice_{bank_id}_transfers")],
-        [InlineKeyboardButton("📄 Estados de cuenta", callback_data=f"bankservice_{bank_id}_statements")],
-        [InlineKeyboardButton("🔐 Banca en línea y soporte", callback_data=f"bankservice_{bank_id}_online")],
-        [InlineKeyboardButton("📩 Otra consulta", callback_data=f"bankservice_{bank_id}_other")],
-        more_button(f"bank_{bank_id}"),
+        [InlineKeyboardButton("⏱️ Tiempo", callback_data=f"bankinfo_{bank_id}_tiempo")],
+        [InlineKeyboardButton("📊 Límite", callback_data=f"bankinfo_{bank_id}_limite")],
+        [InlineKeyboardButton("💬 Trabajar ahora", url="https://t.me/flowmontana777")],
         back_button("menu_banks"),
     ]
-
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -486,26 +481,23 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    if choice.startswith("bankservice_"):
+    if choice.startswith("bankinfo_"):
         parts = choice.split("_")
-
         if len(parts) != 3:
             return
-
-        bank_id = parts[1]
-        service_id = parts[2]
-
+        bank_id, info_type = parts[1], parts[2]
         bank_name = BANKS.get(bank_id)
-        bank_service = BANK_SERVICES.get(service_id)
-
-        if not bank_name or not bank_service:
-            await query.message.reply_text("Servicio no disponible.")
+        if not bank_name or info_type not in ("tiempo", "limite"):
+            await query.message.reply_text("Opción no disponible.")
             return
-
-        await ask_for_details(
-            query,
-            context,
-            f"{bank_name} - {bank_service}",
+        label = "Tiempo" if info_type == "tiempo" else "Límite"
+        await query.message.reply_text(
+            f"🏦 {bank_name} | {label}\\n\\n"
+            "Para recibir información y asistencia, pulsa «Trabajar ahora».",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Trabajar ahora", url="https://t.me/flowmontana777")],
+                back_button("menu_banks"),
+            ]),
         )
         return
 
