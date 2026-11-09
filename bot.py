@@ -402,6 +402,7 @@ def tools_menu():
         [InlineKeyboardButton("🔐 Soporte VoIP", callback_data="tool_auth")],
         [InlineKeyboardButton("🪪 SSN", callback_data="tool_ssn_info")],
         [InlineKeyboardButton("💳 Tarjetas", callback_data="tool_giftcards")],
+        [InlineKeyboardButton("📄 Quiero Comprar Papel", callback_data="edit_buy_paper")],
         [InlineKeyboardButton("📄 Quiero Editar y Subir Papel", callback_data="tool_edit_upload")],
         more_button("tools"),
         back_button(),
@@ -838,22 +839,47 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if choice == "tool_edit_upload":
+        context.user_data["edit_upload_step"] = None
         await query.message.reply_photo(
             photo="https://i.ibb.co/YTWPTVJZ/photo-2026-11-09-15-54-09.jpg",
             caption=(
                 "📄 UNARED | QUIERO EDITAR Y SUBIR PAPEL\n\n"
                 "💵 Precio: US$200\n\n"
-                "📦 ¿Qué recibes?\n"
+                "🎥 ¿Qué recibes?\n"
+                "• Una videollamada editando con UnaRed\n"
                 "• Link de Photoshop ilimitado\n"
                 "• Papel para empezar\n"
-                "• Un contacto para comprar papel\n\n"
+                "• Contacto para comprar papel\n\n"
                 "💳 MÉTODO DE PAGO\n"
                 "Moneda: USDT\n"
                 "Red: TRON (TRC20)\n"
                 f"Dirección: {PAYMENT_WALLET}\n\n"
-                "Envía únicamente USDT por la red TRC20. "
-                "Conserva el comprobante de pago."
+                "Después de pagar, pulsa «Ya Pagué» y envía el comprobante."
             ),
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("✅ Ya Pagué", callback_data="edit_upload_paid")],
+                [InlineKeyboardButton("ℹ️ Quiero Saber Más", url="https://t.me/flowmontana777")],
+            ]),
+        )
+        return
+
+    if choice == "edit_buy_paper":
+        user = update.effective_user
+        await context.bot.send_message(
+            chat_id=int(ADMIN_CHAT_ID),
+            text=f"📄 SOLICITUD PARA COMPRAR PAPEL\nCliente: {user.full_name}\nUsuario: @{user.username or 'Sin usuario'}\nID: {user.id}",
+        )
+        await query.message.reply_text(
+            "✅ Tu solicitud para comprar papel fue enviada. UnaRed se comunicará contigo.",
+            reply_markup=tools_menu(),
+        )
+        return
+
+    if choice == "edit_upload_paid":
+        context.user_data["edit_upload_step"] = "receipt"
+        await query.message.reply_text(
+            "📩 Envía ahora el comprobante de pago como foto o archivo. "
+            "Lo enviaremos al equipo de UnaRed para verificarlo."
         )
         return
 
@@ -928,6 +954,41 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dayler_step = context.user_data.get("dayler_step")
+    if context.user_data.get("edit_upload_step") == "receipt":
+        if not update.message.photo and not update.message.document:
+            await update.message.reply_text("Por favor, envía el comprobante como foto o archivo.")
+            return
+        user = update.effective_user
+        caption = (
+            "💚 COMPROBANTE | EDITAR Y SUBIR PAPEL - UNARED\n"
+            f"Cliente: {user.full_name}\n"
+            f"Usuario: @{user.username or 'Sin usuario'}\n"
+            f"ID: {user.id}\n"
+            "Monto indicado: US$200\n"
+            "Estado: pendiente de verificación."
+        )
+        try:
+            if update.message.photo:
+                await context.bot.send_photo(
+                    chat_id=int(ADMIN_CHAT_ID),
+                    photo=update.message.photo[-1].file_id,
+                    caption=caption,
+                )
+            else:
+                await context.bot.send_document(
+                    chat_id=int(ADMIN_CHAT_ID),
+                    document=update.message.document.file_id,
+                    caption=caption,
+                )
+            context.user_data.pop("edit_upload_step", None)
+            await update.message.reply_text(
+                "✅ Recibimos tu comprobante. El equipo de UnaRed verificará el pago y te contactará."
+            )
+        except Exception:
+            logger.exception("Error enviando comprobante de Editar y Subir Papel.")
+            await update.message.reply_text("No pudimos enviar el comprobante. Inténtalo nuevamente.")
+        return
+
     if dayler_step == "username":
         username = update.message.text.strip()
         if not username or len(username) > 40:
