@@ -175,7 +175,7 @@ def main_menu():
                 callback_data="menu_tools",
             ),
             InlineKeyboardButton(
-                "🎵 Modo Digital",
+                "📟 Modo Digital",
                 callback_data="digital",
             ),
         ],
@@ -736,8 +736,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "digital":
         await query.message.reply_text(
-            "🎵 UNARED | MODO DIGITAL\n\n"
-            "Próximamente..",
+            "📟 UNARED | MODO DIGITAL\n\n"
+            "PRÓXIMAMENTE.",
             reply_markup=back_button(),
         )
         return
