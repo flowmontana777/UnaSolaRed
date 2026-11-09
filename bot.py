@@ -558,19 +558,24 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text("Banco no disponible.")
             return
 
-        if bank_id == "chase":
+        bank_images = {
+            "chase": "https://i.ibb.co/gLRfjxkT/Green-financial-brand-display-a05f13b3-2-K.jpg",
+            "boa": "https://i.ibb.co/4gnktDdq/Bank-logos-and-financial-symbols-a33fe393-2-K.jpg",
+        }
+        bank_image = bank_images.get(bank_id)
+        caption = (
+            f"🏦 UNARED | {bank_name}\n\n"
+            "Selecciona el servicio que necesitas:"
+        )
+        if bank_image:
             await query.message.reply_photo(
-                photo="https://i.ibb.co/gLRfjxkT/Green-financial-brand-display-a05f13b3-2-K.jpg",
-                caption=(
-                    f"🏦 UNARED | {bank_name}\n\n"
-                    "Selecciona el servicio que necesitas:"
-                ),
+                photo=bank_image,
+                caption=caption,
                 reply_markup=bank_services_menu(bank_id),
             )
         else:
             await query.message.reply_text(
-                f"🏦 UNARED | {bank_name}\n\n"
-                "Selecciona el servicio que necesitas:",
+                caption,
                 reply_markup=bank_services_menu(bank_id),
             )
         return
