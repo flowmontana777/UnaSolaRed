@@ -753,9 +753,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # HERRAMIENTAS
 
     if choice == "menu_tools":
-        await query.message.reply_text(
-            "🧰 UNARED | CENTRO DE HERRAMIENTAS\n\n"
-            "Selecciona el servicio que necesitas:",
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/Z60vmNNM/photo-2026-11-09-01-47-51.jpg",
+            caption=(
+                "🧰 UNARED | CENTRO DE HERRAMIENTAS\n\n"
+                "Selecciona el servicio que necesitas:"
+            ),
             reply_markup=tools_menu(),
         )
         return
