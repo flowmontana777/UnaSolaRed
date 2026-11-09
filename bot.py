@@ -641,7 +641,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data["bill_category"] = payment_name
             context.user_data["bill_amount"] = ""
             await query.message.reply_text(
-                f"🧾 {payment_name}\\n\\nMonto: RD$ 0\\nUsa los botones numéricos:",
+                f"🧾 {payment_name}\\n\\nMonto: USD 0\\nUsa los botones numéricos:",
                 reply_markup=bill_amount_keyboard(),
             )
         return
@@ -653,7 +653,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             amount += digit
         context.user_data["bill_amount"] = amount
         await query.edit_message_text(
-            f"🧾 {context.user_data.get('bill_category', 'Pago')}\\n\\nMonto: RD$ {amount or '0'}",
+            f"🧾 {context.user_data.get('bill_category', 'Pago')}\\n\\nMonto: USD {amount or '0'}",
             reply_markup=bill_amount_keyboard(),
         )
         return
@@ -662,7 +662,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         amount = context.user_data.get("bill_amount", "")[:-1]
         context.user_data["bill_amount"] = amount
         await query.edit_message_text(
-            f"🧾 {context.user_data.get('bill_category', 'Pago')}\\n\\nMonto: RD$ {amount or '0'}",
+            f"🧾 {context.user_data.get('bill_category', 'Pago')}\\n\\nMonto: USD {amount or '0'}",
             reply_markup=bill_amount_keyboard(),
         )
         return
@@ -678,7 +678,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption=(
                 "💚 UNARED | MÉTODO DE PAGO\\n\\n"
                 f"Categoría: {context.user_data.get('bill_category')}\\n"
-                f"Monto: RD$ {amount}\\n"
+                f"Monto: USD {amount}\\n"
                 "Pago en USDT por TRON (TRC20).\\n\\n"
                 f"Billetera:\\n<code>{PAYMENT_WALLET}</code>\\n\\n"
                 "Envía el pago y luego manda la referencia para verificarlo."
@@ -861,7 +861,7 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Cliente: {user.full_name}\\n"
             f"Usuario Telegram: @{user.username or 'Sin usuario'}\\n"
             f"Categoría: {context.user_data.get('bill_category')}\\n"
-            f"Monto: RD$ {context.user_data.get('bill_amount')}\\n"
+            f"Monto: USD {context.user_data.get('bill_amount')}\\n"
             f"Referencia: {reference}\\n"
             "Estado: pendiente de verificación."
         )
