@@ -397,12 +397,18 @@ def payment_types_menu():
 
 def tools_menu():
     keyboard = [
-        [InlineKeyboardButton("📞 Alquilar Línea Dayler", callback_data="tool_dayler")],
-        [InlineKeyboardButton("🤖 Comprar Bot", callback_data="tool_bots")],
-        [InlineKeyboardButton("🔐 Soporte VoIP", callback_data="tool_auth")],
-        [InlineKeyboardButton("🪪 SSN", callback_data="tool_ssn_info")],
-        [InlineKeyboardButton("💳 Tarjetas", callback_data="tool_giftcards")],
-        [InlineKeyboardButton("📄 Quiero Comprar Papel", callback_data="edit_buy_paper")],
+        [
+            InlineKeyboardButton("📞 Alquilar Línea Dayler", callback_data="tool_dayler"),
+            InlineKeyboardButton("🤖 Comprar Bot", callback_data="tool_bots"),
+        ],
+        [
+            InlineKeyboardButton("🔐 Soporte VoIP", callback_data="tool_auth"),
+            InlineKeyboardButton("🪪 SSN", callback_data="tool_ssn_info"),
+        ],
+        [
+            InlineKeyboardButton("💳 Tarjetas", callback_data="tool_giftcards"),
+            InlineKeyboardButton("📄 Quiero Comprar Papel", callback_data="edit_buy_paper"),
+        ],
         [InlineKeyboardButton("📄 Quiero Editar y Subir Papel", callback_data="tool_edit_upload")],
         more_button("tools"),
         back_button(),
