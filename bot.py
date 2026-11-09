@@ -633,9 +633,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ENVIOS Y REMESAS
 
     if choice == "remesas":
-        await query.message.reply_text(
-            "💸 UNARED | ENVÍOS Y REMESAS\n\n"
-            "Selecciona la aplicación:",
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/N67F70xw/photo-2026-11-09-01-22-27.jpg",
+            caption=(
+                "💸 UNARED | ENVÍOS Y REMESAS\n\n"
+                "Selecciona la aplicación:"
+            ),
             reply_markup=remittances_menu(),
         )
         return
