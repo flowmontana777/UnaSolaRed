@@ -739,7 +739,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "digital":
         await query.message.reply_photo(
-            photo="https://i.ibb.co/n8ZjJ5dL/photo-2026-11-09-00-00-25.jpg",
+            photo="https://i.ibb.co/jZBDX10r/photo-2026-11-09-00-00-25.jpg",
             caption=(
                 "📟 UNARED | MODO DIGITAL\n\n"
                 "PRÓXIMAMENTE."
