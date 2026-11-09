@@ -591,9 +591,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # APPLE
 
     if choice == "apple":
-        await query.message.reply_text(
-            "🍎 UNARED | APPLE\n\n"
-            "Selecciona una opción:",
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/nscvpdVp/photo-2026-11-09-01-02-28.jpg",
+            caption=(
+                "🍎 UNARED | APPLE\n\n"
+                "Selecciona una opción:"
+            ),
             reply_markup=apple_menu(),
         )
         return
