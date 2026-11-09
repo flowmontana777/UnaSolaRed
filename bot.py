@@ -216,7 +216,6 @@ def banks_menu():
 def bank_services_menu(bank_id):
     keyboard = [
         [InlineKeyboardButton("⏱️ Tiempo", callback_data=f"bankinfo_{bank_id}_tiempo")],
-        [InlineKeyboardButton("📊 Límite", callback_data=f"bankinfo_{bank_id}_limite")],
         [InlineKeyboardButton("💬 Trabajar ahora", url="https://t.me/flowmontana777")],
         back_button("menu_banks"),
     ]
@@ -499,11 +498,16 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.answer("Introduce un límite mayor que cero.", show_alert=True)
                 return
             bank_name = BANKS.get(context.user_data.get("bank_input_id"), "Banco")
+            duration = context.user_data.get("bank_time_value", "No indicado")
             user = update.effective_user
             try:
-                await context.bot.send_message(chat_id=int(ADMIN_CHAT_ID), text=f"DATOS BANCARIOS UNARED | Cliente: {user.full_name} | Banco: {bank_name} | Límite: USD {value}")
+                await context.bot.send_message(
+                    chat_id=int(ADMIN_CHAT_ID),
+                    text=f"DATOS BANCARIOS UNARED | Cliente: {user.full_name} | Banco: {bank_name} | Tiempo con el banco: {duration} | Límite: USD {value}"
+                )
                 context.user_data["bank_input_step"] = None
-                await query.message.reply_text("✅ Límite recibido. Para continuar, pulsa Trabajar ahora.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("💬 Trabajar ahora", url="https://t.me/flowmontana777")]]))
+                context.user_data["bank_time_value"] = None
+                await query.message.reply_text("✅ Tiempo y límite recibidos. Para continuar, pulsa Trabajar ahora.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("💬 Trabajar ahora", url="https://t.me/flowmontana777")]]))
             except Exception:
                 logger.exception("Error enviando límite bancario.")
                 await query.message.reply_text("No pudimos enviar el dato. Inténtalo nuevamente.")
@@ -987,15 +991,15 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not duration or len(duration) > 100:
             await update.message.reply_text("Escribe un tiempo válido con el banco.")
             return
+        context.user_data["bank_time_value"] = duration
+        context.user_data["bank_input_step"] = "limit"
+        context.user_data["bank_limit_value"] = ""
         bank_name = BANKS.get(context.user_data.get("bank_input_id"), "Banco")
-        user = update.effective_user
-        try:
-            await context.bot.send_message(chat_id=int(ADMIN_CHAT_ID), text=f"DATOS BANCARIOS UNARED | Cliente: {user.full_name} | Banco: {bank_name} | Tiempo con el banco: {duration}")
-            context.user_data["bank_input_step"] = None
-            await update.message.reply_text("✅ Tiempo recibido. Para continuar, pulsa Trabajar ahora.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("💬 Trabajar ahora", url="https://t.me/flowmontana777")]]))
-        except Exception:
-            logger.exception("Error enviando tiempo bancario.")
-            await update.message.reply_text("No pudimos enviar el dato. Inténtalo nuevamente.")
+        await update.message.reply_text(
+            f"✅ Tiempo recibido para {bank_name}.\n\n"
+            "📊 Ahora introduce el límite de tu cuenta en USD con los botones y pulsa Confirmar.",
+            reply_markup=bank_limit_keyboard(),
+        )
         return
 
     if not context.user_data.get("waiting_detail"):
