@@ -658,7 +658,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice == "digital":
         await query.message.reply_text(
             "🎵 UNARED | MODO DIGITAL\n\n"
-            "Próximamente…",
+            "Próximamente..",
             reply_markup=back_button(),
         )
         return
