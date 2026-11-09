@@ -484,7 +484,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "menu_banks":
         await query.message.reply_photo(
-            photo="https://i.ibb.co/MJ1T4RZ/photo-2026-11-09-00-00-22.jpg",
+            photo="https://i.ibb.co/sptC6Y0J/photo-2026-11-09-01-00-59.jpg",
             caption=(
                 "🏦 UNARED | BANCOS\n\n"
                 "Selecciona tu banco:"
