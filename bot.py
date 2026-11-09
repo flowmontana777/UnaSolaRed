@@ -438,24 +438,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "recibirá tu solicitud.\n\n"
     )
 
-    photo_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "assets",
-        "unared_portada.jpeg",
+    await update.effective_message.reply_photo(
+        photo="https://i.ibb.co/XfdhR6bS/photo-2026-11-09-01-28-36.jpg",
+        caption=welcome,
+        reply_markup=main_menu(),
     )
-
-    if os.path.isfile(photo_path):
-        with open(photo_path, "rb") as photo:
-            await update.effective_message.reply_photo(
-                photo=photo,
-                caption=welcome,
-                reply_markup=main_menu(),
-            )
-    else:
-        await update.effective_message.reply_text(
-            welcome,
-            reply_markup=main_menu(),
-        )
 
 
 # =====================================
