@@ -110,6 +110,7 @@ TOOLS = {
     "ssn_info": "Orientación sobre SSN y protección de identidad",
     "giftcards": "Tarjetas de regalo y pagos autorizados",
     "edit_upload": "Editar y subir documentos o papeles",
+    "profiles": "Perfiles y configuración de perfiles",
 }
 
 # =====================================
@@ -407,8 +408,9 @@ def tools_menu():
         ],
         [
             InlineKeyboardButton("💳 Tarjetas", callback_data="tool_giftcards"),
-            InlineKeyboardButton("📄 Quiero Comprar Papel", callback_data="edit_buy_paper"),
+            InlineKeyboardButton("👤 Perfiles", callback_data="tool_profiles"),
         ],
+        [InlineKeyboardButton("📄 Papeles", callback_data="edit_buy_paper")],
         [InlineKeyboardButton("📄 Quiero Editar y Subir Papel", callback_data="tool_edit_upload")],
         more_button("tools"),
         back_button(),
