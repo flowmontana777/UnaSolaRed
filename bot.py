@@ -82,7 +82,7 @@ BANK_SERVICES = {
 # =====================================
 
 SERVICES = {
-    "digital": "Digital Money",
+    "digital": "Modo Digital",
 }
 
 REMITTANCE_APPS = {
@@ -175,7 +175,7 @@ def main_menu():
                 callback_data="menu_tools",
             ),
             InlineKeyboardButton(
-                "🎵 Digital Money",
+                "🎵 Modo Digital",
                 callback_data="digital",
             ),
         ],
@@ -330,17 +330,11 @@ def bills_menu():
     keyboard = [
         [
             InlineKeyboardButton(
-                "🧾 Pago de Bill",
-                callback_data="bill_info",
-            )
-        ],
-        [
-            InlineKeyboardButton(
                 "💳 Quiero pagar",
                 callback_data="bill_pay",
             )
         ],
-        more_button("pagos"),
+        [InlineKeyboardButton("ℹ️ Necesito saber más de la vuelta", url="https://t.me/flowmontana777")],
         back_button(),
     ]
 
@@ -359,7 +353,7 @@ def payment_types_menu():
         [InlineKeyboardButton("💳 Tarjeta", callback_data="pay_card")],
         [InlineKeyboardButton("💰 Préstamo", callback_data="pay_loan")],
         [InlineKeyboardButton("💡 Luz", callback_data="pay_light")],
-        more_button("pagos"),
+        [InlineKeyboardButton("ℹ️ Necesito saber más de la vuelta", url="https://t.me/flowmontana777")],
         back_button("pagos"),
     ]
 
@@ -415,9 +409,6 @@ async def ask_for_details(query, context, service):
         f"💚 UNARED | {service}\n\n"
         "Escribe qué necesitas y nuestro equipo "
         "recibirá tu solicitud.\n\n"
-        "⚠️ No envíes contraseñas, números completos "
-        "de tarjetas, SSN, códigos OTP ni datos "
-        "bancarios confidenciales.\n\n"
         "Escribe /cancel para cancelar."
     )
 
@@ -434,7 +425,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Todos tus servicios en un solo lugar.\n"
         "Selecciona la opción que necesitas y nuestro equipo "
         "recibirá tu solicitud.\n\n"
-        "🔒 No compartas contraseñas ni códigos de seguridad."
     )
 
     photo_path = os.path.join(
@@ -644,7 +634,11 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # DIGITAL MONEY
 
     if choice == "digital":
-        await ask_for_details(query, context, "Digital Money")
+        await query.message.reply_text(
+            "🎵 UNARED | MODO DIGITAL\n\n"
+            "Próximamente…",
+            reply_markup=back_button(),
+        )
         return
 
     # HERRAMIENTAS
