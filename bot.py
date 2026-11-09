@@ -864,14 +864,13 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if choice == "edit_buy_paper":
-        user = update.effective_user
-        await context.bot.send_message(
-            chat_id=int(ADMIN_CHAT_ID),
-            text=f"📄 SOLICITUD PARA COMPRAR PAPEL\nCliente: {user.full_name}\nUsuario: @{user.username or 'Sin usuario'}\nID: {user.id}",
-        )
         await query.message.reply_text(
-            "✅ Tu solicitud para comprar papel fue enviada. UnaRed se comunicará contigo.",
-            reply_markup=tools_menu(),
+            "📄 QUIERO COMPRAR PAPEL\n\n"
+            "Para consultar la compra de papel, comunícate directamente con UnaRed.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("📲 Contacto", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
+            ]),
         )
         return
 
@@ -1085,6 +1084,10 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    if not update.message.text:
+        await update.message.reply_text("Por favor, envía el texto de tu solicitud.")
+        return
+
     if not context.user_data.get("waiting_detail"):
         await update.message.reply_text(
             "Selecciona primero un servicio:",
@@ -1201,7 +1204,7 @@ def main():
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
+            (filters.TEXT & ~filters.COMMAND) | filters.PHOTO | filters.Document.ALL,
             receive_request,
         )
     )
