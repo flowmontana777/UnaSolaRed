@@ -566,9 +566,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # AMAZON
 
     if choice == "amazon":
-        await query.message.reply_text(
-            "🛒 UNARED | AMAZON\n\n"
-            "Selecciona una opción:",
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/21HDrxmJ/photo-2026-11-09-00-49-50.jpg",
+            caption=(
+                "🛒 UNARED | AMAZON\n\n"
+                "Selecciona una opción:"
+            ),
             reply_markup=amazon_menu(),
         )
         return
