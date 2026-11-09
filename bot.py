@@ -726,10 +726,15 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if choice == "dayler_pay":
-        await query.message.reply_text(
-            "💚 UNARED | PAGO LÍNEA DAYLER\n\n"
-            "Total: US$150 (pago en USDT por la red TRON/TRC20).\n\n"
-            + PAYMENT_MESSAGE,
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/6c7GZ9rw/photo-2026-11-08-23-17-50.jpg",
+            caption=(
+                "💚 UNARED | PAGO LÍNEA DAYLER\n\n"
+                "Total: US$150\nPago en USDT por TRON (TRC20).\n\n"
+                f"Billetera:\n<code>{PAYMENT_WALLET}</code>\n\n"
+                "Conserva la referencia para verificar el pago."
+            ),
+            parse_mode="HTML",
             reply_markup=dayler_receipt_menu(),
         )
         return
