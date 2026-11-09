@@ -616,9 +616,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # VUELOS
 
     if choice == "vuelos":
-        await query.message.reply_text(
-            "✈️ UNARED | SERVICIOS DE VUELOS\n\n"
-            "¿Qué necesitas?",
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/pvwR93w6/Green-financial-brand-display-9c28aa1d-2-K.jpg",
+            caption=(
+                "✈️ UNARED | SERVICIOS DE VUELOS\n\n"
+                "¿Qué necesitas?"
+            ),
             reply_markup=flights_menu(),
         )
         return
