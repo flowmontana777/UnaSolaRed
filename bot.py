@@ -346,9 +346,9 @@ def dayler_receipt_menu():
 
 def bot_catalog_menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Bot de atención al cliente", callback_data="botproduct_support")],
-        [InlineKeyboardButton("Bot de gestión de pedidos", callback_data="botproduct_orders")],
-        [InlineKeyboardButton("Bot de notificaciones", callback_data="botproduct_alerts")],
+        [InlineKeyboardButton("BOT OTP", callback_data="botproduct_otp")],
+        [InlineKeyboardButton("BOT SSN", callback_data="botproduct_ssn")],
+        [InlineKeyboardButton("BOT CHECK", callback_data="botproduct_check")],
         back_button("menu_tools"),
     ])
 
@@ -720,11 +720,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_photo(
             photo="https://i.ibb.co/6c7GZ9rw/photo-2026-11-08-23-17-50.jpg",
             caption=(
-                "💚 UNARED | MÉTODO DE PAGO\\n\\n"
-                f"Categoría: {context.user_data.get('bill_category')}\\n"
-                f"Monto: USD {amount}\\n"
-                "Pago en USDT por TRON (TRC20).\\n\\n"
-                f"Billetera:\\n<code>{PAYMENT_WALLET}</code>\\n\\n"
+                "💚 UNARED | MÉTODO DE PAGO\n\n"
+                f"Categoría: {context.user_data.get('bill_category')}\n"
+                f"Monto: USD {amount}\n"
+                "Método: USDT por red TRON (TRC20)\n\n"
+                "BILLETERA (pulsa para copiar):\n"
+                f"<code>{PAYMENT_WALLET}</code>\n\n"
                 "Envía el pago y luego manda la referencia para verificarlo."
             ),
             parse_mode="HTML",
@@ -766,8 +767,10 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/6c7GZ9rw/photo-2026-11-08-23-17-50.jpg",
             caption=(
                 "💚 UNARED | PAGO LÍNEA DAYLER\n\n"
-                "Total: US$150\nPago en USDT por TRON (TRC20).\n\n"
-                f"Billetera:\n<code>{PAYMENT_WALLET}</code>\n\n"
+                "Total: USD 150\n"
+                "Método: USDT por red TRON (TRC20)\n\n"
+                "BILLETERA (pulsa para copiar):\n"
+                f"<code>{PAYMENT_WALLET}</code>\n\n"
                 "Conserva la referencia para verificar el pago."
             ),
             parse_mode="HTML",
@@ -793,9 +796,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice.startswith("botproduct_"):
         products = {
-            "botproduct_support": "Bot de atención al cliente",
-            "botproduct_orders": "Bot de gestión de pedidos",
-            "botproduct_alerts": "Bot de notificaciones",
+            "botproduct_otp": "BOT OTP",
+            "botproduct_ssn": "BOT SSN",
+            "botproduct_check": "BOT CHECK",
         }
         product = products.get(choice)
         if product:
