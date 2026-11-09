@@ -814,11 +814,24 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Escribe un nombre de usuario válido (máximo 40 caracteres).")
             return
         context.user_data["dayler_username"] = username
+        context.user_data["dayler_step"] = "password"
+        await update.message.reply_text(
+            "🔐 Crea la contraseña para tu nueva cuenta SIP.\n\n"
+            "Debe tener entre 8 y 64 caracteres. No uses la contraseña de otra cuenta."
+        )
+        return
+
+    if dayler_step == "password":
+        password = update.message.text.strip()
+        if len(password) < 8 or len(password) > 64:
+            await update.message.reply_text("La contraseña es obligatoria y debe tener entre 8 y 64 caracteres. Inténtalo otra vez.")
+            return
+        context.user_data["dayler_password"] = password
         context.user_data["dayler_step"] = "payment"
         await update.message.reply_text(
             "💚 UNARED | RESUMEN DE TU ORDEN\n\n"
-            f"Servicio: Alquiler de Línea Dayler / SIP\n"
-            f"Usuario solicitado: {username}\n"
+            f"Usuario SIP: {context.user_data.get('dayler_username')}\n"
+            "Contraseña: recibida\n"
             "Total: US$150\n\n"
             "Pulsa el botón para ver el método de pago.",
             reply_markup=dayler_payment_menu(),
@@ -837,6 +850,7 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Usuario Telegram: @{user.username or 'Sin usuario'}\n"
             f"ID Telegram: {user.id}\n"
             f"Usuario SIP solicitado: {context.user_data.get('dayler_username', 'No indicado')}\n"
+            f"Contraseña inicial SIP: {context.user_data.get('dayler_password', 'No indicada')}\n"
             f"Referencia de pago: {reference}\n"
             "Estado: pendiente de verificación manual."
         )
