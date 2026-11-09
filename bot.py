@@ -23,13 +23,13 @@ from telegram.ext import (
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID", "5864523026")
 
-GROUP_LINK = "https://t.me/+sI1SJL6HIQ4Nzcx"
+GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
 
 # =====================================
 # METODO DE PAGO UNARED
 # =====================================
 
-PAYMENT_WALLET = "TQnHr5uVKkeKVRU4DQzr2pukPCdwh2yt7q"
+PAYMENT_WALLET = "TKn18e7RCxhzt9xPZ15JnDhs9kxvf7gsWm"
 
 PAYMENT_MESSAGE = (
     "💚 UNARED | MÉTODO DE PAGO\n\n"
@@ -259,22 +259,10 @@ def amazon_menu():
 
 def apple_menu():
     keyboard = [
-        [
-            InlineKeyboardButton(
-                "🍎 Tengo Apple",
-                callback_data="apple_have",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "ℹ️ Tengo Apple, pero necesito saber más",
-                callback_data="apple_info",
-            )
-        ],
-        more_button("apple"),
+        [InlineKeyboardButton("🍎 Tengo Apple", callback_data="apple_have")],
+        [InlineKeyboardButton("ℹ️ Necesito saber más", callback_data="apple_info")],
         back_button(),
     ]
-
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -399,8 +387,8 @@ def tools_menu():
         [InlineKeyboardButton("📞 Alquilar Línea Dayler", callback_data="tool_dayler")],
         [InlineKeyboardButton("🤖 Comprar Bot", callback_data="tool_bots")],
         [InlineKeyboardButton("🔐 Soporte SIP y autenticación", callback_data="tool_auth")],
-        [InlineKeyboardButton("🪪 Protección de identidad", callback_data="tool_ssn_info")],
-        [InlineKeyboardButton("💳 Tarjetas de regalo autorizadas", callback_data="tool_giftcards")],
+        [InlineKeyboardButton("🪪 SSN", callback_data="tool_ssn_info")],
+        [InlineKeyboardButton("💳 Tarjetas", callback_data="tool_giftcards")],
         more_button("tools"),
         back_button(),
     ]
