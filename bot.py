@@ -325,6 +325,15 @@ def dayler_payment_menu():
     ])
 
 
+def bill_amount_keyboard():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("1", callback_data="bill_digit_1"), InlineKeyboardButton("2", callback_data="bill_digit_2"), InlineKeyboardButton("3", callback_data="bill_digit_3")],
+        [InlineKeyboardButton("4", callback_data="bill_digit_4"), InlineKeyboardButton("5", callback_data="bill_digit_5"), InlineKeyboardButton("6", callback_data="bill_digit_6")],
+        [InlineKeyboardButton("7", callback_data="bill_digit_7"), InlineKeyboardButton("8", callback_data="bill_digit_8"), InlineKeyboardButton("9", callback_data="bill_digit_9")],
+        [InlineKeyboardButton("⌫", callback_data="bill_backspace"), InlineKeyboardButton("0", callback_data="bill_digit_0"), InlineKeyboardButton("Confirmar", callback_data="bill_amount_done")],
+    ])
+
+
 def dayler_receipt_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("Ya realicé el pago", callback_data="dayler_paid")]
@@ -636,9 +645,54 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice.startswith("pay_"):
         payment_id = choice.replace("pay_", "", 1)
         payment_name = PAYMENT_TYPES.get(payment_id)
-
         if payment_name:
-            await ask_for_details(query, context, payment_name)
+            context.user_data["bill_category"] = payment_name
+            context.user_data["bill_amount"] = ""
+            await query.message.reply_text(
+                f"🧾 {payment_name}\\n\\nMonto: RD$ 0\\nUsa los botones numéricos:",
+                reply_markup=bill_amount_keyboard(),
+            )
+        return
+
+    if choice.startswith("bill_digit_"):
+        digit = choice.rsplit("_", 1)[1]
+        amount = context.user_data.get("bill_amount", "")
+        if len(amount) < 8:
+            amount += digit
+        context.user_data["bill_amount"] = amount
+        await query.edit_message_text(
+            f"🧾 {context.user_data.get('bill_category', 'Pago')}\\n\\nMonto: RD$ {amount or '0'}",
+            reply_markup=bill_amount_keyboard(),
+        )
+        return
+
+    if choice == "bill_backspace":
+        amount = context.user_data.get("bill_amount", "")[:-1]
+        context.user_data["bill_amount"] = amount
+        await query.edit_message_text(
+            f"🧾 {context.user_data.get('bill_category', 'Pago')}\\n\\nMonto: RD$ {amount or '0'}",
+            reply_markup=bill_amount_keyboard(),
+        )
+        return
+
+    if choice == "bill_amount_done":
+        amount = context.user_data.get("bill_amount", "")
+        if not amount or int(amount) <= 0:
+            await query.answer("Escribe un monto mayor que cero.", show_alert=True)
+            return
+        context.user_data["bill_step"] = "receipt"
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/6c7GZ9rw/photo-2026-11-08-23-17-50.jpg",
+            caption=(
+                "💚 UNARED | MÉTODO DE PAGO\\n\\n"
+                f"Categoría: {context.user_data.get('bill_category')}\\n"
+                f"Monto: RD$ {amount}\\n"
+                "Pago en USDT por TRON (TRC20).\\n\\n"
+                f"Billetera:\\n<code>{PAYMENT_WALLET}</code>\\n\\n"
+                "Envía el pago y luego manda la referencia para verificarlo."
+            ),
+            parse_mode="HTML",
+        )
         return
 
     # DIGITAL MONEY
@@ -800,6 +854,27 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             logger.exception("Error enviando orden Dayler al administrador.")
             await update.message.reply_text("No pudimos enviar tu orden. Inténtalo más tarde.")
+        return
+
+    if context.user_data.get("bill_step") == "receipt":
+        reference = update.message.text.strip()
+        user = update.effective_user
+        admin_message = (
+            "💚 PAGO DE SERVICIO - UNARED\\n\\n"
+            f"Cliente: {user.full_name}\\n"
+            f"Usuario Telegram: @{user.username or 'Sin usuario'}\\n"
+            f"Categoría: {context.user_data.get('bill_category')}\\n"
+            f"Monto: RD$ {context.user_data.get('bill_amount')}\\n"
+            f"Referencia: {reference}\\n"
+            "Estado: pendiente de verificación."
+        )
+        try:
+            await context.bot.send_message(chat_id=int(ADMIN_CHAT_ID), text=admin_message)
+            context.user_data.clear()
+            await update.message.reply_text("✅ Recibimos la referencia. El equipo verificará el pago.")
+        except Exception:
+            logger.exception("Error enviando referencia de pago.")
+            await update.message.reply_text("No pudimos enviar la referencia. Inténtalo más tarde.")
         return
 
     if not context.user_data.get("waiting_detail"):
