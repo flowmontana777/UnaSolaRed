@@ -837,6 +837,26 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    if choice == "tool_edit_upload":
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/YTWPTVJZ/photo-2026-11-09-15-54-09.jpg",
+            caption=(
+                "📄 UNARED | QUIERO EDITAR Y SUBIR PAPEL\n\n"
+                "💵 Precio: US$200\n\n"
+                "📦 ¿Qué recibes?\n"
+                "• Link de Photoshop ilimitado\n"
+                "• Papel para empezar\n"
+                "• Un contacto para comprar papel\n\n"
+                "💳 MÉTODO DE PAGO\n"
+                "Moneda: USDT\n"
+                "Red: TRON (TRC20)\n"
+                f"Dirección: {PAYMENT_WALLET}\n\n"
+                "Envía únicamente USDT por la red TRC20. "
+                "Conserva el comprobante de pago."
+            ),
+        )
+        return
+
     if choice.startswith("tool_"):
         tool_id = choice.replace("tool_", "", 1)
         service = TOOLS.get(tool_id)
