@@ -820,9 +820,27 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    if choice == "botproduct_otp":
+        context.user_data["service"] = "BOT OTP"
+        context.user_data["waiting_detail"] = True
+        await query.message.reply_text(
+            "🔐 OTP Verification System v3.2\n\n"
+            "Automated call & SMS verification tool.\n\n"
+            "💵 Precio: US$35\n\n"
+            "🔎 Si quieres un bot que esté funcionando, aquí lo buscamos y lo probamos "
+            "en entornos de prueba o cuentas que tengas autorización para verificar.\n\n"
+            "✨ Features:\n"
+            "• Real time call panel\n"
+            "• Human voice AI\n"
+            "• Caller ID verificado y configurable\n"
+            "• Multi country routes autorizadas\n"
+            "• Live status logs\n\n"
+            "📩 Escribe tu consulta para que el equipo de UnaRed pueda ayudarte."
+        )
+        return
+
     if choice.startswith("botproduct_"):
         products = {
-            "botproduct_otp": "BOT OTP",
             "botproduct_ssn": "BOT SSN",
             "botproduct_check": "BOT CHECK",
         }
