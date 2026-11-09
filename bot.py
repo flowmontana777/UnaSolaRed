@@ -533,7 +533,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data["bank_input_step"] = "time"
             context.user_data["bank_input_id"] = bank_id
             await query.message.reply_text(
-                f"🏦 {bank_name}\\n\\nEscribe cuánto tiempo tienes con este banco (ejemplo: 2 años y 6 meses)."
+                f"🏦 {bank_name}\n\nEscribe cuánto tiempo tienes con este banco (ejemplo: 2 años y 6 meses)."
             )
         else:
             context.user_data.clear()
