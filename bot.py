@@ -22,7 +22,24 @@ from telegram.ext import (
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID", "5864523026")
 
-GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
+GROUP_LINK = "https://t.me/+sI1SJL6HIQ4Nzcx"
+
+# METODO DE PAGO UNARED
+
+PAYMENT_WALLET = "TQnHr5uVKkeKVRU4DQzr2pukPCdwh2yt7q"
+
+PAYMENT_MESSAGE = (
+    "💚 UNARED | MÉTODO DE PAGO\n\n"
+    "💵 Moneda: USDT\n"
+    "🌐 Red: TRON (TRC20)\n\n"
+    "💳 Dirección de pago:\n"
+    f"{PAYMENT_WALLET}\n\n"
+    "⚠️ IMPORTANTE:\n"
+    "Envía únicamente USDT por la red TRC20.\n"
+    "No utilices otra red.\n\n"
+    "Después de realizar el pago, conserva tu "
+    "comprobante para verificarlo con nuestro equipo."
+)
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -60,19 +77,58 @@ BANK_SERVICES = {
 # =====================================
 
 SERVICES = {
-    "remesas": "Envíos y remesas",
-    "pagos": "Pago de servicios",
-    "amazon": "Amazon",
-    "apple": "Apple / iCloud",
-    "vuelos": "Vuelos",
     "digital": "Digital Money",
 }
 
-TOOLS = {
-    "profiles": "Perfiles",
-    "authorized": "Herramientas autorizadas",
-    "support": "Soporte técnico",
+REMITTANCE_APPS = {
+    "remitly": "Remitly",
+    "western": "Western Union",
+    "taptap": "TapTap",
+    "paypal": "PayPal",
+    "moneygram": "MoneyGram",
+    "boss": "Boss Money",
+    "ria": "Ria",
 }
+
+PAYMENT_TYPES = {
+    "house": "Pago de casa",
+    "car": "Pago de carro",
+    "phone": "Pago de teléfono",
+    "card": "Pago de tarjeta",
+    "loan": "Pago de préstamo",
+    "light": "Pago de luz",
+}
+
+TOOLS = {
+    "line": "Línea virtual para uso legítimo",
+    "auth": "Soporte de autenticación y seguridad",
+    "ssn_info": "Orientación sobre SSN y protección de identidad",
+    "giftcards": "Tarjetas de regalo y pagos autorizados",
+}
+
+
+# =====================================
+# BOTONES AUXILIARES
+# =====================================
+
+def more_button(service_id):
+
+    return [
+        InlineKeyboardButton(
+            "ℹ️ Necesito saber más de la vuelta",
+            callback_data=f"more_{service_id}",
+        )
+    ]
+
+
+def back_button(destination="menu_home"):
+
+    return [
+        InlineKeyboardButton(
+            "⬅️ Volver",
+            callback_data=destination,
+        )
+    ]
 
 
 # =====================================
@@ -82,12 +138,6 @@ TOOLS = {
 def main_menu():
 
     keyboard = [
-        [
-            InlineKeyboardButton(
-                "💚 Ser Parte de UnaRed",
-                url=GROUP_LINK,
-            )
-        ],
         [
             InlineKeyboardButton(
                 "🏦 Bancos",
@@ -110,7 +160,7 @@ def main_menu():
         ],
         [
             InlineKeyboardButton(
-                "📱 Apple / iCloud",
+                "📱 Apple",
                 callback_data="apple",
             ),
             InlineKeyboardButton(
@@ -127,6 +177,12 @@ def main_menu():
                 "🎵 Digital Money",
                 callback_data="digital",
             ),
+        ],
+        [
+            InlineKeyboardButton(
+                "💚 Ser Parte de UnaRed",
+                url=GROUP_LINK,
+            )
         ],
     ]
 
@@ -176,12 +232,8 @@ def banks_menu():
                 callback_data="bank_credit",
             )
         ],
-        [
-            InlineKeyboardButton(
-                "⬅️ Volver al menú",
-                callback_data="menu_home",
-            )
-        ],
+        more_button("banks"),
+        back_button(),
     ]
 
     return InlineKeyboardMarkup(keyboard)
@@ -230,12 +282,217 @@ def bank_services_menu(bank_id):
                 callback_data=f"bankservice_{bank_id}_other",
             )
         ],
+        more_button(f"bank_{bank_id}"),
+        back_button("menu_banks"),
+    ]
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+# =====================================
+# MENU AMAZON
+# =====================================
+
+def amazon_menu():
+
+    keyboard = [
         [
             InlineKeyboardButton(
-                "⬅️ Volver a bancos",
-                callback_data="menu_banks",
+                "🛒 Tengo Amazon",
+                callback_data="amazon_have",
             )
         ],
+        [
+            InlineKeyboardButton(
+                "ℹ️ Tengo Amazon, pero necesito saber más",
+                callback_data="amazon_info",
+            )
+        ],
+        more_button("amazon"),
+        back_button(),
+    ]
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+# =====================================
+# MENU APPLE
+# =====================================
+
+def apple_menu():
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "🍎 Tengo Apple",
+                callback_data="apple_have",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "ℹ️ Tengo Apple, pero necesito saber más",
+                callback_data="apple_info",
+            )
+        ],
+        more_button("apple"),
+        back_button(),
+    ]
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+# =====================================
+# MENU DE VUELOS
+# =====================================
+
+def flights_menu():
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "✈️ Quiero solicitar un vuelo",
+                callback_data="flight_request",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "ℹ️ Necesito más información",
+                callback_data="more_flights",
+            )
+        ],
+        back_button(),
+    ]
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+# =====================================
+# MENU DE ENVIOS Y REMESAS
+# =====================================
+
+def remittances_menu():
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "Remitly",
+                callback_data="remit_remitly",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "Western Union",
+                callback_data="remit_western",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "TapTap",
+                callback_data="remit_taptap",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "PayPal",
+                callback_data="remit_paypal",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "MoneyGram",
+                callback_data="remit_moneygram",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "Boss Money",
+                callback_data="remit_boss",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "Ria",
+                callback_data="remit_ria",
+            )
+        ],
+        more_button("remesas"),
+        back_button(),
+    ]
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+# =====================================
+# MENU DE PAGOS
+# =====================================
+
+def bills_menu():
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "🧾 Pago de Bill",
+                callback_data="bill_info",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "💳 Quiero pagar",
+                callback_data="bill_pay",
+            )
+        ],
+        more_button("pagos"),
+        back_button(),
+    ]
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+# =====================================
+# TIPOS DE PAGOS
+# =====================================
+
+def payment_types_menu():
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "🏠 Casa",
+                callback_data="pay_house",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🚗 Carro",
+                callback_data="pay_car",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "📱 Teléfono",
+                callback_data="pay_phone",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "💳 Tarjeta",
+                callback_data="pay_card",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "💰 Préstamo",
+                callback_data="pay_loan",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "💡 Luz",
+                callback_data="pay_light",
+            )
+        ],
+        more_button("pagos"),
+        back_button("pagos"),
     ]
 
     return InlineKeyboardMarkup(keyboard)
@@ -250,31 +507,57 @@ def tools_menu():
     keyboard = [
         [
             InlineKeyboardButton(
-                "👤 Perfiles",
-                callback_data="tool_profiles",
+                "📞 Línea virtual para uso legítimo",
+                callback_data="tool_line",
             )
         ],
         [
             InlineKeyboardButton(
-                "🧰 Herramientas autorizadas",
-                callback_data="tool_authorized",
+                "🔐 Soporte de autenticación",
+                callback_data="tool_auth",
             )
         ],
         [
             InlineKeyboardButton(
-                "🛠️ Soporte técnico",
-                callback_data="tool_support",
+                "🪪 Orientación sobre SSN",
+                callback_data="tool_ssn_info",
             )
         ],
         [
             InlineKeyboardButton(
-                "⬅️ Volver al menú",
-                callback_data="menu_home",
+                "💳 Tarjetas de regalo autorizadas",
+                callback_data="tool_giftcards",
             )
         ],
+        more_button("tools"),
+        back_button(),
     ]
 
     return InlineKeyboardMarkup(keyboard)
+
+
+# =====================================
+# SOLICITAR DETALLES
+# =====================================
+
+async def ask_for_details(
+    query,
+    context,
+    service,
+):
+
+    context.user_data["service"] = service
+    context.user_data["waiting_detail"] = True
+
+    await query.message.reply_text(
+        f"💚 UNARED | {service}\n\n"
+        "Escribe qué necesitas y nuestro equipo "
+        "recibirá tu solicitud.\n\n"
+        "⚠️ No envíes contraseñas, números completos "
+        "de tarjetas, SSN, códigos OTP ni datos "
+        "bancarios confidenciales.\n\n"
+        "Escribe /cancel para cancelar."
+    )
 
 
 # =====================================
@@ -318,30 +601,6 @@ async def start(
             welcome,
             reply_markup=main_menu(),
         )
-
-
-# =====================================
-# SOLICITAR DETALLES
-# =====================================
-
-async def ask_for_details(
-    query,
-    context,
-    service,
-):
-
-    context.user_data["service"] = service
-    context.user_data["waiting_detail"] = True
-
-    await query.message.reply_text(
-        f"💚 UNA RED | {service}\n\n"
-        "Escribe qué necesitas y nuestro equipo "
-        "recibirá tu solicitud.\n\n"
-        "⚠️ No envíes contraseñas, números completos "
-        "de tarjetas, SSN, códigos OTP ni datos "
-        "bancarios confidenciales.\n\n"
-        "Escribe /cancel para cancelar."
-    )
 
 
 # =====================================
@@ -391,32 +650,227 @@ async def select_option(
 
         await query.message.reply_text(
             "🧰 UNARED | CENTRO DE HERRAMIENTAS\n\n"
-            "Selecciona una herramienta:",
+            "Selecciona el servicio que necesitas:\n\n"
+            + PAYMENT_MESSAGE,
             reply_markup=tools_menu(),
         )
 
         return
 
-    # SELECCIONAR BANCO
+    # AMAZON
 
-    if choice.startswith("bank_"):
-
-        bank_id = choice.replace("bank_", "", 1)
-
-        bank_name = BANKS.get(bank_id)
-
-        if not bank_name:
-
-            await query.message.reply_text(
-                "Banco no disponible."
-            )
-
-            return
+    if choice == "amazon":
 
         await query.message.reply_text(
-            f"🏦 UNARED | {bank_name}\n\n"
-            "Selecciona el servicio que necesitas:",
-            reply_markup=bank_services_menu(bank_id),
+            "🛒 UNARED | AMAZON\n\n"
+            "Selecciona una opción:",
+            reply_markup=amazon_menu(),
+        )
+
+        return
+
+    if choice == "amazon_have":
+
+        await ask_for_details(
+            query,
+            context,
+            "Amazon - Tengo Amazon",
+        )
+
+        return
+
+    if choice == "amazon_info":
+
+        await ask_for_details(
+            query,
+            context,
+            "Amazon - Tengo Amazon, necesito más información",
+        )
+
+        return
+
+    # APPLE
+
+    if choice == "apple":
+
+        await query.message.reply_text(
+            "🍎 UNARED | APPLE\n\n"
+            "Selecciona una opción:",
+            reply_markup=apple_menu(),
+        )
+
+        return
+
+    if choice == "apple_have":
+
+        await ask_for_details(
+            query,
+            context,
+            "Apple - Tengo Apple",
+        )
+
+        return
+
+    if choice == "apple_info":
+
+        await ask_for_details(
+            query,
+            context,
+            "Apple - Tengo Apple, necesito más información",
+        )
+
+        return
+
+    # VUELOS
+
+    if choice == "vuelos":
+
+        await query.message.reply_text(
+            "✈️ UNARED | SERVICIOS DE VUELOS\n\n"
+            "¿Qué necesitas?",
+            reply_markup=flights_menu(),
+        )
+
+        return
+
+    if choice == "flight_request":
+
+        await ask_for_details(
+            query,
+            context,
+            "Solicitud de vuelo",
+        )
+
+        return
+
+    # ENVIOS Y REMESAS
+
+    if choice == "remesas":
+
+        await query.message.reply_text(
+            "💸 UNARED | ENVÍOS Y REMESAS\n\n"
+            "Selecciona la aplicación:",
+            reply_markup=remittances_menu(),
+        )
+
+        return
+
+    if choice.startswith("remit_"):
+
+        app_id = choice.replace("remit_", "", 1)
+
+        app_name = REMITTANCE_APPS.get(app_id)
+
+        if app_name:
+
+            await ask_for_details(
+                query,
+                context,
+                f"Envíos y remesas - {app_name}",
+            )
+
+        return
+
+    # PAGOS DE SERVICIOS
+
+    if choice == "pagos":
+
+        await query.message.reply_text(
+            "🧾 UNARED | PAGO DE SERVICIOS\n\n"
+            "Pago de Bill.\n"
+            "Selecciona una opción:",
+            reply_markup=bills_menu(),
+        )
+
+        return
+
+    if choice == "bill_info":
+
+        await ask_for_details(
+            query,
+            context,
+            "Información sobre Pago de Bill",
+        )
+
+        return
+
+    if choice == "bill_pay":
+
+        await query.message.reply_text(
+            "💳 UNARED | QUIERO PAGAR\n\n"
+            "Selecciona qué deseas pagar:",
+            reply_markup=payment_types_menu(),
+        )
+
+        return
+
+    if choice.startswith("pay_"):
+
+        payment_id = choice.replace("pay_", "", 1)
+
+        payment_name = PAYMENT_TYPES.get(payment_id)
+
+        if payment_name:
+
+            await ask_for_details(
+                query,
+                context,
+                payment_name,
+            )
+
+        return
+
+    # DIGITAL MONEY
+
+    if choice == "digital":
+
+        await ask_for_details(
+            query,
+            context,
+            "Digital Money",
+        )
+
+        return
+
+    # MAS INFORMACION
+
+    if choice.startswith("more_"):
+
+        section = choice.replace("more_", "", 1)
+
+        descriptions = {
+            "banks": "Información general sobre servicios bancarios",
+            "remesas": "Información sobre envíos y remesas",
+            "pagos": "Información sobre pagos de servicios",
+            "amazon": "Información sobre Amazon",
+            "apple": "Información sobre Apple",
+            "flights": "Información sobre vuelos",
+            "tools": "Información sobre herramientas",
+        }
+
+        # Información de bancos individuales
+
+        if section.startswith("bank_"):
+
+            bank_id = section.replace("bank_", "", 1)
+            bank_name = BANKS.get(bank_id)
+
+            if bank_name:
+                description = f"Más información sobre {bank_name}"
+            else:
+                description = "Más información sobre bancos"
+
+        else:
+
+            description = descriptions.get(
+                section,
+                "Información general de UnaRed",
+            )
+
+        await ask_for_details(
+            query,
+            context,
+            description,
         )
 
         return
@@ -452,6 +906,30 @@ async def select_option(
 
         return
 
+    # SELECCIONAR BANCO
+
+    if choice.startswith("bank_"):
+
+        bank_id = choice.replace("bank_", "", 1)
+
+        bank_name = BANKS.get(bank_id)
+
+        if not bank_name:
+
+            await query.message.reply_text(
+                "Banco no disponible."
+            )
+
+            return
+
+        await query.message.reply_text(
+            f"🏦 UNARED | {bank_name}\n\n"
+            "Selecciona el servicio que necesitas:",
+            reply_markup=bank_services_menu(bank_id),
+        )
+
+        return
+
     # HERRAMIENTAS
 
     if choice.startswith("tool_"):
@@ -473,20 +951,6 @@ async def select_option(
             await query.message.reply_text(
                 "Herramienta no disponible."
             )
-
-        return
-
-    # OTROS SERVICIOS
-
-    service = SERVICES.get(choice)
-
-    if service:
-
-        await ask_for_details(
-            query,
-            context,
-            service,
-        )
 
         return
 
