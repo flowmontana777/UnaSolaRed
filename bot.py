@@ -118,7 +118,7 @@ TOOLS = {
 def more_button(service_id):
     return [
         InlineKeyboardButton(
-            "ℹ️ Necesito saber más de la vuelta",
+            "ℹ️ Necesito saber de la Vuelta",
             callback_data=f"more_{service_id}",
         )
     ]
@@ -849,7 +849,28 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Información general de UnaRed",
             )
 
-        await ask_for_details(query, context, description)
+        user = update.effective_user
+        username = f"@{user.username}" if user.username else "Sin nombre de usuario"
+        try:
+            await context.bot.send_message(
+                chat_id=int(ADMIN_CHAT_ID),
+                text=(
+                    "📩 NUEVA SOLICITUD DE INFORMACIÓN | UNARED\\n\\n"
+                    f"Cliente: {user.full_name}\\n"
+                    f"Telegram: {username}\\n"
+                    f"ID: {user.id}\\n"
+                    f"Consulta: {description}\\n\\n"
+                    "Abre el perfil del cliente en Telegram para comunicarte con él."
+                ),
+            )
+            await query.message.reply_text(
+                "✅ Recibimos tu solicitud. El equipo de UnaRed se comunicará contigo para explicarte."
+            )
+        except Exception:
+            logger.exception("No se pudo notificar al administrador sobre la solicitud de información.")
+            await query.message.reply_text(
+                "No pudimos registrar tu solicitud en este momento. Inténtalo más tarde."
+            )
         return
 
     await query.message.reply_text("Opción no disponible.")
