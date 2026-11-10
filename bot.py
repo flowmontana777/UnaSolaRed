@@ -427,14 +427,7 @@ def tools_menu():
         [InlineKeyboardButton("🗂️ Páginas Buy CC | OFERTA US$17", callback_data="tool_pages")],
         [InlineKeyboardButton("🤖 Comprar Bot", callback_data="tool_bots")],
         [InlineKeyboardButton("🪪 SSN", callback_data="tool_ssn_info")],
-        [
-            InlineKeyboardButton("👤 Perfiles", callback_data="tool_profiles"),
-            InlineKeyboardButton("🛒 Amazon", callback_data="tool_amazon"),
-        ],
-        [
-            InlineKeyboardButton("🍎 iCloud", callback_data="tool_icloud"),
-            InlineKeyboardButton("💰 Préstamos", callback_data="tool_loans"),
-        ],
+        [InlineKeyboardButton("👤 Perfiles", callback_data="tool_profiles")],
         [InlineKeyboardButton("💵 Método PyP | OFERTA US$100", callback_data="tool_pyp")],
         [InlineKeyboardButton("📄 Papeles", callback_data="edit_buy_paper")],
         [InlineKeyboardButton("📄 Quiero Editar y Subir Papel", callback_data="tool_edit_upload")],
@@ -1065,9 +1058,21 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    if choice in ("tool_profiles", "tool_amazon", "tool_icloud", "tool_loans"):
+    if choice == "tool_profiles":
+        await query.message.reply_text(
+            "💚 UNARED | PERFILES\n\n"
+            "Selecciona el servicio que necesitas:",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🛒 Amazon", callback_data="tool_amazon")],
+                [InlineKeyboardButton("🍎 iCloud", callback_data="tool_icloud")],
+                [InlineKeyboardButton("💰 Préstamos", callback_data="tool_loans")],
+                [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
+            ]),
+        )
+        return
+
+    if choice in ("tool_amazon", "tool_icloud", "tool_loans"):
         labels = {
-            "tool_profiles": "PERFILES",
             "tool_amazon": "AMAZON",
             "tool_icloud": "ICLOUD",
             "tool_loans": "PRÉSTAMOS",
@@ -1078,7 +1083,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "No compartas contraseñas ni códigos de verificación.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("💬 Consultar servicio", url="https://t.me/flowmontana777")],
-                [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
+                [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
             ]),
         )
         return
