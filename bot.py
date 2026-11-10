@@ -914,8 +914,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/21033K6c/Creating-promotional-image-design-310bdb13.jpg",
             caption=(
                 "🔐 OTP Verification System v3.2\n\n"
-                "Automated call & SMS verification tool para demostraciones y pruebas "
-                "de autenticación en entornos sandbox, con números propios o autorizados.\n\n"
+                "Automated call & SMS verification tool "
+                " "
                 "💵 Precio: US$35\n\n"
                 "💳 MÉTODO DE PAGO\n"
                 "Moneda: USDT\n"
