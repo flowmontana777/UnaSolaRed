@@ -945,15 +945,18 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if choice == "tool_pages":
-        await query.message.reply_text(
-            "💚 UNARED | PÁGINAS BUY CC\n\n"
-            "Cada número identifica una página disponible en nuestro catálogo.\n"
-            "🏷️ Precio de oferta por página: US$17\n"
-            "Precio regular: US$20\n\n"
-            "📌 Solicita el catálogo actualizado para consultar los números "
-            "disponibles y sus características. Las páginas son para usos legítimos "
-            "y no deben utilizarse para suplantación ni para recopilar credenciales "
-            "o códigos de otras personas.",
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/dJQ4yzbg/Create-promotional-image-for-tel-003ed2cb.jpg",
+            caption=(
+                "💚 UNARED | PÁGINAS BUY CC\n\n"
+                "Cada número identifica una página disponible en nuestro catálogo.\n"
+                "🏷️ Precio de oferta por página: US$17\n"
+                "Precio regular: US$20\n\n"
+                "📌 Solicita el catálogo actualizado para consultar los números "
+                "disponibles y sus características. Las páginas son para usos legítimos "
+                "y no deben utilizarse para suplantación ni para recopilar credenciales "
+                "o códigos de otras personas."
+            ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("📋 Solicitar catálogo numerado", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
