@@ -559,7 +559,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         bank_images = {
-            "chase": "https://i.ibb.co/gLRfjxkT/Green-financial-brand-display-a05f13b3-2-K.jpg",
+            "chase": "https://i.ibb.co/prKMYW9X/Chase-Bank-promotional-image-design-fdd3c421-2-K.jpg",
             "boa": "https://i.ibb.co/4gnktDdq/Bank-logos-and-financial-symbols-a33fe393-2-K.jpg",
         }
         bank_image = bank_images.get(bank_id)
