@@ -423,8 +423,9 @@ def payment_types_menu():
 
 def tools_menu():
     keyboard = [
+        [InlineKeyboardButton("📞 Alquilar Línea Dialer", callback_data="tool_dayler")],
         [
-            InlineKeyboardButton("📞 Alquilar Línea Dayler", callback_data="tool_dayler"),
+            InlineKeyboardButton("💵 Método PyP | OFERTA US$100", callback_data="tool_pyp"),
             InlineKeyboardButton("🤖 Comprar Bot", callback_data="tool_bots"),
         ],
         [
@@ -432,9 +433,14 @@ def tools_menu():
             InlineKeyboardButton("🪪 SSN", callback_data="tool_ssn_info"),
         ],
         [
-            InlineKeyboardButton("💳 Tarjetas", callback_data="tool_giftcards"),
             InlineKeyboardButton("👤 Perfiles", callback_data="tool_profiles"),
+            InlineKeyboardButton("🛒 Amazon", callback_data="tool_amazon"),
         ],
+        [
+            InlineKeyboardButton("🍎 iCloud", callback_data="tool_icloud"),
+            InlineKeyboardButton("💰 Préstamos", callback_data="tool_loans"),
+        ],
+        [InlineKeyboardButton("🗂️ Páginas verificadas | US$17", callback_data="tool_pages")],
         [InlineKeyboardButton("📄 Papeles", callback_data="edit_buy_paper")],
         [InlineKeyboardButton("📄 Quiero Editar y Subir Papel", callback_data="tool_edit_upload")],
         more_button("tools"),
@@ -921,6 +927,55 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         product = products.get(choice)
         if product:
             await ask_for_details(query, context, product)
+        return
+
+    if choice == "tool_pyp":
+        await query.message.reply_text(
+            "💚 UNARED | MÉTODO PyP\n\n"
+            "🎉 OFERTA PARA CLIENTES NUEVOS: US$100\n\n"
+            "Para conocer los detalles del servicio y confirmar disponibilidad, "
+            "contacta directamente con nuestro equipo.\n"
+            "No envíes contraseñas, códigos de verificación ni datos bancarios.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Consultar y solicitar", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
+            ]),
+        )
+        return
+
+    if choice == "tool_pages":
+        await query.message.reply_text(
+            "💚 UNARED | PÁGINAS VERIFICADAS\n\n"
+            "Cada número identifica una página disponible en nuestro catálogo.\n"
+            "🏷️ Precio de oferta por página: US$17\n"
+            "Precio regular: US$20\n\n"
+            "📌 Solicita el catálogo actualizado para consultar los números "
+            "disponibles y sus características. Las páginas son para usos legítimos "
+            "y no deben utilizarse para suplantación ni para recopilar credenciales "
+            "o códigos de otras personas.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("📋 Solicitar catálogo numerado", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
+            ]),
+        )
+        return
+
+    if choice in ("tool_profiles", "tool_amazon", "tool_icloud", "tool_loans"):
+        labels = {
+            "tool_profiles": "PERFILES",
+            "tool_amazon": "AMAZON",
+            "tool_icloud": "ICLOUD",
+            "tool_loans": "PRÉSTAMOS",
+        }
+        await query.message.reply_text(
+            f"💚 UNARED | {labels[choice]}\n\n"
+            "Consulta los servicios disponibles con nuestro equipo. "
+            "No compartas contraseñas ni códigos de verificación.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Consultar servicio", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
+            ]),
+        )
         return
 
     if choice == "tool_giftcards":
