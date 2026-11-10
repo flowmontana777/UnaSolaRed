@@ -996,6 +996,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     InlineKeyboardButton(f"{quantity}", callback_data="pages_qty_display"),
                     InlineKeyboardButton("➕", callback_data="pages_qty_plus"),
                 ],
+                [InlineKeyboardButton("💳 ¡Pagar!", callback_data="pages_pay")],
                 [InlineKeyboardButton("📋 Solicitar selección", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
             ]),
@@ -1025,9 +1026,21 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     InlineKeyboardButton(f"{quantity}", callback_data="pages_qty_display"),
                     InlineKeyboardButton("➕", callback_data="pages_qty_plus"),
                 ],
+                [InlineKeyboardButton("💳 ¡Pagar!", callback_data="pages_pay")],
                 [InlineKeyboardButton("📋 Solicitar selección", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
             ]),
+        )
+        return
+
+    if choice == "pages_pay":
+        quantity = int(context.user_data.get("pages_quantity", 1))
+        total = quantity * 17
+        await query.message.reply_text(
+            "💚 UNARED | PAGO DE PÁGINAS\n\n"
+            f"📦 Cantidad: {quantity}\n"
+            f"💵 Total: US\\${total}\n\n"
+            + PAYMENT_MESSAGE
         )
         return
 
