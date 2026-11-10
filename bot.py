@@ -1036,11 +1036,14 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice == "pages_pay":
         quantity = int(context.user_data.get("pages_quantity", 1))
         total = quantity * 17
-        await query.message.reply_text(
-            "💚 UNARED | PAGO DE PÁGINAS\n\n"
-            f"📦 Cantidad: {quantity}\n"
-            f"💵 Total: US\\${total}\n\n"
-            + PAYMENT_MESSAGE
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/C56KgxnJ/Promotional-graphic-card-design-a75dfcaf-2-K.jpg",
+            caption=(
+                "💚 UNARED | PAGO DE PÁGINAS\n\n"
+                f"📦 Cantidad: {quantity}\n"
+                f"💵 Total: US\\${total}\n\n"
+                + PAYMENT_MESSAGE
+            ),
         )
         return
 
