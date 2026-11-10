@@ -424,6 +424,7 @@ def payment_types_menu():
 def tools_menu():
     keyboard = [
         [InlineKeyboardButton("📞 Alquilar Línea Dialer", callback_data="tool_dayler")],
+        [InlineKeyboardButton("🗂️ Páginas Buy CC | OFERTA US$17", callback_data="tool_pages")],
         [
             InlineKeyboardButton("💵 Método PyP | OFERTA US$100", callback_data="tool_pyp"),
             InlineKeyboardButton("🤖 Comprar Bot", callback_data="tool_bots"),
@@ -440,7 +441,7 @@ def tools_menu():
             InlineKeyboardButton("🍎 iCloud", callback_data="tool_icloud"),
             InlineKeyboardButton("💰 Préstamos", callback_data="tool_loans"),
         ],
-        [InlineKeyboardButton("🗂️ Páginas verificadas | US$17", callback_data="tool_pages")],
+        [InlineKeyboardButton("🗂️ Páginas Buy CC | OFERTA US$17", callback_data="tool_pages")],
         [InlineKeyboardButton("📄 Papeles", callback_data="edit_buy_paper")],
         [InlineKeyboardButton("📄 Quiero Editar y Subir Papel", callback_data="tool_edit_upload")],
         more_button("tools"),
@@ -945,7 +946,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "tool_pages":
         await query.message.reply_text(
-            "💚 UNARED | PÁGINAS VERIFICADAS\n\n"
+            "💚 UNARED | PÁGINAS BUY CC\n\n"
             "Cada número identifica una página disponible en nuestro catálogo.\n"
             "🏷️ Precio de oferta por página: US$17\n"
             "Precio regular: US$20\n\n"
