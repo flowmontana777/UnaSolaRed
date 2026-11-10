@@ -850,17 +850,23 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "tool_dayler":
         context.user_data.clear()
-        context.user_data["dayler_step"] = "username"
         await query.message.reply_photo(
             photo="https://i.ibb.co/7xp7rTMV/Create-promotional-image-for-tel-a730da20-2-K.jpg",
             caption=(
                 "📞 UNARED | ALQUILAR LÍNEA DAYLER\n\n"
-                "Escribe el nombre de usuario que deseas para tu cuenta SIP.\n"
-                "No envíes contraseñas de otras cuentas."
+                "Pulsa Empezar para solicitar tu nueva línea SIP."
             ),
             reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🚀 Empezar", callback_data="dayler_start")],
                 [InlineKeyboardButton("🔐 Soporte VoIP", callback_data="tool_auth")],
             ]),
+        )
+        return
+
+    if choice == "dayler_start":
+        context.user_data["dayler_step"] = "username"
+        await query.message.reply_text(
+            "👤 Escribe el usuario que deseas para tu nueva línea SIP."
         )
         return
 
@@ -1172,8 +1178,12 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if len(password) < 8 or len(password) > 64:
             await update.message.reply_text("La contraseña es obligatoria y debe tener entre 8 y 64 caracteres. Inténtalo otra vez.")
             return
-        context.user_data["dayler_password"] = password
+        # No conservar ni reenviar contraseñas por seguridad.
         context.user_data["dayler_step"] = "payment"
+        try:
+            await update.message.delete()
+        except Exception:
+            logger.warning("No se pudo borrar el mensaje con la contraseña SIP.")
         await update.message.reply_text(
             "💚 UNARED | RESUMEN DE TU ORDEN\n\n"
             f"Usuario SIP: {context.user_data.get('dayler_username')}\n"
@@ -1196,7 +1206,6 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Usuario Telegram: @{user.username or 'Sin usuario'}\n"
             f"ID Telegram: {user.id}\n"
             f"Usuario SIP solicitado: {context.user_data.get('dayler_username', 'No indicado')}\n"
-            f"Contraseña inicial SIP: {context.user_data.get('dayler_password', 'No indicada')}\n"
             f"Referencia de pago: {reference}\n"
             "Estado: pendiente de verificación manual."
         )
