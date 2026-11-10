@@ -910,26 +910,22 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if choice == "botproduct_otp":
-        context.user_data["service"] = "BOT OTP"
-        context.user_data["waiting_detail"] = True
-        await query.message.reply_text(
-            "🔐 OTP Verification System v3.2\n\n"
-            "Automated call & SMS verification tool.\n\n"
-            "💵 Precio: US$35\n\n"
-            "💳 MÉTODO DE PAGO\n"
-            "Moneda: USDT\n"
-            "Red: TRON (TRC20)\n"
-            f"Dirección: {PAYMENT_WALLET}\n\n"
-            "Después de realizar el pago, conserva el comprobante y contacta al equipo para verificarlo.\n\n"
-            "🔎 Si quieres un bot que esté funcionando, aquí lo buscamos y lo probamos "
-            "en entornos de prueba o cuentas que tengas autorización para verificar.\n\n"
-            "✨ Features:\n"
-            "• Real time call panel\n"
-            "• Human voice AI\n"
-            "• Caller ID verificado y configurable\n"
-            "• Multi country routes autorizadas\n"
-            "• Live status logs\n\n"
-            "📩 Escribe tu consulta para que el equipo de UnaRed pueda ayudarte."
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/21033K6c/Creating-promotional-image-design-310bdb13.jpg",
+            caption=(
+                "💚 UNARED | BOT OTP\n\n"
+                "🔐 Herramienta para pruebas de autenticación OTP en entornos sandbox, "
+                "números propios o cuentas que tengas autorización para verificar.\n\n"
+                "💵 Precio: US$35\n\n"
+                "⚠️ Uso exclusivo para pruebas autorizadas. No se deben solicitar, "
+                "capturar ni compartir códigos de verificación de otras personas. "
+                "Nunca envíes códigos reales al equipo.\n\n"
+                "📩 Consulta disponibilidad y detalles con UnaRed."
+            ),
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Consultar servicio", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
+            ]),
         )
         return
 
