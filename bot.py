@@ -913,14 +913,27 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_photo(
             photo="https://i.ibb.co/21033K6c/Creating-promotional-image-design-310bdb13.jpg",
             caption=(
-                "💚 UNARED | BOT OTP\n\n"
-                "🔐 Herramienta para pruebas de autenticación OTP en entornos sandbox, "
-                "números propios o cuentas que tengas autorización para verificar.\n\n"
+                "🔐 OTP Verification System v3.2\n\n"
+                "Automated call & SMS verification tool para demostraciones y pruebas "
+                "de autenticación en entornos sandbox, con números propios o autorizados.\n\n"
                 "💵 Precio: US$35\n\n"
-                "⚠️ Uso exclusivo para pruebas autorizadas. No se deben solicitar, "
-                "capturar ni compartir códigos de verificación de otras personas. "
-                "Nunca envíes códigos reales al equipo.\n\n"
-                "📩 Consulta disponibilidad y detalles con UnaRed."
+                "💳 MÉTODO DE PAGO\n"
+                "Moneda: USDT\n"
+                "Red: TRON (TRC20)\n"
+                f"Dirección: {PAYMENT_WALLET}\n\n"
+                "Después de realizar el pago, conserva el comprobante y contacta al equipo "
+                "para verificarlo.\n\n"
+                "🔎 Si quieres un bot que esté funcionando, aquí lo buscamos y lo probamos "
+                "en entornos de prueba o cuentas que tengas autorización para verificar.\n\n"
+                "✨ Features:\n"
+                "• Real time call panel de demostración\n"
+                "• Human voice AI para pruebas controladas\n"
+                "• Caller ID de prueba verificado y configurable\n"
+                "• Multi country routes en entornos sandbox autorizados\n"
+                "• Live status logs de las pruebas\n\n"
+                "⚠️ Solo para pruebas autorizadas. No se utiliza para obtener códigos "
+                "de terceros ni acceder a cuentas ajenas.\n\n"
+                "📩 Escribe tu consulta para que el equipo de UnaRed pueda ayudarte."
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("💬 Consultar servicio", url="https://t.me/flowmontana777")],
