@@ -562,6 +562,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "chase": "https://i.ibb.co/prKMYW9X/Chase-Bank-promotional-image-design-fdd3c421-2-K.jpg",
             "boa": "https://i.ibb.co/PvdvkDgM/Create-promotional-image-for-Bank-3fb32c12-2-K.jpg",
             "wells": "https://i.ibb.co/93BS584j/Bank-logos-and-financial-symbols-d8b31d62-2-K.jpg",
+            "citi": "https://i.ibb.co/B5fQN5Mp/Citibank-promotional-image-design-44c08ff5-2-K.jpg",
         }
         bank_image = bank_images.get(bank_id)
         caption = (
