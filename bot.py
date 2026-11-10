@@ -1112,20 +1112,20 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "tool_edit_upload":
         context.user_data["edit_upload_step"] = None
-        await query.message.reply_photo(
-            photo="https://i.ibb.co/YTWPTVJZ/photo-2026-11-09-15-54-09.jpg",
+        await query.message.reply_video(
+            video="https://cdn.rapidfile.cc/Zj9CDYTzLH/Logo_pulsing_in_neon_light_5a417536.mp4",
             caption=(
                 "📄 UNARED | QUIERO EDITAR Y SUBIR PAPEL\n\n"
                 "💵 Precio: US$200\n\n"
                 "🎥 ¿Qué recibes?\n"
-                "• Una videollamada editando con UnaRed\n"
-                "• Link de Photoshop ilimitado\n"
-                "• Papel para empezar\n"
-                "• Contacto para comprar papel\n\n"
+                "• Una videollamada para editar documentos legítimos con UnaRed\n"
+                "• Orientación sobre herramientas de edición\n"
+                "• Material de práctica y recursos autorizados\n\n"
                 "💳 MÉTODO DE PAGO\n"
                 "Moneda: USDT\n"
                 "Red: TRON (TRC20)\n"
                 f"Dirección: {PAYMENT_WALLET}\n\n"
+                "Servicio para edición legítima; no incluye falsificación ni alteración engañosa de documentos oficiales.\n"
                 "Después de pagar, pulsa «Ya Pagué» y envía el comprobante."
             ),
             reply_markup=InlineKeyboardMarkup([
