@@ -60,12 +60,19 @@ logger = logging.getLogger(__name__)
 # =====================================
 
 BANKS = {
-    "chase": "JPMorgan Chase",
+    "citi": "Citi",
+    "citizens": "Citizens Bank",
     "boa": "Bank of America",
-    "wells": "Wells Fargo",
-    "citi": "Citibank",
+    "chase": "JPMorgan Chase",
+    "discover": "Discover Bank",
     "capital": "Capital One",
-    "credit": "Credit Union",
+    "navy": "Navy Federal Credit Union",
+    "pnc": "PNC Bank",
+    "dcu": "DCU",
+    "santander": "Santander",
+    "regions": "Regions Bank",
+    "truist": "Truist Bank",
+    "wells": "Wells Fargo",
 }
 
 BANK_SERVICES = {
@@ -197,17 +204,26 @@ def main_menu():
 # =====================================
 
 def banks_menu():
-    keyboard = [
-        [InlineKeyboardButton("🏦 JPMorgan Chase", callback_data="bank_chase")],
-        [InlineKeyboardButton("🏦 Bank of America", callback_data="bank_boa")],
-        [InlineKeyboardButton("🏦 Wells Fargo", callback_data="bank_wells")],
-        [InlineKeyboardButton("🏦 Citibank", callback_data="bank_citi")],
-        [InlineKeyboardButton("🏦 Capital One", callback_data="bank_capital")],
-        [InlineKeyboardButton("🏦 Credit Union", callback_data="bank_credit")],
-        more_button("banks"),
-        back_button(),
+    bank_order = [
+        ("citi", "🏦 Citi"),
+        ("citizens", "🏦 Citizens Bank"),
+        ("boa", "🏦 Bank of America"),
+        ("chase", "🏦 JPMorgan Chase"),
+        ("discover", "🏦 Discover Bank"),
+        ("capital", "🏦 Capital One"),
+        ("navy", "🏦 Navy Federal"),
+        ("pnc", "🏦 PNC Bank"),
+        ("dcu", "🏦 DCU"),
+        ("santander", "🏦 Santander"),
+        ("regions", "🏦 Regions Bank"),
+        ("truist", "🏦 Truist Bank"),
+        ("wells", "🏦 Wells Fargo"),
     ]
-
+    keyboard = [
+        [InlineKeyboardButton(label, callback_data=f"bank_{bank_id}")]
+        for bank_id, label in bank_order
+    ]
+    keyboard.extend([more_button("banks"), back_button()])
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -217,8 +233,7 @@ def banks_menu():
 
 def bank_services_menu(bank_id):
     keyboard = [
-        [InlineKeyboardButton("⏱️ Tiempo", callback_data=f"bankinfo_{bank_id}_tiempo")],
-        [InlineKeyboardButton("💬 Trabajar ahora", url="https://t.me/flowmontana777")],
+        [InlineKeyboardButton("💬 Consultar servicios", url="https://t.me/flowmontana777")],
         back_button("menu_banks"),
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -559,10 +574,19 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         bank_images = {
-            "chase": "https://i.ibb.co/prKMYW9X/Chase-Bank-promotional-image-design-fdd3c421-2-K.jpg",
-            "boa": "https://i.ibb.co/PvdvkDgM/Create-promotional-image-for-Bank-3fb32c12-2-K.jpg",
-            "wells": "https://i.ibb.co/93BS584j/Bank-logos-and-financial-symbols-d8b31d62-2-K.jpg",
-            "citi": "https://i.ibb.co/B5fQN5Mp/Citibank-promotional-image-design-44c08ff5-2-K.jpg",
+            "citi": "https://i.ibb.co/3YcCXcLb/Citi-Bank-promotional-image-design-d7e032d9.jpg",
+            "citizens": "https://i.ibb.co/Vpc6DZsJ/Citizens-Bank-promotional-image-0dcbc19c.jpg",
+            "boa": "https://i.ibb.co/v41k3ZqX/Create-Bank-of-America-promotion-f3f42bce.jpg",
+            "chase": "https://i.ibb.co/wFvLyH1g/Create-Chase-Bank-promotional-image-b0f4d9af.jpg",
+            "discover": "https://i.ibb.co/FkvqfqsC/Creating-Discover-Bank-promotion-a0435e92.jpg",
+            "capital": "https://i.ibb.co/sJd00ZP8/Designing-Capital-One-promotiona-a4b6e8aa.jpg",
+            "navy": "https://i.ibb.co/bgmvgSfg/Navy-Federal-promotional-image-d-a1e37228.jpg",
+            "pnc": "https://i.ibb.co/TxMtDQQ4/PNC-Bank-promotional-image-design-581507fe.jpg",
+            "dcu": "https://i.ibb.co/QSqVqsw/Promotional-image-design-for-DCU-3e4dda17.jpg",
+            "santander": "https://i.ibb.co/81f40BH/Promotional-image-for-Santander-175c3219.jpg",
+            "regions": "https://i.ibb.co/Qv0RN1n9/Regions-Bank-promotional-image-d-1ca0273b.jpg",
+            "truist": "https://i.ibb.co/YBY77HgC/Truist-Bank-promotional-image-de-846cdc0d.jpg",
+            "wells": "https://i.ibb.co/wNg8zHSv/Wells-Fargo-promotional-image-de-77ab0756.jpg",
         }
         bank_image = bank_images.get(bank_id)
         caption = (
