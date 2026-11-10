@@ -914,8 +914,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/21033K6c/Creating-promotional-image-design-310bdb13.jpg",
             caption=(
                 "🔐 OTP Verification System v3.2\n\n"
-                "Automated call & SMS verification tool "
-                " "
+                "Automated call & SMS verification tool"
                 "💵 Precio: US$35\n\n"
                 "💳 MÉTODO DE PAGO\n"
                 "Moneda: USDT\n"
@@ -923,16 +922,15 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Dirección: {PAYMENT_WALLET}\n\n"
                 "Después de realizar el pago, conserva el comprobante y contacta al equipo "
                 "para verificarlo.\n\n"
-                "🔎 Si quieres un bot que esté funcionando, aquí lo buscamos y lo probamos "
-                "en entornos de prueba o cuentas que tengas autorización para verificar.\n\n"
+                "🔎 Si quieres un bot que esté funcionando, aquí lo buscamos y lo probamos.\n\n"
                 "✨ Features:\n"
                 "• Real time call panel de demostración\n"
                 "• Human voice AI para pruebas controladas\n"
-                "• Caller ID de prueba verificado y configurable\n"
+                "• Caller ID de verificado y configurable\n"
                 "• Multi country routes en entornos sandbox autorizados\n"
-                "• Live status logs de las pruebas\n\n"
-                "⚠️ Solo para pruebas autorizadas. No se utiliza para obtener códigos "
-                "de terceros ni acceder a cuentas ajenas.\n\n"
+                "• Live status logs\n\n"
+                "⚠️ se utiliza para obtener códigos "
+                "de terceros.\n\n"
                 "📩 Escribe tu consulta para que el equipo de UnaRed pueda ayudarte."
             ),
             reply_markup=InlineKeyboardMarkup([
