@@ -425,10 +425,7 @@ def tools_menu():
     keyboard = [
         [InlineKeyboardButton("📞 Alquilar Línea Dialer", callback_data="tool_dayler")],
         [InlineKeyboardButton("🗂️ Páginas Buy CC | OFERTA US$17", callback_data="tool_pages")],
-        [
-            InlineKeyboardButton("💵 Método PyP | OFERTA US$100", callback_data="tool_pyp"),
-            InlineKeyboardButton("🤖 Comprar Bot", callback_data="tool_bots"),
-        ],
+        [InlineKeyboardButton("🤖 Comprar Bot", callback_data="tool_bots")],
         [
             InlineKeyboardButton("🔐 Soporte VoIP", callback_data="tool_auth"),
             InlineKeyboardButton("🪪 SSN", callback_data="tool_ssn_info"),
