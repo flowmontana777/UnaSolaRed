@@ -714,10 +714,27 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         app_id = choice.replace("remit_", "", 1)
         app_name = REMITTANCE_APPS.get(app_id)
         if app_name:
-            await query.message.reply_text(
-                f"💸 UNARED | {app_name}\n\nSelecciona una opción:",
-                reply_markup=remittance_options_menu(app_id),
-            )
+            remittance_images = {
+                "moneygram": "https://i.ibb.co/zh3qqz6g/Create-promotional-image-for-Mon-a81f61c0.jpg",
+                "ria": "https://i.ibb.co/7TvCXwv/Designing-Ria-promotional-image-e4ea90ac.jpg",
+                "paypal": "https://i.ibb.co/Y71ZLQGQ/Pay-Pal-promotional-image-design-4c23fd05.jpg",
+                "taptap": "https://i.ibb.co/JRLwQMJM/esta-es-Tap-Tap-7e13b4cc.jpg",
+                "western": "https://i.ibb.co/W4PJKPjb/Western-Union-promotional-image-df5c8464.jpg",
+                "remitly": "https://i.ibb.co/sJjzgYX7/Creating-promotional-image-for-R-42f525cf.jpg",
+            }
+            caption = f"💸 UNARED | {app_name}\n\nSelecciona una opción:"
+            image_url = remittance_images.get(app_id)
+            if image_url:
+                await query.message.reply_photo(
+                    photo=image_url,
+                    caption=caption,
+                    reply_markup=remittance_options_menu(app_id),
+                )
+            else:
+                await query.message.reply_text(
+                    caption,
+                    reply_markup=remittance_options_menu(app_id),
+                )
         return
 
     # PAGOS DE SERVICIOS
