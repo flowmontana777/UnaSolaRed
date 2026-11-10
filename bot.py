@@ -956,12 +956,15 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if choice == "tool_pyp":
-        await query.message.reply_text(
-            "💚 UNARED | MÉTODO PyP\n\n"
-            "🎉 OFERTA PARA CLIENTES NUEVOS: US$100\n\n"
-            "Para conocer los detalles del servicio y confirmar disponibilidad, "
-            "contacta directamente con nuestro equipo.\n"
-            "No envíes contraseñas, códigos de verificación ni datos bancarios.",
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/Nqmk8fV/Promotional-graphic-card-design-9f04e875-2-K.jpg",
+            caption=(
+                "💚 UNARED | MÉTODO PyP\n\n"
+                "🎉 OFERTA PARA CLIENTES NUEVOS: US$100\n\n"
+                "Para conocer los detalles del servicio y confirmar disponibilidad, "
+                "contacta directamente con nuestro equipo.\n"
+                "No envíes contraseñas, códigos de verificación ni datos bancarios."
+            ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("💬 Consultar y solicitar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
