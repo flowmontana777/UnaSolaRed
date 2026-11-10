@@ -977,6 +977,23 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    if choice == "tool_ssn_info":
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/xqSWw0jN/Creating-promotional-image-for-U-bc5b392a.jpg",
+            caption=(
+                "🪪 UNARED | INFORMACIÓN SSN\n\n"
+                "Consulta orientación sobre trámites y servicios legítimos relacionados "
+                "con el Seguro Social de Estados Unidos.\n\n"
+                "Por tu seguridad, no envíes tu número SSN completo, documentos "
+                "personales ni códigos de verificación por este chat."
+            ),
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Consultar servicio", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
+            ]),
+        )
+        return
+
     if choice in ("tool_profiles", "tool_amazon", "tool_icloud", "tool_loans"):
         labels = {
             "tool_profiles": "PERFILES",
