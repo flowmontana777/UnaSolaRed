@@ -426,10 +426,7 @@ def tools_menu():
         [InlineKeyboardButton("📞 Alquilar Línea Dialer", callback_data="tool_dayler")],
         [InlineKeyboardButton("🗂️ Páginas Buy CC | OFERTA US$17", callback_data="tool_pages")],
         [InlineKeyboardButton("🤖 Comprar Bot", callback_data="tool_bots")],
-        [
-            InlineKeyboardButton("🔐 Soporte VoIP", callback_data="tool_auth"),
-            InlineKeyboardButton("🪪 SSN", callback_data="tool_ssn_info"),
-        ],
+        [InlineKeyboardButton("🪪 SSN", callback_data="tool_ssn_info")],
         [
             InlineKeyboardButton("👤 Perfiles", callback_data="tool_profiles"),
             InlineKeyboardButton("🛒 Amazon", callback_data="tool_amazon"),
@@ -861,7 +858,14 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Escribe el nombre de usuario que deseas para tu cuenta SIP.\n"
                 "No envíes contraseñas de otras cuentas."
             ),
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔐 Soporte VoIP", callback_data="tool_auth")],
+            ]),
         )
+        return
+
+    if choice == "tool_auth":
+        await ask_for_details(query, context, "Soporte VoIP")
         return
 
     if choice == "dayler_pay":
