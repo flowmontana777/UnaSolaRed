@@ -982,10 +982,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/xqSWw0jN/Creating-promotional-image-for-U-bc5b392a.jpg",
             caption=(
                 "🪪 UNARED | INFORMACIÓN SSN\n\n"
-                "Consulta orientación sobre trámites y servicios legítimos relacionados "
-                "con el Seguro Social de Estados Unidos.\n\n"
-                "Por tu seguridad, no envíes tu número SSN completo, documentos "
-                "personales ni códigos de verificación por este chat."
+                "Quiero Búsqueda de Seguro Social de Estados Unidos."
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("💬 Consultar servicio", url="https://t.me/flowmontana777")],
