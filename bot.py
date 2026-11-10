@@ -854,10 +854,13 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice == "tool_dayler":
         context.user_data.clear()
         context.user_data["dayler_step"] = "username"
-        await query.message.reply_text(
-            "📞 UNARED | ALQUILAR LÍNEA DAYLER\n\n"
-            "Escribe el nombre de usuario que deseas para tu cuenta SIP.\n"
-            "No envíes contraseñas de otras cuentas."
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/7xp7rTMV/Create-promotional-image-for-tel-a730da20-2-K.jpg",
+            caption=(
+                "📞 UNARED | ALQUILAR LÍNEA DAYLER\n\n"
+                "Escribe el nombre de usuario que deseas para tu cuenta SIP.\n"
+                "No envíes contraseñas de otras cuentas."
+            ),
         )
         return
 
