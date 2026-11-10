@@ -961,9 +961,10 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption=(
                 "💚 UNARED | MÉTODO PyP\n\n"
                 "🎉 OFERTA PARA CLIENTES NUEVOS: US$100\n\n"
-                "Para conocer los detalles del servicio y confirmar disponibilidad, "
-                "contacta directamente con nuestro equipo.\n"
-                "No envíes contraseñas, códigos de verificación ni datos bancarios."
+                "Aquí podrás encontrar información sobre oportunidades de pagos legítimos en Alemania.\n\n"
+                "📋 Requisitos: móvil y traductor.\n\n"
+                "Fue mi primera experiencia y todavía está activa; hoy la comparto "
+                "con quienes desean conocer estas oportunidades."
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("💬 Consultar y solicitar", url="https://t.me/flowmontana777")],
