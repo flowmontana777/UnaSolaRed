@@ -721,6 +721,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "taptap": "https://i.ibb.co/JRLwQMJM/esta-es-Tap-Tap-7e13b4cc.jpg",
                 "western": "https://i.ibb.co/W4PJKPjb/Western-Union-promotional-image-df5c8464.jpg",
                 "remitly": "https://i.ibb.co/sJjzgYX7/Creating-promotional-image-for-R-42f525cf.jpg",
+                "boss": "https://i.ibb.co/4Rm90Fw9/Create-promotional-image-for-Bos-852877e1.jpg",
             }
             caption = f"💸 UNARED | {app_name}\n\nSelecciona una opción:"
             image_url = remittance_images.get(app_id)
