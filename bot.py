@@ -204,26 +204,36 @@ def main_menu():
 # =====================================
 
 def banks_menu():
-    bank_order = [
-        ("citi", "🏦 Citi"),
-        ("citizens", "🏦 Citizens Bank"),
-        ("boa", "🏦 Bank of America"),
-        ("chase", "🏦 JPMorgan Chase"),
-        ("discover", "🏦 Discover Bank"),
-        ("capital", "🏦 Capital One"),
-        ("navy", "🏦 Navy Federal"),
-        ("pnc", "🏦 PNC Bank"),
-        ("dcu", "🏦 DCU"),
-        ("santander", "🏦 Santander"),
-        ("regions", "🏦 Regions Bank"),
-        ("truist", "🏦 Truist Bank"),
-        ("wells", "🏦 Wells Fargo"),
-    ]
+    # JPMorgan Chase destacado arriba; los demás bancos en dos columnas.
     keyboard = [
-        [InlineKeyboardButton(label, callback_data=f"bank_{bank_id}")]
-        for bank_id, label in bank_order
+        [InlineKeyboardButton("🏆 JPMorgan Chase", callback_data="bank_chase")],
+        [
+            InlineKeyboardButton("🏦 Bank of America", callback_data="bank_boa"),
+            InlineKeyboardButton("🏦 Wells Fargo", callback_data="bank_wells"),
+        ],
+        [
+            InlineKeyboardButton("🏦 Citibank", callback_data="bank_citi"),
+            InlineKeyboardButton("🏦 Capital One", callback_data="bank_capital"),
+        ],
+        [
+            InlineKeyboardButton("🏦 Navy Federal", callback_data="bank_navy"),
+            InlineKeyboardButton("🏦 PNC Bank", callback_data="bank_pnc"),
+        ],
+        [
+            InlineKeyboardButton("🏦 Discover Bank", callback_data="bank_discover"),
+            InlineKeyboardButton("🏦 Truist Bank", callback_data="bank_truist"),
+        ],
+        [
+            InlineKeyboardButton("🏦 Citizens Bank", callback_data="bank_citizens"),
+            InlineKeyboardButton("🏦 Santander", callback_data="bank_santander"),
+        ],
+        [
+            InlineKeyboardButton("🏦 Regions Bank", callback_data="bank_regions"),
+            InlineKeyboardButton("🏦 DCU", callback_data="bank_dcu"),
+        ],
+        more_button("banks"),
+        back_button(),
     ]
-    keyboard.extend([more_button("banks"), back_button()])
     return InlineKeyboardMarkup(keyboard)
 
 
