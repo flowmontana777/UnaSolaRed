@@ -933,14 +933,26 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    if choice.startswith("botproduct_"):
-        products = {
-            "botproduct_ssn": "BOT SSN",
-            "botproduct_check": "BOT CHECK",
-        }
-        product = products.get(choice)
-        if product:
-            await ask_for_details(query, context, product)
+    if choice == "botproduct_ssn":
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/RpJHvdrL/Create-promotional-image-with-logo-fb0d71ac.jpg",
+            caption="💚 UNARED | BOT SSN\\n\\nConsulta información y disponibilidad con nuestro equipo.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Consultar servicio", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
+            ]),
+        )
+        return
+
+    if choice == "botproduct_check":
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/HDb1BtDq/Create-Bot-Check-promotional-image-2a47bb9b.jpg",
+            caption="💚 UNARED | BOT CHECK\\n\\nConsulta información y disponibilidad con nuestro equipo.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Consultar servicio", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
+            ]),
+        )
         return
 
     if choice == "tool_pyp":
