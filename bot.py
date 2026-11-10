@@ -491,14 +491,6 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     choice = query.data
 
-    # Al navegar a otra sección, elimina el mensaje anterior del bot.
-    # Se conserva el mensaje en el teclado numérico, que se actualiza editándolo.
-    if not choice.startswith("banklimit_"):
-        try:
-            await query.message.delete()
-        except Exception:
-            logger.debug("No se pudo eliminar el mensaje anterior del menú.")
-
     # VOLVER AL MENU PRINCIPAL
 
     if choice == "menu_home":
