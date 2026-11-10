@@ -441,7 +441,7 @@ def tools_menu():
             InlineKeyboardButton("🍎 iCloud", callback_data="tool_icloud"),
             InlineKeyboardButton("💰 Préstamos", callback_data="tool_loans"),
         ],
-        [InlineKeyboardButton("🗂️ Páginas Buy CC | OFERTA US$17", callback_data="tool_pages")],
+        [InlineKeyboardButton("💵 Método PyP | OFERTA US$100", callback_data="tool_pyp")],
         [InlineKeyboardButton("📄 Papeles", callback_data="edit_buy_paper")],
         [InlineKeyboardButton("📄 Quiero Editar y Subir Papel", callback_data="tool_edit_upload")],
         more_button("tools"),
