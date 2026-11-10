@@ -1059,9 +1059,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if choice == "tool_profiles":
-        await query.message.reply_text(
-            "💚 UNARED | PERFILES\n\n"
-            "Selecciona el servicio que necesitas:",
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/HTfzWz7m/Create-promotional-graphic-card-b9bb92c4-2-K.jpg",
+            caption=(
+                "💚 UNARED | PERFILES\n\n"
+                "Selecciona el servicio que necesitas:"
+            ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Amazon", callback_data="tool_amazon")],
                 [InlineKeyboardButton("🍎 iCloud", callback_data="tool_icloud")],
