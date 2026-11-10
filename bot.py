@@ -889,9 +889,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if choice == "tool_bots":
-        await query.message.reply_text(
-            "🤖 UNARED | CATÁLOGO DE BOTS\n\n"
-            "Selecciona el tipo de automatización que necesitas:",
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/9Ct8LfQ/Create-promotional-image-for-tel-740dbeb8.jpg",
+            caption=(
+                "🤖 UNARED | CATÁLOGO DE BOTS\n\n"
+                "Selecciona el tipo de automatización que necesitas:"
+            ),
             reply_markup=bot_catalog_menu(),
         )
         return
