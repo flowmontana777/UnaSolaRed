@@ -1037,7 +1037,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         quantity = int(context.user_data.get("pages_quantity", 1))
         total = quantity * 17
         await query.message.reply_photo(
-            photo="https://i.ibb.co/C56KgxnJ/Promotional-graphic-card-design-a75dfcaf-2-K.jpg",
+            photo="https://i.ibb.co/SDSpDZbr/Una-Red-promotional-graphic-card-4a15ae25-2-K.jpg",
             caption=(
                 "💚 UNARED | PAGO DE PÁGINAS\n\n"
                 f"📦 Cantidad: {quantity}\n"
