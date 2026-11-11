@@ -1552,9 +1552,12 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         context.user_data["dayler_username"] = username
         context.user_data["dayler_step"] = "password"
-        await update.message.reply_text(
-            "🔐 Crea la contraseña para tu nueva cuenta SIP.\n\n"
-            "Debe tener entre 8 y 64 caracteres. No uses la contraseña de otra cuenta."
+        await update.message.reply_photo(
+            photo="https://i.ibb.co/Ng1nYXJR/Create-promotional-graphic-card-f640c15b.jpg",
+            caption=(
+                "🔐 Crea la contraseña para tu nueva cuenta SIP.\n\n"
+                "Debe tener entre 8 y 64 caracteres. No uses la contraseña de otra cuenta."
+            )
         )
         return
 
