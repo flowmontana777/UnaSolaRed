@@ -991,6 +991,13 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         try:
             with sqlite3.connect(DATABASE_PATH) as db:
+                db.execute("""CREATE TABLE IF NOT EXISTS dayler_invoices (
+                    invoice_id TEXT PRIMARY KEY,
+                    telegram_id INTEGER NOT NULL,
+                    amount TEXT NOT NULL,
+                    username TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'PENDING'
+                )""")
                 row = db.execute(
                     "SELECT invoice_id, amount, status FROM dayler_invoices WHERE telegram_id = ? ORDER BY rowid DESC LIMIT 1",
                     (update.effective_user.id,),
@@ -1264,6 +1271,13 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         try:
             with sqlite3.connect(DATABASE_PATH) as db:
+                db.execute("""CREATE TABLE IF NOT EXISTS pages_invoices (
+                    invoice_id TEXT PRIMARY KEY,
+                    telegram_id INTEGER NOT NULL,
+                    amount TEXT NOT NULL,
+                    quantity INTEGER NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'PENDING'
+                )""")
                 row = db.execute(
                     "SELECT invoice_id, amount, quantity, status FROM pages_invoices WHERE telegram_id = ? ORDER BY rowid DESC LIMIT 1",
                     (update.effective_user.id,),
