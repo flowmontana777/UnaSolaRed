@@ -1747,15 +1747,31 @@ async def wolvpay_webhook(request):
                 "SELECT telegram_id, amount, username, status FROM dayler_invoices WHERE invoice_id = ?",
                 (invoice_id,),
             ).fetchone()
+            invoice_type = "dayler"
+            if not row:
+                row = db.execute(
+                    "SELECT telegram_id, amount, quantity, status FROM pages_invoices WHERE invoice_id = ?",
+                    (invoice_id,),
+                ).fetchone()
+                invoice_type = "pages"
     except sqlite3.Error:
-        logger.exception("Could not read Dayler invoice record.")
+        logger.exception("Could not read WolvPay invoice record.")
         return web.Response(status=500, text="Database error.")
 
     if not row:
         logger.warning("Received WolvPay event for unknown invoice %s", invoice_id)
         return web.Response(status=200, text="Unknown invoice ignored.")
 
-    telegram_id, expected_amount, username, current_status = row
+    if invoice_type == "dayler":
+        telegram_id, expected_amount, username, current_status = row
+        customer_description = "Tu pago de US$150 para la solicitud Dayler fue confirmado automáticamente."
+        order_detail = f"Usuario SIP solicitado: {username}"
+        admin_detail = f"Usuario SIP solicitado: {username}\nImporte confirmado: US$150"
+    else:
+        telegram_id, expected_amount, quantity, current_status = row
+        customer_description = "Tu pago de US$" + str(expected_amount) + f" por {quantity} página(s) web fue confirmado automáticamente."
+        order_detail = f"Cantidad de páginas web: {quantity}"
+        admin_detail = f"Cantidad: {quantity}\nImporte confirmado: US$" + str(expected_amount)
     if current_status == "PAID":
         return web.Response(status=200, text="Already processed.")
 
@@ -1786,8 +1802,9 @@ async def wolvpay_webhook(request):
 
     try:
         with sqlite3.connect(DATABASE_PATH) as db:
+            table_name = "dayler_invoices" if invoice_type == "dayler" else "pages_invoices"
             cursor = db.execute(
-                "UPDATE dayler_invoices SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'",
+                f"UPDATE {table_name} SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'",
                 (invoice_id,),
             )
             if cursor.rowcount != 1:
@@ -1802,8 +1819,7 @@ async def wolvpay_webhook(request):
             chat_id=int(telegram_id),
             text=(
                 "✅ PAGO CONFIRMADO | UNARED\n\n"
-                "Tu pago de US$150 para la solicitud Dayler fue confirmado automáticamente.\n"
-                f"Usuario SIP solicitado: {username}\n"
+                f"{customer_description}\n{order_detail}\n"
                 f"Factura: {invoice_id}\n\n"
                 "El equipo de UnaRed continuará con la preparación de tu servicio."
             ),
@@ -1811,10 +1827,8 @@ async def wolvpay_webhook(request):
         await application.bot.send_message(
             chat_id=int(ADMIN_CHAT_ID),
             text=(
-                "💚 PAGO DAYLER CONFIRMADO | UNARED\n\n"
-                f"Cliente Telegram ID: {telegram_id}\n"
-                f"Usuario SIP solicitado: {username}\n"
-                "Importe confirmado: US$150\n"
+                "💚 PAGO " + ("DAYLER" if invoice_type == "dayler" else "PÁGINAS WEB") + " CONFIRMADO | UNARED\n\n"
+                f"Cliente Telegram ID: {telegram_id}\n{admin_detail}\n"
                 f"Factura WolvPay: {invoice_id}\n"
                 "Estado: PAGADO (verificado con WolvPay)."
             ),
