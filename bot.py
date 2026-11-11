@@ -1782,9 +1782,6 @@ async def wolvpay_webhook(request):
         customer_description = "Tu pago de US$" + str(expected_amount) + f" por {quantity} página(s) web fue confirmado automáticamente."
         order_detail = f"Cantidad de páginas web: {quantity}"
         admin_detail = f"Cantidad: {quantity}\nImporte confirmado: US$" + str(expected_amount)
-    if current_status == "PAID":
-        return web.Response(status=200, text="Already processed.")
-
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(
@@ -1813,41 +1810,72 @@ async def wolvpay_webhook(request):
     try:
         with sqlite3.connect(DATABASE_PATH) as db:
             table_name = "dayler_invoices" if invoice_type == "dayler" else "pages_invoices"
-            cursor = db.execute(
+            db.execute(
                 f"UPDATE {table_name} SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'",
                 (invoice_id,),
             )
-            if cursor.rowcount != 1:
-                return web.Response(status=200, text="Already processed.")
+            confirmed = db.execute(
+                f"SELECT status FROM {table_name} WHERE invoice_id = ?",
+                (invoice_id,),
+            ).fetchone()
+            if not confirmed or confirmed[0] != "PAID":
+                logger.error("Invoice %s could not be marked PAID after provider verification.", invoice_id)
+                return web.Response(status=500, text="Could not persist payment status.")
+
+            db.execute(
+                """CREATE TABLE IF NOT EXISTS wolvpay_notifications (
+                    invoice_id TEXT PRIMARY KEY,
+                    customer_sent INTEGER NOT NULL DEFAULT 0,
+                    admin_sent INTEGER NOT NULL DEFAULT 0
+                )"""
+            )
+            db.execute(
+                "INSERT OR IGNORE INTO wolvpay_notifications (invoice_id) VALUES (?)",
+                (invoice_id,),
+            )
+            notification_state = db.execute(
+                "SELECT customer_sent, admin_sent FROM wolvpay_notifications WHERE invoice_id = ?",
+                (invoice_id,),
+            ).fetchone()
     except sqlite3.Error:
-        logger.exception("Could not mark Dayler invoice as paid.")
+        logger.exception("Could not persist WolvPay payment/notification state for %s.", invoice_id)
         return web.Response(status=500, text="Database error.")
 
     application = request.app["telegram_application"]
-    try:
-        await application.bot.send_message(
-            chat_id=int(telegram_id),
-            text=(
-                "✅ PAGO CONFIRMADO | UNARED\n\n"
-                f"{customer_description}\n{order_detail}\n"
-                f"Factura: {invoice_id}\n\n"
-                "El equipo de UnaRed continuará con la preparación de tu servicio."
-            ),
-        )
-        await application.bot.send_message(
-            chat_id=int(ADMIN_CHAT_ID),
-            text=(
-                "💚 PAGO " + ("DAYLER" if invoice_type == "dayler" else "PÁGINAS WEB") + " CONFIRMADO | UNARED\n\n"
-                f"Cliente Telegram ID: {telegram_id}\n{admin_detail}\n"
-                f"Factura WolvPay: {invoice_id}\n"
-                "Estado: PAGADO (verificado con WolvPay)."
-            ),
-        )
-    except Exception:
-        logger.exception("Payment confirmed but Telegram notification failed for %s", invoice_id)
-        return web.Response(status=500, text="Payment confirmed; notification will need review.")
+    customer_text = (
+        "✅ PAGO CONFIRMADO | UNARED\n\n"
+        f"{customer_description}\n{order_detail}\n"
+        f"Factura: {invoice_id}\n\n"
+        "El equipo de UnaRed continuará con la preparación de tu servicio."
+    )
+    admin_text = (
+        "💚 PAGO " + ("DAYLER" if invoice_type == "dayler" else "PÁGINAS WEB") + " CONFIRMADO | UNARED\n\n"
+        f"Cliente Telegram ID: {telegram_id}\n{admin_detail}\n"
+        f"Factura WolvPay: {invoice_id}\n"
+        "Estado: PAGADO (verificado con WolvPay)."
+    )
 
-    return web.Response(status=200, text="Webhook processed.")
+    try:
+        if not notification_state[0]:
+            await application.bot.send_message(chat_id=int(telegram_id), text=customer_text)
+            with sqlite3.connect(DATABASE_PATH) as db:
+                db.execute(
+                    "UPDATE wolvpay_notifications SET customer_sent = 1 WHERE invoice_id = ?",
+                    (invoice_id,),
+                )
+
+        if not notification_state[1]:
+            await application.bot.send_message(chat_id=int(ADMIN_CHAT_ID), text=admin_text)
+            with sqlite3.connect(DATABASE_PATH) as db:
+                db.execute(
+                    "UPDATE wolvpay_notifications SET admin_sent = 1 WHERE invoice_id = ?",
+                    (invoice_id,),
+                )
+    except Exception:
+        logger.exception("Payment confirmed; notification retry is pending for %s", invoice_id)
+        return web.Response(status=500, text="Payment confirmed; notification retry required.")
+
+    return web.Response(status=200, text="Webhook processed; notifications complete.")
 
 
 async def start_webhook_server(application):
