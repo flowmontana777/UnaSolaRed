@@ -965,7 +965,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Pulsa el botón para completar el pago. "
                 "La orden se confirmará automáticamente cuando WolvPay valide el pago.",
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)]
+                    [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
+                    [InlineKeyboardButton("🔎 Verificar pago", callback_data="dayler_verify")]
                 ]),
             )
         except Exception:
@@ -974,6 +975,52 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "No pudimos generar la factura en este momento. "
                 "No realices ninguna transferencia manual; inténtalo más tarde o contacta al equipo."
             )
+        return
+
+    if choice == "dayler_verify":
+        if not WOLVPAY_API_KEY:
+            await query.message.reply_text("La verificación automática no está disponible. Contacta al equipo de UnaRed.")
+            return
+        try:
+            with sqlite3.connect(DATABASE_PATH) as db:
+                row = db.execute(
+                    "SELECT invoice_id, amount, status FROM dayler_invoices WHERE telegram_id = ? ORDER BY rowid DESC LIMIT 1",
+                    (update.effective_user.id,),
+                ).fetchone()
+            if not row:
+                await query.message.reply_text("No encontramos una factura asociada a tu cuenta.")
+                return
+            invoice_id, expected_amount, current_status = row
+            if current_status == "PAID":
+                await query.message.reply_text("✅ Tu pago ya está confirmado. El equipo de UnaRed continuará con tu solicitud.")
+                return
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{WOLVPAY_API_URL}/invoices/{invoice_id}",
+                    headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}"},
+                    timeout=aiohttp.ClientTimeout(total=20),
+                ) as response:
+                    payload = await response.json(content_type=None)
+                    if response.status != 200:
+                        logger.error("WolvPay manual verification returned HTTP %s", response.status)
+                        await query.message.reply_text("No pudimos consultar la factura ahora mismo. Inténtalo nuevamente en unos minutos.")
+                        return
+            invoice = payload.get("data") or payload
+            status = str(invoice.get("status", "")).upper()
+            verified_amount = Decimal(str(invoice.get("amount", "0")))
+            if status == "PAID" and str(invoice.get("invoice_id", invoice_id)) == invoice_id and verified_amount == Decimal(expected_amount):
+                with sqlite3.connect(DATABASE_PATH) as db:
+                    db.execute("UPDATE dayler_invoices SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'", (invoice_id,))
+                await query.message.reply_text("✅ WolvPay confirma que tu pago está realizado. El equipo de UnaRed continuará con tu solicitud.")
+                await context.bot.send_message(
+                    chat_id=int(ADMIN_CHAT_ID),
+                    text=f"💚 PAGO DAYLER CONFIRMADO | UNARED\\nFactura: {invoice_id}\\nCliente Telegram ID: {update.effective_user.id}\\nEstado: PAGADO (consulta manual verificada con WolvPay)."
+                )
+            else:
+                await query.message.reply_text("⏳ WolvPay todavía no confirma el pago. Espera unos minutos y vuelve a pulsar «Verificar pago».")
+        except (aiohttp.ClientError, asyncio.TimeoutError, sqlite3.Error, InvalidOperation, ValueError, TypeError):
+            logger.exception("Error during manual WolvPay verification.")
+            await query.message.reply_text("No pudimos verificar el pago en este momento. Inténtalo más tarde.")
         return
 
     if choice == "dayler_paid":
