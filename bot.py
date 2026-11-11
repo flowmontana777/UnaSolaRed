@@ -1128,17 +1128,17 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_photo(
             photo="https://i.ibb.co/dJQ4yzbg/Create-promotional-image-for-tel-003ed2cb.jpg",
             caption=(
-                "💚 UNARED | PÁGINAS DE PAGO\n\n"
-                "Mi Catálogo de Páginas de CC 🛍️💳\n"
-                "🏷️ Precio por unidad: US$17\n"
-                "Precio regular: US$20\n\n"
-                f"📦 Cantidad: {quantity}\n"
-                f"💵 Total: US\${total}"
+                "💚 UNARED | PÁGINAS WEB\\n\\n"
+                "Catálogo de páginas web para comercios legítimos.\\n"
+                "🏷️ Precio por unidad: US$17\\n"
+                "Precio regular: US$20\\n\\n"
+                f"📦 Cantidad: {quantity}\\n"
+                f"💵 Total: US${total}"
             ),
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("➖", callback_data="pages_qty_minus"),
-                    InlineKeyboardButton(f"{quantity}", callback_data="pages_qty_display"),
+                    InlineKeyboardButton(str(quantity), callback_data="pages_qty_display"),
                     InlineKeyboardButton("➕", callback_data="pages_qty_plus"),
                 ],
                 [InlineKeyboardButton("💳 ¡Pagar!", callback_data="pages_pay")],
@@ -1150,34 +1150,43 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice in ("pages_qty_plus", "pages_qty_minus"):
         quantity = int(context.user_data.get("pages_quantity", 1))
-        if choice == "pages_qty_plus":
-            quantity = min(quantity + 1, 99)
-        else:
-            quantity = max(quantity - 1, 1)
+        quantity = min(quantity + 1, 99) if choice == "pages_qty_plus" else max(quantity - 1, 1)
         context.user_data["pages_quantity"] = quantity
         total = quantity * 17
         await query.edit_message_caption(
             caption=(
-                "💚 UNARED | PÁGINAS DE PAGO\n\n"
-                "Mi Catálogo de Páginas de CC 🛍️💳\n"
-                "🏷️ Precio por unidad: US$17\n"
-                "Precio regular: US$20\n\n"
-                f"📦 Cantidad: {quantity}\n"
-                f"💵 Total: US\${total}"
+                "💚 UNARED | PÁGINAS WEB\\n\\n"
+                "Catálogo de páginas web para comercios legítimos.\\n"
+                "🏷️ Precio por unidad: US$17\\n"
+                "Precio regular: US$20\\n\\n"
+                f"📦 Cantidad: {quantity}\\n"
+                f"💵 Total: US${total}"
             ),
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("➖", callback_data="pages_qty_minus"),
-                    InlineKeyboardButton(f"{quantity}", callback_data="pages_qty_display"),
+                    InlineKeyboardButton(str(quantity), callback_data="pages_qty_display"),
                     InlineKeyboardButton("➕", callback_data="pages_qty_plus"),
-                    if choice == "pages_pay":
+                ],
+                [InlineKeyboardButton("💳 ¡Pagar!", callback_data="pages_pay")],
+                [InlineKeyboardButton("📋 Solicitar selección", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
+            ]),
+        )
+        return
+
+    if choice == "pages_qty_display":
+        await query.answer("Usa ➕ o ➖ para cambiar la cantidad.")
+        return
+
+    if choice == "pages_pay":
         quantity = int(context.user_data.get("pages_quantity", 1))
         context.user_data["pages_checkout_quantity"] = quantity
         total = quantity * 17
         await query.message.reply_text(
-            "💚 UNARED | PAGO DE PÁGINAS WEB\n\n"
-            f"📦 Cantidad: {quantity}\n"
-            "💵 Total: US$" + str(total) + "\n\n"
+            "💚 UNARED | PAGO DE PÁGINAS WEB\\n\\n"
+            f"📦 Cantidad: {quantity}\\n"
+            f"💵 Total: US${total}\\n\\n"
             "Selecciona tu método de pago:",
             reply_markup=pages_coin_menu(),
         )
@@ -1200,7 +1209,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"{WOLVPAY_API_URL}/invoices",
                     headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}", "Content-Type": "application/json"},
                     json={
-                        "amount": total, "currency": "USD", "coin": coin,
+                        "amount": total,
+                        "currency": "USD",
+                        "coin": coin,
                         "description": f"UNARED_PAGINAS_WEB|telegram_id={user.id}|quantity={quantity}",
                         "white_label": False,
                     },
@@ -1218,8 +1229,10 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 raise RuntimeError("Incomplete invoice response")
             with sqlite3.connect(DATABASE_PATH) as db:
                 db.execute("""CREATE TABLE IF NOT EXISTS pages_invoices (
-                    invoice_id TEXT PRIMARY KEY, telegram_id INTEGER NOT NULL,
-                    amount TEXT NOT NULL, quantity INTEGER NOT NULL,
+                    invoice_id TEXT PRIMARY KEY,
+                    telegram_id INTEGER NOT NULL,
+                    amount TEXT NOT NULL,
+                    quantity INTEGER NOT NULL,
                     status TEXT NOT NULL DEFAULT 'PENDING'
                 )""")
                 db.execute(
@@ -1227,10 +1240,10 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     (invoice_id, user.id, str(total), quantity),
                 )
             await query.message.reply_text(
-                "💚 UNARED | FACTURA DE PÁGINAS WEB\n\n"
-                f"📦 Cantidad: {quantity}\n"
-                "💵 Total: US$" + str(total) + "\n"
-                f"🧾 Factura: {invoice_id}\n\n"
+                "💚 UNARED | FACTURA DE PÁGINAS WEB\\n\\n"
+                f"📦 Cantidad: {quantity}\\n"
+                f"💵 Total: US${total}\\n"
+                f"🧾 Factura: {invoice_id}\\n\\n"
                 "Completa el pago desde WolvPay.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
@@ -1240,7 +1253,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         except Exception:
             logger.exception("No se pudo crear la factura WolvPay para Páginas Web.")
-            await query.message.reply_text("No pudimos generar la factura. No realices transferencias manuales; inténtalo más tarde o contacta al equipo.")
+            await query.message.reply_text(
+                "No pudimos generar la factura. No realices transferencias manuales; inténtalo más tarde o contacta al equipo."
+            )
         return
 
     if choice == "pages_verify":
@@ -1281,29 +1296,24 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.message.reply_text("⏳ WolvPay todavía no confirma el pago. Vuelve a verificar en unos minutos.")
                 return
             with sqlite3.connect(DATABASE_PATH) as db:
-                db.execute("UPDATE pages_invoices SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'", (invoice_id,))
+                db.execute(
+                    "UPDATE pages_invoices SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'",
+                    (invoice_id,),
+                )
             await query.message.reply_text("✅ WolvPay confirma tu pago. El equipo de UnaRed continuará con tu solicitud.")
             await context.bot.send_message(
                 chat_id=int(ADMIN_CHAT_ID),
-                text=f"💚 PAGO DE PÁGINAS WEB CONFIRMADO | UNARED\nCliente: {update.effective_user.id}\nCantidad: {quantity}\nImporte: US$" + str(expected_amount) + f"\nFactura: {invoice_id}",
+                text=(
+                    "💚 PAGO DE PÁGINAS WEB CONFIRMADO | UNARED\\n"
+                    f"Cliente: {update.effective_user.id}\\n"
+                    f"Cantidad: {quantity}\\n"
+                    f"Importe: US${expected_amount}\\n"
+                    f"Factura: {invoice_id}"
+                ),
             )
         except (aiohttp.ClientError, asyncio.TimeoutError, sqlite3.Error, InvalidOperation, ValueError, TypeError):
             logger.exception("Error verificando pago de páginas web.")
             await query.message.reply_text("No pudimos verificar el pago en este momento.")
-        return
-
-photo="https://i.ibb.co/SDSpDZbr/Una-Red-promotional-graphic-card-4a15ae25-2-K.jpg",
-            caption=(
-                "💚 UNARED | PAGO DE PÁGINAS\n\n"
-                f"📦 Cantidad: {quantity}\n"
-                f"💵 Total: US\\${total}\n\n"
-                + PAYMENT_MESSAGE
-            ),
-        )
-        return
-
-    if choice == "pages_qty_display":
-        await query.answer("Usa ➕ o ➖ para cambiar la cantidad.")
         return
 
     if choice == "tool_ssn_info":
