@@ -376,6 +376,14 @@ def dayler_coin_menu():
     ])
 
 
+def pages_coin_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("₿ Bitcoin (BTC)", callback_data="pages_coin_btc")],
+        [InlineKeyboardButton("₮ USDT (TRC20)", callback_data="pages_coin_trc20_usdt")],
+        [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_pages")],
+    ])
+
+
 def bill_amount_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("1", callback_data="bill_digit_1"), InlineKeyboardButton("2", callback_data="bill_digit_2"), InlineKeyboardButton("3", callback_data="bill_digit_3")],
@@ -1162,19 +1170,129 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     InlineKeyboardButton("➖", callback_data="pages_qty_minus"),
                     InlineKeyboardButton(f"{quantity}", callback_data="pages_qty_display"),
                     InlineKeyboardButton("➕", callback_data="pages_qty_plus"),
-                ],
-                [InlineKeyboardButton("💳 ¡Pagar!", callback_data="pages_pay")],
-                [InlineKeyboardButton("📋 Solicitar selección", url="https://t.me/flowmontana777")],
-                [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
-            ]),
+                    if choice == "pages_pay":
+        quantity = int(context.user_data.get("pages_quantity", 1))
+        context.user_data["pages_checkout_quantity"] = quantity
+        total = quantity * 17
+        await query.message.reply_text(
+            "💚 UNARED | PAGO DE PÁGINAS WEB\n\n"
+            f"📦 Cantidad: {quantity}\n"
+            "💵 Total: US$" + str(total) + "\n\n"
+            "Selecciona tu método de pago:",
+            reply_markup=pages_coin_menu(),
         )
         return
 
-    if choice == "pages_pay":
-        quantity = int(context.user_data.get("pages_quantity", 1))
+    if choice.startswith("pages_coin_"):
+        coin = choice.replace("pages_coin_", "", 1)
+        if coin not in ("btc", "trc20_usdt"):
+            await query.message.reply_text("Método de pago no disponible.")
+            return
+        if not WOLVPAY_API_KEY:
+            await query.message.reply_text("El pago automático no está configurado. Contacta al equipo de UnaRed.")
+            return
+        quantity = int(context.user_data.get("pages_checkout_quantity", 1))
         total = quantity * 17
-        await query.message.reply_photo(
-            photo="https://i.ibb.co/SDSpDZbr/Una-Red-promotional-graphic-card-4a15ae25-2-K.jpg",
+        user = update.effective_user
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{WOLVPAY_API_URL}/invoices",
+                    headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}", "Content-Type": "application/json"},
+                    json={
+                        "amount": total, "currency": "USD", "coin": coin,
+                        "description": f"UNARED_PAGINAS_WEB|telegram_id={user.id}|quantity={quantity}",
+                        "white_label": False,
+                    },
+                    timeout=aiohttp.ClientTimeout(total=25),
+                ) as response:
+                    payload = await response.json(content_type=None)
+                    if response.status not in (200, 201) or payload.get("success") is False:
+                        logger.error("WolvPay pages invoice error: HTTP %s; response=%s", response.status, payload)
+                        raise RuntimeError("Invoice creation failed")
+            data = payload.get("data") or payload
+            invoice_id = data.get("invoice_id")
+            invoice_url = data.get("url") or data.get("payment_url")
+            if not invoice_id or not invoice_url:
+                logger.error("Incomplete WolvPay pages response: %s", payload)
+                raise RuntimeError("Incomplete invoice response")
+            with sqlite3.connect(DATABASE_PATH) as db:
+                db.execute("""CREATE TABLE IF NOT EXISTS pages_invoices (
+                    invoice_id TEXT PRIMARY KEY, telegram_id INTEGER NOT NULL,
+                    amount TEXT NOT NULL, quantity INTEGER NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'PENDING'
+                )""")
+                db.execute(
+                    "INSERT INTO pages_invoices (invoice_id, telegram_id, amount, quantity, status) VALUES (?, ?, ?, ?, 'PENDING')",
+                    (invoice_id, user.id, str(total), quantity),
+                )
+            await query.message.reply_text(
+                "💚 UNARED | FACTURA DE PÁGINAS WEB\n\n"
+                f"📦 Cantidad: {quantity}\n"
+                "💵 Total: US$" + str(total) + "\n"
+                f"🧾 Factura: {invoice_id}\n\n"
+                "Completa el pago desde WolvPay.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
+                    [InlineKeyboardButton("🔎 Verificar pago", callback_data="pages_verify")],
+                    [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
+                ]),
+            )
+        except Exception:
+            logger.exception("No se pudo crear la factura WolvPay para Páginas Web.")
+            await query.message.reply_text("No pudimos generar la factura. No realices transferencias manuales; inténtalo más tarde o contacta al equipo.")
+        return
+
+    if choice == "pages_verify":
+        if not WOLVPAY_API_KEY:
+            await query.message.reply_text("La verificación automática no está disponible.")
+            return
+        try:
+            with sqlite3.connect(DATABASE_PATH) as db:
+                row = db.execute(
+                    "SELECT invoice_id, amount, quantity, status FROM pages_invoices WHERE telegram_id = ? ORDER BY rowid DESC LIMIT 1",
+                    (update.effective_user.id,),
+                ).fetchone()
+            if not row:
+                await query.message.reply_text("No encontramos una factura de páginas web asociada a tu cuenta.")
+                return
+            invoice_id, expected_amount, quantity, current_status = row
+            if current_status == "PAID":
+                await query.message.reply_text("✅ Tu pago ya está confirmado.")
+                return
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{WOLVPAY_API_URL}/invoices/{invoice_id}",
+                    headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}"},
+                    timeout=aiohttp.ClientTimeout(total=20),
+                ) as response:
+                    payload = await response.json(content_type=None)
+                    if response.status != 200:
+                        logger.error("WolvPay pages verification HTTP %s: %s", response.status, payload)
+                        await query.message.reply_text("No pudimos consultar la factura. Inténtalo de nuevo.")
+                        return
+            invoice = payload.get("data") or payload
+            paid = (
+                str(invoice.get("status", "")).upper() == "PAID"
+                and str(invoice.get("invoice_id", invoice_id)) == invoice_id
+                and Decimal(str(invoice.get("amount", "0"))) == Decimal(expected_amount)
+            )
+            if not paid:
+                await query.message.reply_text("⏳ WolvPay todavía no confirma el pago. Vuelve a verificar en unos minutos.")
+                return
+            with sqlite3.connect(DATABASE_PATH) as db:
+                db.execute("UPDATE pages_invoices SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'", (invoice_id,))
+            await query.message.reply_text("✅ WolvPay confirma tu pago. El equipo de UnaRed continuará con tu solicitud.")
+            await context.bot.send_message(
+                chat_id=int(ADMIN_CHAT_ID),
+                text=f"💚 PAGO DE PÁGINAS WEB CONFIRMADO | UNARED\nCliente: {update.effective_user.id}\nCantidad: {quantity}\nImporte: US$" + str(expected_amount) + f"\nFactura: {invoice_id}",
+            )
+        except (aiohttp.ClientError, asyncio.TimeoutError, sqlite3.Error, InvalidOperation, ValueError, TypeError):
+            logger.exception("Error verificando pago de páginas web.")
+            await query.message.reply_text("No pudimos verificar el pago en este momento.")
+        return
+
+photo="https://i.ibb.co/SDSpDZbr/Una-Red-promotional-graphic-card-4a15ae25-2-K.jpg",
             caption=(
                 "💚 UNARED | PAGO DE PÁGINAS\n\n"
                 f"📦 Cantidad: {quantity}\n"
