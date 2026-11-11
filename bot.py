@@ -1128,11 +1128,11 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_photo(
             photo="https://i.ibb.co/dJQ4yzbg/Create-promotional-image-for-tel-003ed2cb.jpg",
             caption=(
-                "💚 UNARED | PÁGINAS WEB\\n\\n"
-                "Catálogo de páginas web para comercios legítimos.\\n"
-                "🏷️ Precio por unidad: US$17\\n"
-                "Precio regular: US$20\\n\\n"
-                f"📦 Cantidad: {quantity}\\n"
+                "💚 UNARED | PÁGINAS WEB\n\n"
+                "Catálogo de páginas web para comercios legítimos.\n"
+                "🏷️ Precio por unidad: US$17\n"
+                "Precio regular: US$20\n\n"
+                f"📦 Cantidad: {quantity}\n"
                 f"💵 Total: US${total}"
             ),
             reply_markup=InlineKeyboardMarkup([
@@ -1155,11 +1155,11 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         total = quantity * 17
         await query.edit_message_caption(
             caption=(
-                "💚 UNARED | PÁGINAS WEB\\n\\n"
-                "Catálogo de páginas web para comercios legítimos.\\n"
-                "🏷️ Precio por unidad: US$17\\n"
-                "Precio regular: US$20\\n\\n"
-                f"📦 Cantidad: {quantity}\\n"
+                "💚 UNARED | PÁGINAS WEB\n\n"
+                "Catálogo de páginas web para comercios legítimos.\n"
+                "🏷️ Precio por unidad: US$17\n"
+                "Precio regular: US$20\n\n"
+                f"📦 Cantidad: {quantity}\n"
                 f"💵 Total: US${total}"
             ),
             reply_markup=InlineKeyboardMarkup([
@@ -1184,9 +1184,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["pages_checkout_quantity"] = quantity
         total = quantity * 17
         await query.message.reply_text(
-            "💚 UNARED | PAGO DE PÁGINAS WEB\\n\\n"
-            f"📦 Cantidad: {quantity}\\n"
-            f"💵 Total: US${total}\\n\\n"
+            "💚 UNARED | PAGO DE PÁGINAS WEB\n\n"
+            f"📦 Cantidad: {quantity}\n"
+            f"💵 Total: US${total}\n\n"
             "Selecciona tu método de pago:",
             reply_markup=pages_coin_menu(),
         )
@@ -1240,10 +1240,10 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     (invoice_id, user.id, str(total), quantity),
                 )
             await query.message.reply_text(
-                "💚 UNARED | FACTURA DE PÁGINAS WEB\\n\\n"
-                f"📦 Cantidad: {quantity}\\n"
-                f"💵 Total: US${total}\\n"
-                f"🧾 Factura: {invoice_id}\\n\\n"
+                "💚 UNARED | FACTURA DE PÁGINAS WEB\n\n"
+                f"📦 Cantidad: {quantity}\n"
+                f"💵 Total: US${total}\n"
+                f"🧾 Factura: {invoice_id}\n\n"
                 "Completa el pago desde WolvPay.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
@@ -1304,10 +1304,10 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(
                 chat_id=int(ADMIN_CHAT_ID),
                 text=(
-                    "💚 PAGO DE PÁGINAS WEB CONFIRMADO | UNARED\\n"
-                    f"Cliente: {update.effective_user.id}\\n"
-                    f"Cantidad: {quantity}\\n"
-                    f"Importe: US${expected_amount}\\n"
+                    "💚 PAGO DE PÁGINAS WEB CONFIRMADO | UNARED\n"
+                    f"Cliente: {update.effective_user.id}\n"
+                    f"Cantidad: {quantity}\n"
+                    f"Importe: US${expected_amount}\n"
                     f"Factura: {invoice_id}"
                 ),
             )
