@@ -875,8 +875,10 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_photo(
             photo="https://i.ibb.co/7xp7rTMV/Create-promotional-image-for-tel-a730da20-2-K.jpg",
             caption=(
-                "📞 UNARED | ALQUILAR LÍNEA DAYLER\n\n"
-                "Pulsa Empezar para solicitar tu nueva línea SIP."
+                "📞 UNARED | ALQUILER DE LÍNEA SIP\n\n"
+                "¿Necesitas configurar una línea SIP?\n\n"
+                "Solicita tu línea de forma rápida y sencilla desde UnaRed.\n\n"
+                "👇 Pulsa «Empezar» para iniciar tu solicitud y recibir los detalles del servicio."
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🚀 Empezar", callback_data="dayler_start")],
