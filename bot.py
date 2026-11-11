@@ -1,15 +1,6 @@
 
 import os
 import logging
-import asyncio
-import hmac
-import hashlib
-import json
-import sqlite3
-from decimal import Decimal, InvalidOperation
-
-import aiohttp
-from aiohttp import web
 
 from telegram import (
     Update,
@@ -31,11 +22,6 @@ from telegram.ext import (
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID", "5864523026")
-WOLVPAY_API_KEY = os.getenv("WOLVPAY_API_KEY")
-WOLVPAY_WEBHOOK_SECRET = os.getenv("WOLVPAY_WEBHOOK_SECRET")
-WOLVPAY_API_URL = "https://wolvpay.com/api/v1"
-DATABASE_PATH = os.getenv("DATABASE_PATH", "unared_payments.sqlite3")
-DAYLER_PRICE_USD = Decimal(os.getenv("DAYLER_PRICE_USD", "150.00"))
 
 GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
 
@@ -365,15 +351,7 @@ def remittance_options_menu(app_id):
 
 def dayler_payment_menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"💳 Pagar US${DAYLER_PRICE_USD:.2f}", callback_data="dayler_pay")]
-    ])
-
-
-def dayler_coin_menu():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("₿ Bitcoin (BTC)", callback_data="dayler_coin_btc")],
-        [InlineKeyboardButton("₮ USDT (TRC20)", callback_data="dayler_coin_trc20_usdt")],
-        [InlineKeyboardButton("⬅️ Volver", callback_data="menu_tools")],
+        [InlineKeyboardButton("💳 Pagar US$150", callback_data="dayler_pay")]
     ])
 
 
@@ -890,91 +868,19 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if choice == "dayler_pay":
-        await query.message.reply_text(
-            "💚 UNARED | PAGO LÍNEA DAYLER\n\n"
-            f"Total: US${DAYLER_PRICE_USD:.2f}\n"
-            "Selecciona la criptomoneda para generar tu factura individual:",
-            reply_markup=dayler_coin_menu(),
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/6c7GZ9rw/photo-2026-11-08-23-17-50.jpg",
+            caption=(
+                "💚 UNARED | PAGO LÍNEA DAYLER\n\n"
+                "Total: USD 150\n"
+                "Método: USDT por red TRON (TRC20)\n\n"
+                "BILLETERA (pulsa para copiar):\n"
+                f"<code>{PAYMENT_WALLET}</code>\n\n"
+                "Conserva la referencia para verificar el pago."
+            ),
+            parse_mode="HTML",
+            reply_markup=dayler_receipt_menu(),
         )
-        return
-
-    if choice.startswith("dayler_coin_"):
-        coin = choice.replace("dayler_coin_", "", 1)
-        if coin not in ("btc", "trc20_usdt"):
-            await query.message.reply_text("Método de pago no disponible.")
-            return
-        if not WOLVPAY_API_KEY:
-            await query.message.reply_text(
-                "El pago automático no está configurado todavía. "
-                "Contacta al equipo de UnaRed."
-            )
-            return
-        username = context.user_data.get("dayler_username")
-        if not username:
-            await query.message.reply_text(
-                "No encontramos tu solicitud Dayler. Vuelve a iniciar el proceso desde Herramientas."
-            )
-            return
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{WOLVPAY_API_URL}/invoices",
-                    headers={
-                        "Authorization": f"Bearer {WOLVPAY_API_KEY}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "amount": float(DAYLER_PRICE_USD),
-                        "currency": "USD",
-                        "coin": coin,
-                        "description": f"UNARED_DAYLER|telegram_id={update.effective_user.id}|username={username}",
-                        "white_label": False,
-                    },
-                    timeout=aiohttp.ClientTimeout(total=25),
-                ) as response:
-                    payload = await response.json(content_type=None)
-                    if response.status not in (200, 201) or payload.get("success") is False:
-                        logger.error("WolvPay invoice error: HTTP %s", response.status)
-                        raise RuntimeError("No se pudo crear la factura.")
-            invoice_data = payload.get("data") or payload
-            invoice_id = invoice_data.get("invoice_id")
-            invoice_url = invoice_data.get("url") or invoice_data.get("payment_url")
-            if not invoice_id or not invoice_url:
-                logger.error("WolvPay response missing invoice id or hosted URL.")
-                raise RuntimeError("Respuesta incompleta del proveedor.")
-            with sqlite3.connect(DATABASE_PATH) as db:
-                db.execute(
-                    """CREATE TABLE IF NOT EXISTS dayler_invoices (
-                        invoice_id TEXT PRIMARY KEY,
-                        telegram_id INTEGER NOT NULL,
-                        amount TEXT NOT NULL,
-                        username TEXT NOT NULL,
-                        status TEXT NOT NULL DEFAULT 'PENDING'
-                    )"""
-                )
-                db.execute(
-                    """INSERT INTO dayler_invoices
-                       (invoice_id, telegram_id, amount, username, status)
-                       VALUES (?, ?, ?, ?, 'PENDING')""",
-                    (invoice_id, update.effective_user.id, str(DAYLER_PRICE_USD), username),
-                )
-            await query.message.reply_text(
-                f"💚 UNARED | FACTURA DAYLER\n\n"
-                f"Importe: US${DAYLER_PRICE_USD:.2f}\n"
-                f"Moneda: {'Bitcoin (BTC)' if coin == 'btc' else 'USDT (TRC20)'}\n"
-                f"Factura: {invoice_id}\n\n"
-                "Pulsa el botón para completar el pago. "
-                "La orden se confirmará automáticamente cuando WolvPay valide el pago.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)]
-                ]),
-            )
-        except Exception:
-            logger.exception("No se pudo crear la factura WolvPay para Dayler.")
-            await query.message.reply_text(
-                "No pudimos generar la factura en este momento. "
-                "No realices ninguna transferencia manual; inténtalo más tarde o contacta al equipo."
-            )
         return
 
     if choice == "dayler_paid":
@@ -1382,7 +1288,7 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "💚 UNARED | RESUMEN DE TU ORDEN\n\n"
             f"Usuario SIP: {context.user_data.get('dayler_username')}\n"
             "Contraseña: recibida\n"
-            f"Total: US${DAYLER_PRICE_USD:.2f}\n\n"
+            "Total: US$150\n\n"
             "Pulsa el botón para ver el método de pago.",
             reply_markup=dayler_payment_menu(),
         )
@@ -1547,144 +1453,6 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
 
 
 # =====================================
-# WOLVPAY WEBHOOK
-# =====================================
-
-async def wolvpay_webhook(request):
-    if not WOLVPAY_WEBHOOK_SECRET or not WOLVPAY_API_KEY:
-        return web.Response(status=503, text="Payment integration is not configured.")
-
-    raw_body = await request.read()
-    signature = request.headers.get("X-WolvPay-Signature", "")
-    expected = hmac.new(
-        WOLVPAY_WEBHOOK_SECRET.encode("utf-8"),
-        raw_body,
-        hashlib.sha256,
-    ).hexdigest()
-
-    if not signature or not hmac.compare_digest(expected, signature):
-        return web.Response(status=401, text="Invalid signature.")
-
-    try:
-        event = json.loads(raw_body.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return web.Response(status=400, text="Invalid JSON.")
-
-    invoice_id = str(event.get("invoice_id", "")).strip()
-    if not invoice_id:
-        return web.Response(status=400, text="Missing invoice_id.")
-
-    if str(event.get("status", "")).upper() != "PAID":
-        return web.Response(status=200, text="Event ignored.")
-
-    try:
-        with sqlite3.connect(DATABASE_PATH) as db:
-            row = db.execute(
-                "SELECT telegram_id, amount, username, status FROM dayler_invoices WHERE invoice_id = ?",
-                (invoice_id,),
-            ).fetchone()
-    except sqlite3.Error:
-        logger.exception("Could not read Dayler invoice record.")
-        return web.Response(status=500, text="Database error.")
-
-    if not row:
-        logger.warning("Received WolvPay event for unknown invoice %s", invoice_id)
-        return web.Response(status=200, text="Unknown invoice ignored.")
-
-    telegram_id, expected_amount, username, current_status = row
-    if current_status == "PAID":
-        return web.Response(status=200, text="Already processed.")
-
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                f"{WOLVPAY_API_URL}/invoices/{invoice_id}",
-                headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}"},
-                timeout=aiohttp.ClientTimeout(total=20),
-            ) as response:
-                invoice_payload = await response.json(content_type=None)
-                if response.status != 200:
-                    logger.error("WolvPay invoice verification returned HTTP %s", response.status)
-                    return web.Response(status=502, text="Could not verify invoice.")
-        invoice = invoice_payload.get("data") or invoice_payload
-        verified_amount = Decimal(str(invoice.get("amount", "0")))
-        if (
-            str(invoice.get("invoice_id", invoice_id)) != invoice_id
-            or str(invoice.get("status", "")).upper() != "PAID"
-            or verified_amount != Decimal(expected_amount)
-            or Decimal(str(event.get("amount", "0"))) != Decimal(expected_amount)
-        ):
-            logger.warning("WolvPay invoice verification mismatch for %s", invoice_id)
-            return web.Response(status=400, text="Invoice verification mismatch.")
-    except (aiohttp.ClientError, asyncio.TimeoutError, InvalidOperation, ValueError, TypeError):
-        logger.exception("Error verifying WolvPay invoice %s", invoice_id)
-        return web.Response(status=502, text="Invoice verification failed.")
-
-    try:
-        with sqlite3.connect(DATABASE_PATH) as db:
-            cursor = db.execute(
-                "UPDATE dayler_invoices SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'",
-                (invoice_id,),
-            )
-            if cursor.rowcount != 1:
-                return web.Response(status=200, text="Already processed.")
-    except sqlite3.Error:
-        logger.exception("Could not mark Dayler invoice as paid.")
-        return web.Response(status=500, text="Database error.")
-
-    application = request.app["telegram_application"]
-    try:
-        await application.bot.send_message(
-            chat_id=int(telegram_id),
-            text=(
-                "✅ PAGO CONFIRMADO | UNARED\n\n"
-                f"Tu pago de US${DAYLER_PRICE_USD:.2f} para la solicitud Dayler fue confirmado automáticamente.\n"
-                f"Usuario SIP solicitado: {username}\n"
-                f"Factura: {invoice_id}\n\n"
-                "El equipo de UnaRed continuará con la preparación de tu servicio."
-            ),
-        )
-        await application.bot.send_message(
-            chat_id=int(ADMIN_CHAT_ID),
-            text=(
-                "💚 PAGO DAYLER CONFIRMADO | UNARED\n\n"
-                f"Cliente Telegram ID: {telegram_id}\n"
-                f"Usuario SIP solicitado: {username}\n"
-                f"Importe confirmado: US${DAYLER_PRICE_USD:.2f}\n"
-                f"Factura WolvPay: {invoice_id}\n"
-                "Estado: PAGADO (verificado con WolvPay)."
-            ),
-        )
-    except Exception:
-        logger.exception("Payment confirmed but Telegram notification failed for %s", invoice_id)
-        return web.Response(status=500, text="Payment confirmed; notification will need review.")
-
-    return web.Response(status=200, text="Webhook processed.")
-
-
-async def start_webhook_server(application):
-    if not WOLVPAY_API_KEY or not WOLVPAY_WEBHOOK_SECRET:
-        logger.warning("WolvPay credentials missing; webhook server was not started.")
-        return
-
-    app = web.Application(client_max_size=1024 * 64)
-    app["telegram_application"] = application
-    app.router.add_post("/webhooks/wolvpay", wolvpay_webhook)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", int(os.getenv("PORT", "8080")))
-    await site.start()
-    application.bot_data["wolvpay_webhook_runner"] = runner
-    logger.info("WolvPay webhook listening on port %s", os.getenv("PORT", "8080"))
-
-
-async def stop_webhook_server(application):
-    runner = application.bot_data.get("wolvpay_webhook_runner")
-    if runner:
-        await runner.cleanup()
-
-
-# =====================================
 # EJECUTAR BOT
 # =====================================
 
@@ -1717,8 +1485,6 @@ def main():
     )
 
     app.add_error_handler(error_handler)
-    app.post_init = start_webhook_server
-    app.post_shutdown = stop_webhook_server
 
     print("💚 UnaRed Bot está funcionando.")
 
