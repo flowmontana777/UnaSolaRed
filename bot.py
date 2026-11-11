@@ -1591,7 +1591,7 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "💚 UNARED | RESUMEN DE TU ORDEN\n\n"
             "📞 Servicio: Alquiler de línea SIP para MicroSIP.\n\n"
             f"👤 Usuario SIP: {context.user_data.get('dayler_username')}\n"
-            "🔐 Contraseña: •••••••• (oculta por seguridad)\n\n"
+            f"🔐 Contraseña SIP (confirma que esté correcta): {password}\n\n"
             "💰 Total a pagar: US$150\n\n"
             "🎁 BENEFICIO INCLUIDO:\n"
             "Recibirás US$50 de saldo acreditado en tu panel, disponible para realizar llamadas desde MicroSIP.\n\n"
@@ -1600,8 +1600,7 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• Acceso y detalles de configuración.\n"
             "• US$50 de saldo para realizar llamadas.\n"
             "• Posibilidad de llamar a los bancos disponibles en el servicio.\n\n"
-            "👇 Pulsa el botón para ver el método de pago y continuar con tu solicitud.\n\n"
-            "💚 UNARED | LA RED QUE MUEVE TU DINERO",
+            "👇 Pulsa el botón para ver el método de pago y continuar con tu solicitud.",
             reply_markup=dayler_payment_menu(),
         )
         return
