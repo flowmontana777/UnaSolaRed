@@ -35,6 +35,7 @@ WOLVPAY_API_KEY = os.getenv("WOLVPAY_API_KEY")
 WOLVPAY_WEBHOOK_SECRET = os.getenv("WOLVPAY_WEBHOOK_SECRET")
 WOLVPAY_API_URL = "https://wolvpay.com/api/v1"
 DATABASE_PATH = os.getenv("DATABASE_PATH", "unared_payments.sqlite3")
+DAYLER_PRICE_USD = Decimal(os.getenv("DAYLER_PRICE_USD", "150.00"))
 
 GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
 
@@ -364,7 +365,7 @@ def remittance_options_menu(app_id):
 
 def dayler_payment_menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("💳 Pagar US$150", callback_data="dayler_pay")]
+        [InlineKeyboardButton(f"💳 Pagar US${DAYLER_PRICE_USD:.2f}", callback_data="dayler_pay")]
     ])
 
 
@@ -891,7 +892,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice == "dayler_pay":
         await query.message.reply_text(
             "💚 UNARED | PAGO LÍNEA DAYLER\n\n"
-            "Total: US$150\n"
+            f"Total: US${DAYLER_PRICE_USD:.2f}\n"
             "Selecciona la criptomoneda para generar tu factura individual:",
             reply_markup=dayler_coin_menu(),
         )
@@ -923,7 +924,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         "Content-Type": "application/json",
                     },
                     json={
-                        "amount": 150,
+                        "amount": float(DAYLER_PRICE_USD),
                         "currency": "USD",
                         "coin": coin,
                         "description": f"UNARED_DAYLER|telegram_id={update.effective_user.id}|username={username}",
@@ -955,11 +956,11 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     """INSERT INTO dayler_invoices
                        (invoice_id, telegram_id, amount, username, status)
                        VALUES (?, ?, ?, ?, 'PENDING')""",
-                    (invoice_id, update.effective_user.id, "150.00", username),
+                    (invoice_id, update.effective_user.id, str(DAYLER_PRICE_USD), username),
                 )
             await query.message.reply_text(
                 f"💚 UNARED | FACTURA DAYLER\n\n"
-                f"Importe: US$150\n"
+                f"Importe: US${DAYLER_PRICE_USD:.2f}\n"
                 f"Moneda: {'Bitcoin (BTC)' if coin == 'btc' else 'USDT (TRC20)'}\n"
                 f"Factura: {invoice_id}\n\n"
                 "Pulsa el botón para completar el pago. "
@@ -1381,7 +1382,7 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "💚 UNARED | RESUMEN DE TU ORDEN\n\n"
             f"Usuario SIP: {context.user_data.get('dayler_username')}\n"
             "Contraseña: recibida\n"
-            "Total: US$150\n\n"
+            f"Total: US${DAYLER_PRICE_USD:.2f}\n\n"
             "Pulsa el botón para ver el método de pago.",
             reply_markup=dayler_payment_menu(),
         )
@@ -1637,7 +1638,7 @@ async def wolvpay_webhook(request):
             chat_id=int(telegram_id),
             text=(
                 "✅ PAGO CONFIRMADO | UNARED\n\n"
-                "Tu pago de US$150 para la solicitud Dayler fue confirmado automáticamente.\n"
+                f"Tu pago de US${DAYLER_PRICE_USD:.2f} para la solicitud Dayler fue confirmado automáticamente.\n"
                 f"Usuario SIP solicitado: {username}\n"
                 f"Factura: {invoice_id}\n\n"
                 "El equipo de UnaRed continuará con la preparación de tu servicio."
@@ -1649,7 +1650,7 @@ async def wolvpay_webhook(request):
                 "💚 PAGO DAYLER CONFIRMADO | UNARED\n\n"
                 f"Cliente Telegram ID: {telegram_id}\n"
                 f"Usuario SIP solicitado: {username}\n"
-                "Importe confirmado: US$150\n"
+                f"Importe confirmado: US${DAYLER_PRICE_USD:.2f}\n"
                 f"Factura WolvPay: {invoice_id}\n"
                 "Estado: PAGADO (verificado con WolvPay)."
             ),
