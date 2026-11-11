@@ -889,8 +889,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "dayler_start":
         context.user_data["dayler_step"] = "username"
-        await query.message.reply_text(
-            "👤 Escribe el usuario que deseas para tu nueva línea SIP."
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/tws5NH0C/Promotional-graphic-card-design-6f106e97.jpg",
+            caption="👤 Escribe el usuario que deseas para tu nueva línea SIP."
         )
         return
 
