@@ -875,9 +875,24 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_photo(
             photo="https://i.ibb.co/7xp7rTMV/Create-promotional-image-for-tel-a730da20-2-K.jpg",
             caption=(
-                "📞 UNARED | ALQUILER DE LÍNEA SIP\n\n"
-                "¿Necesitas configurar una línea SIP?\n\n"
-                "Solicita tu línea de forma rápida y sencilla desde UnaRed.\n\n"
+                "💚 UNARED | LA RED QUE MUEVE TU DINERO\n"
+                "📞 ALQUILER DE LÍNEA SIP\n\n"
+                "¿Necesitas configurar una línea SIP para realizar llamadas desde MicroSIP?\n\n"
+                "💰 OFERTA DE ACTIVACIÓN\n"
+                "Paga US$150 y recibe US$50 de saldo acreditado en tu panel, para comenzar a realizar llamadas desde YA.\n\n"
+                "🏦 BANCOS DISPONIBLES\n"
+                "🏦 Wells Fargo\n"
+                "🏦 Bank of America (BOFA)\n"
+                "🏦 Discover\n"
+                "🏦 Capital One\n"
+                "🏦 KeyBank\n"
+                "🏦 Citi Bank – Débito y Crédito\n"
+                "🏦 Chase Bank\n"
+                "🏦 US Bank\n"
+                "🏦 First National Bank\n"
+                "🏦 TD Bank\n\n"
+                "🏦 ¡Y demás bancos que desees llamar!\n\n"
+                "🚀 Solicita tu línea de forma rápida y sencilla desde UnaRed.\n\n"
                 "👇 Pulsa «Empezar» para iniciar tu solicitud y recibir los detalles del servicio."
             ),
             reply_markup=InlineKeyboardMarkup([
