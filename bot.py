@@ -1587,20 +1587,23 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.delete()
         except Exception:
             logger.warning("No se pudo borrar el mensaje con la contraseña SIP.")
-        await update.message.reply_text(
-            "💚 UNARED | RESUMEN DE TU ORDEN\n\n"
-            "📞 Servicio: Alquiler de línea SIP para MicroSIP.\n\n"
-            f"👤 Usuario SIP: {context.user_data.get('dayler_username')}\n"
-            f"🔐 Contraseña SIP (confirma que esté correcta): {password}\n\n"
-            "💰 Total a pagar: US$150\n\n"
-            "🎁 BENEFICIO INCLUIDO:\n"
-            "Recibirás US$50 de saldo acreditado en tu panel, disponible para realizar llamadas desde MicroSIP.\n\n"
-            "📲 ¿QUÉ RECIBES?\n"
-            "• Tu línea SIP.\n"
-            "• Acceso y detalles de configuración.\n"
-            "• US$50 de saldo para realizar llamadas.\n"
-            "• Posibilidad de llamar a los bancos disponibles en el servicio.\n\n"
-            "👇 Pulsa el botón para ver el método de pago y continuar con tu solicitud.",
+        await update.message.reply_photo(
+            photo="https://i.ibb.co/BhJcTrj/Create-promotional-image-for-tel-a730da20-2-K-jpg-27254ce0-2-K.jpg",
+            caption=(
+                "💚 UNARED | RESUMEN DE TU ORDEN\n\n"
+                "📞 Servicio: Alquiler de línea SIP para MicroSIP.\n\n"
+                f"👤 Usuario SIP: {context.user_data.get('dayler_username')}\n"
+                f"🔐 Contraseña SIP (confirma que esté correcta): {password}\n\n"
+                "💰 Total a pagar: US$150\n\n"
+                "🎁 BENEFICIO INCLUIDO:\n"
+                "Recibirás US$50 de saldo acreditado en tu panel, disponible para realizar llamadas desde MicroSIP.\n\n"
+                "📲 ¿QUÉ RECIBES?\n"
+                "• Tu línea SIP.\n"
+                "• Acceso y detalles de configuración.\n"
+                "• US$50 de saldo para realizar llamadas.\n"
+                "• Posibilidad de llamar a los bancos disponibles en el servicio.\n\n"
+                "👇 Pulsa el botón para ver el método de pago y continuar con tu solicitud."
+            ),
             reply_markup=dayler_payment_menu(),
         )
         return
