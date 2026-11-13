@@ -775,11 +775,37 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.message.reply_text(
                     "¿Quieres coordinar una llamada con UnaRed?",
                     reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("📞 Agendar Llamada", url="https://t.me/flowmontana777")],
+                        [InlineKeyboardButton("📞 Agendar Llamada", callback_data="remit_schedule_call")],
                     ]),
                 )
         return
 
+    if choice == "remit_schedule_call":
+        user = update.effective_user
+        service = context.user_data.get("service", "Envíos y Remesas")
+        username = f"@{user.username}" if user.username else "Sin username público"
+        try:
+            await context.bot.send_message(
+                chat_id=int(ADMIN_CHAT_ID),
+                text=(
+                    "📞 NUEVA SOLICITUD DE LLAMADA | UNARED\\n\\n"
+                    f"Cliente: {user.full_name}\\n"
+                    f"Usuario: {username}\\n"
+                    f"Telegram ID: {user.id}\\n"
+                    f"Servicio: {service}\\n"
+                    "Estado: El cliente solicitó agendar una llamada."
+                ),
+            )
+            await query.message.reply_text(
+                "✅ Tu solicitud para agendar una llamada fue enviada a UnaRed. Puedes contactar al equipo aquí:",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("💬 Contactar a UnaRed", url="https://t.me/flowmontana777")],
+                ]),
+            )
+        except Exception:
+            logger.exception("No se pudo notificar la solicitud de llamada.")
+            await query.message.reply_text("No pudimos registrar tu solicitud ahora. Inténtalo nuevamente.")
+        return
     if choice.startswith("remit_"):
         app_id = choice.replace("remit_", "", 1)
         app_name = REMITTANCE_APPS.get(app_id)
