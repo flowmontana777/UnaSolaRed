@@ -2305,6 +2305,11 @@ async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYP
 # =====================================
 
 async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Los mensajes de grupos/canales no son solicitudes de clientes.
+    # La música de @Una1Red se procesa únicamente en channel_music_ingest.
+    if not update.effective_chat or update.effective_chat.type != "private":
+        return
+
     if context.user_data.get("music_upload_mode"):
         message = update.message
         if not message.audio:
