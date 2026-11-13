@@ -1962,7 +1962,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "💚 UNARED | FACTURA - QUIERO EDITAR Y SUBIR PAPEL\n\n"
                 "💵 Total: US$250\n"
                 f"🧾 Factura: {invoice_id}\n\n"
-                "Completa el pago desde WolvPay. La confirmación se enviará automáticamente cuando el proveedor verifique el pago.\n"
+                "Completa el pago desde WolvPay. La confirmación se enviará automáticamente cuando el proveedor verifique el pago.\n",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
                     [InlineKeyboardButton("✅ Ya Pagué", callback_data="edit_upload_invoice_paid")],
