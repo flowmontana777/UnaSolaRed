@@ -597,9 +597,37 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
-
     choice = query.data
+
+    # Feedback visual para las acciones principales de UnaRed.
+    # Telegram no permite animar el botón; mostramos estado de proceso
+    # y retiramos el teclado anterior mientras el bot prepara la respuesta.
+    loading_actions = {
+        "bill_pay",
+        "dayler_pay",
+        "music_catalog",
+        "music_submit",
+        "tool_edit_upload",
+    }
+    is_loading_action = (
+        choice in loading_actions
+        or choice.startswith((
+            "bill_coin_",
+            "dayler_coin_",
+            "pages_coin_",
+            "icloud_coin_",
+            "edit_upload_coin_",
+        ))
+    )
+
+    if is_loading_action:
+        await query.answer("⏳ Procesando tu selección...", show_alert=False)
+        try:
+            await query.edit_message_reply_markup(reply_markup=None)
+        except Exception:
+            logger.debug("No se pudo retirar el teclado anterior para %s.", choice, exc_info=True)
+    else:
+        await query.answer()
 
     # VOLVER AL MENU PRINCIPAL
 
