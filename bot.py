@@ -1032,17 +1032,15 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 file_id TEXT NOT NULL
             )""")
             banner = db.execute("SELECT file_id FROM digital_banner WHERE id = 1").fetchone()
-        if banner:
-            await query.message.reply_photo(
-                photo=banner[0],
-                caption=digital_caption,
-                reply_markup=digital_music_menu(),
-            )
-        else:
-            await query.message.reply_text(
-                digital_caption + "\\n\\n⚙️ El banner visual todavía no está configurado.",
-                reply_markup=digital_music_menu(),
-            )
+        banner_photo = (
+            banner[0] if banner
+            else "https://i.ibb.co/nNrT98Jp/743800-F9-4-E12-4093-91-E2-4-F05-EB16161-E.png"
+        )
+        await query.message.reply_photo(
+            photo=banner_photo,
+            caption=digital_caption,
+            reply_markup=digital_music_menu(),
+        )
         return
 
     if choice == "music_submit":
