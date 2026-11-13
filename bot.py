@@ -1933,6 +1933,12 @@ async def wolvpay_webhook(request):
                     (invoice_id,),
                 ).fetchone()
                 invoice_type = "pages"
+            if not row:
+                row = db.execute(
+                    "SELECT telegram_id, amount, product, username, status FROM demo_bot_invoices WHERE invoice_id = ?",
+                    (invoice_id,),
+                ).fetchone()
+                invoice_type = "demo"
     except sqlite3.Error:
         logger.exception("Could not read WolvPay invoice record.")
         return web.Response(status=500, text="Database error.")
@@ -1946,11 +1952,18 @@ async def wolvpay_webhook(request):
         customer_description = "Tu pago de US$150 para la solicitud Dayler fue confirmado automáticamente."
         order_detail = f"Usuario SIP solicitado: {username}"
         admin_detail = f"Usuario SIP solicitado: {username}\nImporte confirmado: US$150"
-    else:
+    elif invoice_type == "pages":
         telegram_id, expected_amount, quantity, current_status = row
         customer_description = "Tu pago de US$" + str(expected_amount) + f" por {quantity} página(s) web fue confirmado automáticamente."
         order_detail = f"Cantidad de páginas web: {quantity}"
         admin_detail = f"Cantidad: {quantity}\nImporte confirmado: US$" + str(expected_amount)
+    else:
+        telegram_id, expected_amount, product, username, current_status = row
+        product_labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK"}
+        product_label = product_labels.get(product, "DEMO SANDBOX")
+        customer_description = "Tu pago de US$35 para la demostración sandbox fue confirmado automáticamente."
+        order_detail = f"Producto: {product_label} (datos sintéticos únicamente)"
+        admin_detail = f"Producto: {product_label}\nCliente: @{username or 'sin_username'}\nImporte confirmado: US$" + str(expected_amount)
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(
@@ -1978,7 +1991,7 @@ async def wolvpay_webhook(request):
 
     try:
         with sqlite3.connect(DATABASE_PATH) as db:
-            table_name = "dayler_invoices" if invoice_type == "dayler" else "pages_invoices"
+            table_name = {"dayler": "dayler_invoices", "pages": "pages_invoices", "demo": "demo_bot_invoices"}[invoice_type]
             db.execute(
                 f"UPDATE {table_name} SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'",
                 (invoice_id,),
@@ -2018,7 +2031,7 @@ async def wolvpay_webhook(request):
         "El equipo de UnaRed continuará con la preparación de tu servicio."
     )
     admin_text = (
-        "💚 PAGO " + ("DAYLER" if invoice_type == "dayler" else "PÁGINAS WEB") + " CONFIRMADO | UNARED\n\n"
+        "💚 PAGO " + ({"dayler": "DAYLER", "pages": "PÁGINAS WEB", "demo": "DEMO SANDBOX"}[invoice_type]) + " CONFIRMADO | UNARED\n\n"
         f"Cliente Telegram ID: {telegram_id}\n{admin_detail}\n"
         f"Factura WolvPay: {invoice_id}\n"
         "Estado: PAGADO (verificado con WolvPay)."
