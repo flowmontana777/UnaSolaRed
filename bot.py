@@ -42,6 +42,38 @@ GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
 # METODO DE PAGO UNARED
 # =====================================
 
+async def schedule_payment_reminder(application, table_name, invoice_id, telegram_id, amount, service, invoice_url=None):
+    """Send a reminder after 10 minutes only if this invoice is still pending."""
+    await asyncio.sleep(600)
+    if table_name not in {"dayler_invoices", "pages_invoices", "icloud_invoices"}:
+        return
+    try:
+        with sqlite3.connect(DATABASE_PATH) as db:
+            row = db.execute(
+                f"SELECT status FROM {table_name} WHERE invoice_id = ?",
+                (invoice_id,),
+            ).fetchone()
+        if not row or str(row[0]).upper() != "PENDING":
+            return
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔔 Volver a la factura", url=invoice_url)]
+        ]) if invoice_url else None
+        await application.bot.send_message(
+            chat_id=int(telegram_id),
+            text=(
+                f"⏰ RECORDATORIO DE PAGO | UNARED\\n\\n"
+                f"Tu factura de {service} todavía aparece pendiente. "
+                "Si deseas completar el servicio, puedes finalizar el pago desde tu factura. "
+                "Si ya pagaste, espera la confirmación automática de WolvPay."
+                f"\\n\\n💵 Importe: US${amount}"
+            ),
+            reply_markup=keyboard,
+        )
+    except Exception:
+        logger.exception("No se pudo enviar el recordatorio de pago para %s.", invoice_id)
+
+
+
 PAYMENT_WALLET = "TKn18e7RCxhzt9xPZ15JnDhs9kxvf7gsWm"
 
 PAYMENT_MESSAGE = (
@@ -304,6 +336,7 @@ def apple_menu():
     keyboard = [
         [InlineKeyboardButton("🍎 Tengo Apple", callback_data="apple_have")],
         [InlineKeyboardButton("ℹ️ Necesito saber más", callback_data="apple_info")],
+        [InlineKeyboardButton("📞 Agendar Llamada!", url="https://t.me/flowmontana777")],
         back_button(),
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -983,6 +1016,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                        VALUES (?, ?, ?, ?, 'PENDING')""",
                     (invoice_id, update.effective_user.id, "150.00", username),
                 )
+            asyncio.create_task(schedule_payment_reminder(context.application, "dayler_invoices", invoice_id, update.effective_user.id, "150", "Dayler", invoice_url))
             await query.message.reply_text(
                 f"💚 UNARED | FACTURA DAYLER\n\n"
                 f"Importe: US$150\n"
@@ -1385,6 +1419,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "INSERT INTO pages_invoices (invoice_id, telegram_id, amount, quantity, status) VALUES (?, ?, ?, ?, 'PENDING')",
                     (invoice_id, user.id, str(total), quantity),
                 )
+            asyncio.create_task(schedule_payment_reminder(context.application, "pages_invoices", invoice_id, user.id, str(total), "Páginas Web", invoice_url))
             await query.message.reply_text(
                 "💚 UNARED | FACTURA DE PÁGINAS WEB\n\n"
                 f"📦 Cantidad: {quantity}\n"
@@ -1647,6 +1682,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if "quantity" not in columns:
                     db.execute("ALTER TABLE icloud_invoices ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1")
                 db.execute("INSERT INTO icloud_invoices (invoice_id, telegram_id, amount, quantity, status) VALUES (?, ?, ?, ?, 'PENDING')", (invoice_id, user.id, str(total), quantity))
+            asyncio.create_task(schedule_payment_reminder(context.application, "icloud_invoices", invoice_id, user.id, str(total), "iCloud", invoice_url))
             await query.message.reply_text(
                 "💚 UNARED | FACTURA ICLOUD\n\n"
                 f"📦 Cantidad: {quantity}\n💵 Total: US${total}\n"
