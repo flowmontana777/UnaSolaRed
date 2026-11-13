@@ -21,6 +21,7 @@ from telegram.ext import (
     CommandHandler,
     CallbackQueryHandler,
     MessageHandler,
+    TypeHandler,
     ContextTypes,
     filters,
 )
@@ -2233,11 +2234,23 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.channel_post
-    if not message or not message.chat or (message.chat.username or "").lower() != "una1red":
+    if not message:
         return
 
+    channel_username = (message.chat.username or "").lower() if message.chat else ""
+    if channel_username != "una1red":
+        return
+
+    logger.info(
+        "Publicación recibida en @Una1Red: message_id=%s, audio=%s, document=%s",
+        message.message_id, bool(message.audio), bool(message.document)
+    )
     audio = message.audio
     if not audio:
+        if message.document and (message.document.mime_type or "").lower() in ("audio/mpeg", "audio/mp3"):
+            logger.warning("La canción llegó como DOCUMENTO, no como AUDIO. Reenvíala usando Telegram «Enviar como audio».")
+        else:
+            logger.warning("La publicación de @Una1Red no contiene un audio compatible.")
         return
     if audio.mime_type and audio.mime_type not in ("audio/mpeg", "audio/mp3"):
         return
@@ -2872,12 +2885,9 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(CallbackQueryHandler(select_option))
-    app.add_handler(
-        MessageHandler(
-            filters.UpdateType.CHANNEL_POST & filters.AUDIO,
-            channel_music_ingest,
-        )
-    )
+    # Recibir todas las actualizaciones y filtrar channel_post dentro de la función.
+    # Así evitamos que un filtro de mensaje descarte publicaciones del canal.
+    app.add_handler(TypeHandler(Update, channel_music_ingest))
 
     app.add_handler(
         MessageHandler(
@@ -2892,7 +2902,7 @@ def main():
 
     print("💚 UnaRed Bot está funcionando.")
 
-    app.run_polling()
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
