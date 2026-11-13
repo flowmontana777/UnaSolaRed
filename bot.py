@@ -1854,16 +1854,28 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "• Link de Photoshop ilimitado con licencia\n"
                 "• Papel para empezar\n"
                 "• Contacto para comprar papel\n\n"
-                "💳 MÉTODO DE PAGO\n"
-                "Moneda: USDT\n"
-                "Red: TRON (TRC20)\n"
-                f"Dirección: {PAYMENT_WALLET}\n\n"
                 "Después de pagar, pulsa «Ya Pagué» y envía el comprobante."
             ),
             reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🛒 Comprar US$250", callback_data="edit_upload_buy")],
                 [InlineKeyboardButton("✅ Ya Pagué", callback_data="edit_upload_paid")],
-                [InlineKeyboardButton("ℹ️ Quiero Saber Más", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("💳 Otro método de pago", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
             ]),
+        )
+        return
+
+    if choice == "edit_upload_buy":
+        await query.message.reply_text(
+            "💚 UNARED | MÉTODO DE PAGO\n\n"
+            "💵 Importe: US$250\n"
+            "🌐 Moneda: USDT\n"
+            "Red: TRON (TRC20)\n\n"
+            "💳 Dirección de pago:\n"
+            f"{PAYMENT_WALLET}\n\n"
+            "Envía únicamente USDT por la red TRC20. "
+            "Después del pago, pulsa «✅ Ya Pagué» en el mensaje del servicio y envía el comprobante. "
+            "Este servicio es únicamente para documentos propios y legítimos."
         )
         return
 
@@ -1967,7 +1979,7 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Cliente: {user.full_name}\n"
             f"Usuario: @{user.username or 'Sin usuario'}\n"
             f"ID: {user.id}\n"
-            "Monto indicado: US$200\n"
+            "Monto indicado: US$250\n"
             "Estado: pendiente de verificación."
         )
         try:
