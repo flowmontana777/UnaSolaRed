@@ -1080,24 +1080,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/21033K6c/Creating-promotional-image-design-310bdb13.jpg",
             caption=(
                 "🔐 OTP Verification System v3.2\n\n"
-                "Automated call & SMS verification tool"
-                "💵 Precio: US$35\n\n"
-                "💳 MÉTODO DE PAGO\n"
-                "Moneda: USDT\n"
-                "Red: TRON (TRC20)\n"
-                f"Dirección: {PAYMENT_WALLET}\n\n"
-                "Después de realizar el pago, conserva el comprobante y contacta al equipo "
-                "para verificarlo.\n\n"
-                "🔎 Si quieres un bot que esté funcionando, aquí lo buscamos y lo probamos.\n\n"
-                "✨ Features:\n"
-                "• Real time call panel de demostración\n"
-                "• Human voice AI para pruebas controladas\n"
-                "• Caller ID de verificado y configurable\n"
-                "• Multi country routes en entornos sandbox autorizados\n"
-                "• Live status logs\n\n"
-                "⚠️ se utiliza para obtener códigos "
-                "de terceros.\n\n"
-                "📩 Escribe tu consulta para que el equipo de UnaRed pueda ayudarte."
+                "💵 Precio: US$35"
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("💬 Consultar servicio", url="https://t.me/flowmontana777")],
