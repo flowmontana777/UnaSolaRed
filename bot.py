@@ -2377,18 +2377,25 @@ async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYP
         "🎵 ¡NUEVA MÚSICA EN UNARED!\n\n"
         f"🎧 {title}\n"
         + (f"👤 {performer}\n" if performer else "")
-        + f"📁 Formato: {extension.lstrip('.') or media_type.upper()}\n\n"
-        + "Ya está disponible en Modo Digital. "
+        + "\nYa está disponible en Modo Digital. "
           "Entra al bot y selecciona «Modo Digital» → «Escuchar música»."
     )
+    # Priorizar la portada incrustada en el audio/documento; si no existe,
+    # utilizar la portada general de Modo Digital como respaldo.
+    music_thumbnail = getattr(media, "thumbnail", None)
+    cover_file_id = music_thumbnail.file_id if music_thumbnail else ""
     banner_file_id = banner_row[0].strip() if banner_row and banner_row[0] else ""
+    notification_photo = (
+        cover_file_id
+        or (banner_file_id if not banner_file_id.startswith(("http://", "https://")) else "")
+    )
     sent = 0
     for telegram_id in subscribers:
         try:
-            if banner_file_id and not banner_file_id.startswith(("http://", "https://")):
+            if notification_photo:
                 await context.bot.send_photo(
                     chat_id=telegram_id,
-                    photo=banner_file_id,
+                    photo=notification_photo,
                     caption=notification,
                 )
             else:
