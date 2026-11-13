@@ -1419,10 +1419,13 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if status == "PAID":
                 await query.message.reply_text("✅ Tu pago ya está confirmado. El equipo continuará con tu solicitud.")
                 return
+            username = update.effective_user.username
+            username_text = f"@{username}" if username else "No tiene username público"
             await context.bot.send_message(
                 chat_id=int(ADMIN_CHAT_ID),
                 text=(
                     "🔔 AVISO DE PAGO | PÁGINAS WEB\\n"
+                    f"Cliente: {username_text}\\n"
                     f"Cliente Telegram ID: {update.effective_user.id}\\n"
                     f"Cantidad: {quantity}\\nImporte: US${amount}\\nFactura: {invoice_id}\\n"
                     "El cliente pulsó «¡Ya pagué!». El pago sigue pendiente de verificación automática."
