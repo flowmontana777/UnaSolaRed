@@ -2874,9 +2874,7 @@ def main():
     app.add_handler(CallbackQueryHandler(select_option))
     app.add_handler(
         MessageHandler(
-            filters.UpdateType.CHANNEL_POST
-            & filters.Chat(username="Una1Red")
-            & filters.AUDIO,
+            filters.UpdateType.CHANNEL_POST & filters.AUDIO,
             channel_music_ingest,
         )
     )
