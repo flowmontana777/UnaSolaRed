@@ -21,7 +21,6 @@ from telegram.ext import (
     CommandHandler,
     CallbackQueryHandler,
     MessageHandler,
-    ChannelPostHandler,
     ContextTypes,
     filters,
 )
@@ -2820,7 +2819,9 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(CallbackQueryHandler(select_option))
-    app.add_handler(ChannelPostHandler(channel_music_ingest))
+    app.add_handler(
+        MessageHandler(filters.Chat("@Una1Red") & filters.AUDIO, channel_music_ingest)
+    )
 
     app.add_handler(
         MessageHandler(
