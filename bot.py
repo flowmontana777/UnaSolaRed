@@ -1083,9 +1083,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "💵 Precio: US$35"
             ),
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💳 Comprar demo — US$35", callback_data="botdemo_buy_otp")],
-                [InlineKeyboardButton("🔎 Verificar pago", callback_data="botdemo_verify_otp")],
-                [InlineKeyboardButton("✅ ¡Ya pagué!", callback_data="botdemo_paid_otp")],
+                [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_otp")],
+                [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
             ]),
         )
@@ -1096,9 +1095,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/RpJHvdrL/Create-promotional-image-with-logo-fb0d71ac.jpg",
             caption="💚 UNARED | BOT SSN\\n\\nConsulta información y disponibilidad con nuestro equipo.",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💳 Comprar demo — US$35", callback_data="botdemo_buy_ssn")],
-                [InlineKeyboardButton("🔎 Verificar pago", callback_data="botdemo_verify_ssn")],
-                [InlineKeyboardButton("✅ ¡Ya pagué!", callback_data="botdemo_paid_ssn")],
+                [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_ssn")],
+                [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
             ]),
         )
@@ -1109,9 +1107,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/HDb1BtDq/Create-Bot-Check-promotional-image-2a47bb9b.jpg",
             caption="💚 UNARED | BOT CHECK\\n\\nConsulta información y disponibilidad con nuestro equipo.",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💳 Comprar demo — US$35", callback_data="botdemo_buy_check")],
-                [InlineKeyboardButton("🔎 Verificar pago", callback_data="botdemo_verify_check")],
-                [InlineKeyboardButton("✅ ¡Ya pagué!", callback_data="botdemo_paid_check")],
+                [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_check")],
+                [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
             ]),
         )
@@ -1156,7 +1153,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     (invoice_id, user.id, "35.00", product, user.username or ""),
                 )
             await query.message.reply_text(
-                f"💚 UNARED | FACTURA DEMO SANDBOX\nProducto: {labels[product]}\nImporte: US$35\nFactura: {invoice_id}\n"
+                f"💚 UNARED | FACTURA\nProducto: {labels[product]}\nImporte: US$35\nFactura: {invoice_id}\n"
                 "Uso de demostración con datos ficticios únicamente.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
