@@ -556,6 +556,38 @@ async def ask_for_details(query, context, service):
 # INICIO DEL BOT CON PORTADA
 # =====================================
 
+async def welcome_new_members(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Da la bienvenida automáticamente a cada nuevo integrante del grupo."""
+    message = update.effective_message
+    if not message or not message.new_chat_members:
+        return
+
+    bot_user = await context.bot.get_me()
+    for member in message.new_chat_members:
+        if member.id == bot_user.id or member.is_bot:
+            continue
+
+        welcome_text = (
+            f"💚 ¡Bienvenido/a {member.mention_html()} a UNARED!\n\n"
+            "💳 Ya formas parte de nuestra comunidad.\n"
+            "Para consultar servicios o realizar una solicitud, "
+            "abre nuestro bot privado con el botón de abajo."
+        )
+        keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton(
+                "💚 Abrir UnaRed",
+                url=f"https://t.me/{bot_user.username}?start=grupo",
+            )
+        ]]) if bot_user.username else None
+
+        await message.reply_text(
+            welcome_text,
+            parse_mode="HTML",
+            reply_markup=keyboard,
+            disable_web_page_preview=True,
+        )
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
 
@@ -3102,6 +3134,10 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(CallbackQueryHandler(select_option))
+    # Detecta automáticamente las entradas de nuevos clientes al grupo.
+    app.add_handler(
+        MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_new_members)
+    )
     # Recibir todas las actualizaciones y filtrar channel_post dentro de la función.
     # Así evitamos que un filtro de mensaje descarte publicaciones del canal.
     app.add_handler(TypeHandler(Update, channel_music_ingest), group=-1)
