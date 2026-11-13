@@ -45,7 +45,7 @@ GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
 async def schedule_payment_reminder(application, table_name, invoice_id, telegram_id, amount, service, invoice_url=None):
     """Send a reminder after 10 minutes only if this invoice is still pending."""
     await asyncio.sleep(600)
-    if table_name not in {"dayler_invoices", "pages_invoices", "icloud_invoices"}:
+    if table_name not in {"dayler_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices"}:
         return
     try:
         with sqlite3.connect(DATABASE_PATH) as db:
@@ -1187,6 +1187,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "INSERT INTO demo_bot_invoices VALUES (?, ?, ?, ?, ?, 'PENDING')",
                     (invoice_id, user.id, "35.00", product, user.username or ""),
                 )
+            asyncio.create_task(schedule_payment_reminder(context.application, "demo_bot_invoices", invoice_id, user.id, "35", labels[product], invoice_url))
             await query.message.reply_text(
                 f"💚 UNARED | FACTURA\nProducto: {labels[product]}\nImporte: US$35\nFactura: {invoice_id}\n"
                 "Uso de demostración con datos ficticios únicamente.",
