@@ -1083,7 +1083,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "💵 Precio: US$35"
             ),
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💬 Consultar servicio", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("💳 Comprar demo — US$35", callback_data="botdemo_buy_otp")],
+                [InlineKeyboardButton("🔎 Verificar pago", callback_data="botdemo_verify_otp")],
+                [InlineKeyboardButton("✅ ¡Ya pagué!", callback_data="botdemo_paid_otp")],
                 [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
             ]),
         )
@@ -1094,7 +1096,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/RpJHvdrL/Create-promotional-image-with-logo-fb0d71ac.jpg",
             caption="💚 UNARED | BOT SSN\\n\\nConsulta información y disponibilidad con nuestro equipo.",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💬 Consultar servicio", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("💳 Comprar demo — US$35", callback_data="botdemo_buy_ssn")],
+                [InlineKeyboardButton("🔎 Verificar pago", callback_data="botdemo_verify_ssn")],
+                [InlineKeyboardButton("✅ ¡Ya pagué!", callback_data="botdemo_paid_ssn")],
                 [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
             ]),
         )
@@ -1105,10 +1109,146 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/HDb1BtDq/Create-Bot-Check-promotional-image-2a47bb9b.jpg",
             caption="💚 UNARED | BOT CHECK\\n\\nConsulta información y disponibilidad con nuestro equipo.",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💬 Consultar servicio", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("💳 Comprar demo — US$35", callback_data="botdemo_buy_check")],
+                [InlineKeyboardButton("🔎 Verificar pago", callback_data="botdemo_verify_check")],
+                [InlineKeyboardButton("✅ ¡Ya pagué!", callback_data="botdemo_paid_check")],
                 [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
             ]),
         )
+        return
+
+    # DEMOS AISLADAS: DATOS SINTÉTICOS; NO HAY CONSULTAS A DATOS REALES
+    if choice.startswith("botdemo_buy_"):
+        product = choice.rsplit("_", 1)[-1]
+        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK"}
+        if product not in labels:
+            await query.message.reply_text("Producto no disponible.")
+            return
+        if not WOLVPAY_API_KEY:
+            await query.message.reply_text("El pago automático no está configurado.")
+            return
+        user = update.effective_user
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{WOLVPAY_API_URL}/invoices",
+                    headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}", "Content-Type": "application/json"},
+                    json={"amount": 35, "currency": "USD", "coin": "trc20_usdt",
+                          "description": f"UNARED_SANDBOX_DEMO|product={product}|telegram_id={user.id}",
+                          "white_label": False},
+                    timeout=aiohttp.ClientTimeout(total=25),
+                ) as response:
+                    payload = await response.json(content_type=None)
+                    if response.status not in (200, 201) or payload.get("success") is False:
+                        raise RuntimeError("WolvPay invoice creation failed")
+            data = payload.get("data") or payload
+            invoice_id = data.get("invoice_id")
+            invoice_url = data.get("url") or data.get("payment_url")
+            if not invoice_id or not invoice_url:
+                raise RuntimeError("Incomplete invoice response")
+            with sqlite3.connect(DATABASE_PATH) as db:
+                db.execute("""CREATE TABLE IF NOT EXISTS demo_bot_invoices (
+                    invoice_id TEXT PRIMARY KEY, telegram_id INTEGER NOT NULL, amount TEXT NOT NULL,
+                    product TEXT NOT NULL, username TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'PENDING'
+                )""")
+                db.execute(
+                    "INSERT INTO demo_bot_invoices VALUES (?, ?, ?, ?, ?, 'PENDING')",
+                    (invoice_id, user.id, "35.00", product, user.username or ""),
+                )
+            await query.message.reply_text(
+                f"💚 UNARED | FACTURA DEMO SANDBOX\nProducto: {labels[product]}\nImporte: US$35\nFactura: {invoice_id}\n"
+                "Uso de demostración con datos ficticios únicamente.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
+                    [InlineKeyboardButton("🔎 Verificar pago", callback_data=f"botdemo_verify_{product}")],
+                    [InlineKeyboardButton("✅ ¡Ya pagué!", callback_data=f"botdemo_paid_{product}")],
+                    [InlineKeyboardButton("⬅️ Volver", callback_data="tool_bots")],
+                ]),
+            )
+        except Exception:
+            logger.exception("Error creando factura de demo sandbox.")
+            await query.message.reply_text("No pudimos generar la factura. Inténtalo más tarde.")
+        return
+
+    if choice.startswith("botdemo_paid_"):
+        product = choice.rsplit("_", 1)[-1]
+        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK"}
+        if product not in labels:
+            await query.message.reply_text("Producto no disponible.")
+            return
+        with sqlite3.connect(DATABASE_PATH) as db:
+            row = db.execute(
+                "SELECT invoice_id, amount, status FROM demo_bot_invoices WHERE telegram_id = ? AND product = ? ORDER BY rowid DESC LIMIT 1",
+                (update.effective_user.id, product),
+            ).fetchone()
+        if not row:
+            await query.message.reply_text("No encontramos una factura asociada a tu cuenta.")
+            return
+        invoice_id, amount, status = row
+        await context.bot.send_message(
+            chat_id=int(ADMIN_CHAT_ID),
+            text=("🔔 CLIENTE INDICA QUE PAGÓ | UNARED\nProducto: " + labels[product] +
+                  "\nCliente: @" + (update.effective_user.username or "sin_username") +
+                  "\nTelegram ID: " + str(update.effective_user.id) +
+                  "\nFactura: " + invoice_id + "\nImporte: US$" + str(amount) +
+                  "\nEstado registrado: " + str(status) +
+                  "\nAviso informativo: no confirma el pago; verificar en WolvPay."),
+        )
+        await query.message.reply_text("📨 Aviso enviado al equipo. El pago sigue pendiente hasta confirmación de WolvPay.")
+        return
+
+    if choice.startswith("botdemo_verify_"):
+        product = choice.rsplit("_", 1)[-1]
+        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK"}
+        if product not in labels:
+            await query.message.reply_text("Producto no disponible.")
+            return
+        if not WOLVPAY_API_KEY:
+            await query.message.reply_text("La verificación automática no está configurada.")
+            return
+        try:
+            with sqlite3.connect(DATABASE_PATH) as db:
+                row = db.execute(
+                    "SELECT invoice_id, amount, status FROM demo_bot_invoices WHERE telegram_id = ? AND product = ? ORDER BY rowid DESC LIMIT 1",
+                    (update.effective_user.id, product),
+                ).fetchone()
+            if not row:
+                await query.message.reply_text("No encontramos una factura asociada a tu cuenta.")
+                return
+            invoice_id, amount, current = row
+            if current == "PAID":
+                await query.message.reply_text("✅ El pago ya está confirmado.")
+                return
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{WOLVPAY_API_URL}/invoices/{invoice_id}",
+                    headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}"},
+                    timeout=aiohttp.ClientTimeout(total=20),
+                ) as response:
+                    payload = await response.json(content_type=None)
+                    if response.status != 200:
+                        await query.message.reply_text("No pudimos consultar la factura.")
+                        return
+            invoice = payload.get("data") or payload
+            paid = (str(invoice.get("status", "")).upper() == "PAID"
+                    and str(invoice.get("invoice_id", invoice_id)) == invoice_id
+                    and Decimal(str(invoice.get("amount", "0"))) == Decimal(amount))
+            if not paid:
+                await query.message.reply_text("⏳ WolvPay todavía no confirma el pago.")
+                return
+            with sqlite3.connect(DATABASE_PATH) as db:
+                db.execute("UPDATE demo_bot_invoices SET status = 'PAID' WHERE invoice_id = ?", (invoice_id,))
+            await query.message.reply_text("✅ WolvPay confirma el pago de la demo sandbox.")
+            await context.bot.send_message(
+                chat_id=int(ADMIN_CHAT_ID),
+                text=("💚 DEMO SANDBOX PAGADA | " + labels[product] +
+                      "\nCliente Telegram ID: " + str(update.effective_user.id) +
+                      "\nImporte: US$" + str(amount) + "\nFactura: " + invoice_id +
+                      "\nEstado: PAID verificado con WolvPay."),
+            )
+        except (aiohttp.ClientError, asyncio.TimeoutError, sqlite3.Error, InvalidOperation, ValueError, TypeError):
+            logger.exception("Error verificando pago de demo sandbox.")
+            await query.message.reply_text("No pudimos verificar el pago en este momento.")
         return
 
     if choice == "tool_pyp":
