@@ -2820,7 +2820,12 @@ def main():
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(CallbackQueryHandler(select_option))
     app.add_handler(
-        MessageHandler(filters.Chat("@Una1Red") & filters.AUDIO, channel_music_ingest)
+        MessageHandler(
+            filters.UpdateType.CHANNEL_POST
+            & filters.Chat(username="Una1Red")
+            & filters.AUDIO,
+            channel_music_ingest,
+        )
     )
 
     app.add_handler(
