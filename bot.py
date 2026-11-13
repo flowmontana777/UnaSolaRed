@@ -21,6 +21,7 @@ from telegram.ext import (
     CommandHandler,
     CallbackQueryHandler,
     MessageHandler,
+    ChannelPostHandler,
     ContextTypes,
     filters,
 )
@@ -2210,6 +2211,49 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # =====================================
+# IMPORTAR MUSICA PUBLICADA EN EL CANAL UNARED
+# =====================================
+
+async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.channel_post
+    if not message or not message.chat or (message.chat.username or "").lower() != "una1red":
+        return
+
+    audio = message.audio
+    if not audio:
+        return
+    if audio.mime_type and audio.mime_type not in ("audio/mpeg", "audio/mp3"):
+        return
+
+    title = (audio.title or message.caption or "Canción de UnaRed").strip()[:120]
+    performer = (audio.performer or "").strip()[:120]
+    with sqlite3.connect(DATABASE_PATH) as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS digital_music (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            performer TEXT NOT NULL DEFAULT '',
+            submitted_by INTEGER NOT NULL,
+            submitter_name TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'PENDING',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )""")
+        exists = db.execute(
+            "SELECT id FROM digital_music WHERE file_id = ? LIMIT 1",
+            (audio.file_id,),
+        ).fetchone()
+        if exists:
+            return
+        db.execute(
+            """INSERT INTO digital_music
+               (file_id, title, performer, submitted_by, submitter_name, status)
+               VALUES (?, ?, ?, ?, ?, 'APPROVED')""",
+            (audio.file_id, title, performer, 0, "Canal @Una1Red"),
+        )
+    logger.info("Canción importada desde @Una1Red: %s", title)
+
+
+# =====================================
 # RECIBIR SOLICITUDES
 # =====================================
 
@@ -2776,6 +2820,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(CallbackQueryHandler(select_option))
+    app.add_handler(ChannelPostHandler(channel_music_ingest))
 
     app.add_handler(
         MessageHandler(
