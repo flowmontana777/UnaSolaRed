@@ -772,6 +772,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     context,
                     f"{app_name} - {action_label}",
                 )
+                await query.message.reply_text(
+                    "¿Quieres coordinar una llamada con UnaRed?",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("📞 Agendar Llamada", url="https://t.me/flowmontana777")],
+                    ]),
+                )
         return
 
     if choice.startswith("remit_"):
