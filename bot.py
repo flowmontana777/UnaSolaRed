@@ -2471,19 +2471,44 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if context.user_data.get("music_upload_mode"):
         message = update.message
-        if not message.audio:
+        media = message.audio or message.document
+        if not media:
             await message.reply_text(
-                "Para que se pueda reproducir dentro de Telegram, envía el MP3 como audio, no como documento. "
-                "Pulsa el clip y selecciona «Audio»."
+                "🎵 Envía un archivo de audio (MP3, M4A, AAC, OGG, OPUS, WAV, FLAC, WMA, AIFF o AMR). "
+                "Puedes enviarlo como «Audio» o como «Archivo»."
             )
             return
-        audio = message.audio
-        if audio.mime_type and audio.mime_type not in ("audio/mpeg", "audio/mp3"):
-            await message.reply_text("Por ahora solo aceptamos archivos MP3.")
+
+        file_name = (getattr(media, "file_name", None) or "").strip()
+        mime_type = (getattr(media, "mime_type", None) or "").lower()
+        extension = os.path.splitext(file_name)[1].lower()
+        allowed_audio_extensions = {
+            ".mp3", ".m4a", ".m4b", ".aac", ".ogg", ".oga", ".opus",
+            ".wav", ".flac", ".wma", ".aiff", ".aif", ".alac", ".amr",
+            ".mid", ".midi", ".mpga", ".weba",
+        }
+        is_audio_document = bool(message.document) and (
+            mime_type.startswith("audio/") or extension in allowed_audio_extensions
+        )
+        if message.document and not is_audio_document:
+            await message.reply_text(
+                "⚠️ El archivo no parece ser un audio compatible. Envía MP3, M4A, AAC, OGG, OPUS, WAV o FLAC."
+            )
             return
+        if message.audio and mime_type and not mime_type.startswith("audio/") and extension not in allowed_audio_extensions:
+            await message.reply_text(
+                "⚠️ El formato de audio no es compatible. Envía MP3, M4A, AAC, OGG, OPUS, WAV o FLAC."
+            )
+            return
+
+        media_type = "document" if message.document else "audio"
         user = update.effective_user
-        title = (audio.title or "Canción enviada").strip()[:120]
-        performer = (audio.performer or "").strip()[:120]
+        title = (
+            (getattr(media, "title", None) or "").strip()
+            or (os.path.splitext(file_name)[0] if file_name else "")
+            or "Canción enviada"
+        )[:120]
+        performer = (getattr(media, "performer", None) or "").strip()[:120]
         with sqlite3.connect(DATABASE_PATH) as db:
             db.execute("""CREATE TABLE IF NOT EXISTS digital_music (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2495,32 +2520,50 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 status TEXT NOT NULL DEFAULT 'PENDING',
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )""")
+            columns = {row[1] for row in db.execute("PRAGMA table_info(digital_music)")}
+            if "media_type" not in columns:
+                db.execute("ALTER TABLE digital_music ADD COLUMN media_type TEXT NOT NULL DEFAULT 'audio'")
+            if "file_name" not in columns:
+                db.execute("ALTER TABLE digital_music ADD COLUMN file_name TEXT NOT NULL DEFAULT ''")
             cursor = db.execute(
                 """INSERT INTO digital_music
-                   (file_id, title, performer, submitted_by, submitter_name, status)
-                   VALUES (?, ?, ?, ?, ?, 'PENDING')""",
-                (audio.file_id, title, performer, user.id, user.full_name[:120]),
+                   (file_id, title, performer, submitted_by, submitter_name, status, media_type, file_name)
+                   VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?)""",
+                (media.file_id, title, performer, user.id, user.full_name[:120], media_type, file_name),
             )
             song_id = cursor.lastrowid
         admin_caption = (
             "🎵 NUEVA CANCIÓN PARA REVISAR | UNARED\n\n"
             f"🎼 Título: {title}\n"
             f"🎤 Artista: {performer or 'No indicado'}\n"
+            f"📁 Archivo: {file_name or extension or 'Audio'}\n"
             f"👤 Enviada por: {user.full_name}\n"
             f"🆔 Telegram ID: {user.id}\n"
             "🟡 Estado: pendiente de aprobación.\n"
             "Confirma que tienes autorización para compartir esta grabación."
         )
         try:
-            await context.bot.send_audio(
-                chat_id=int(ADMIN_CHAT_ID),
-                audio=audio.file_id,
-                caption=admin_caption,
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("✅ Aprobar", callback_data=f"music_approve_{song_id}")],
-                    [InlineKeyboardButton("❌ Rechazar", callback_data=f"music_reject_{song_id}")],
-                ]),
-            )
+            buttons = InlineKeyboardMarkup([
+                [InlineKeyboardButton("✅ Aprobar", callback_data=f"music_approve_{song_id}")],
+                [InlineKeyboardButton("❌ Rechazar", callback_data=f"music_reject_{song_id}")],
+            ])
+            if media_type == "document":
+                await context.bot.send_document(
+                    chat_id=int(ADMIN_CHAT_ID),
+                    document=media.file_id,
+                    filename=file_name or None,
+                    caption=admin_caption,
+                    reply_markup=buttons,
+                )
+            else:
+                await context.bot.send_audio(
+                    chat_id=int(ADMIN_CHAT_ID),
+                    audio=media.file_id,
+                    title=title,
+                    performer=performer or None,
+                    caption=admin_caption,
+                    reply_markup=buttons,
+                )
             context.user_data.pop("music_upload_mode", None)
             await message.reply_text(
                 "✅ Recibimos tu canción. Quedó pendiente de revisión y solo aparecerá en el catálogo si UnaRed la aprueba."
