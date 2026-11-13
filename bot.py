@@ -1021,12 +1021,28 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "digital":
         context.user_data.pop("music_upload_mode", None)
-        await query.message.reply_text(
+        digital_caption = (
             "📟 UNARED | MODO DIGITAL\n\n"
             "🎵 Música para escuchar directamente en Telegram.\n"
-            "Explora el catálogo aprobado o envía una canción para revisión.",
-            reply_markup=digital_music_menu(),
+            "Explora el catálogo aprobado o envía una canción para revisión."
         )
+        with sqlite3.connect(DATABASE_PATH) as db:
+            db.execute("""CREATE TABLE IF NOT EXISTS digital_banner (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                file_id TEXT NOT NULL
+            )""")
+            banner = db.execute("SELECT file_id FROM digital_banner WHERE id = 1").fetchone()
+        if banner:
+            await query.message.reply_photo(
+                photo=banner[0],
+                caption=digital_caption,
+                reply_markup=digital_music_menu(),
+            )
+        else:
+            await query.message.reply_text(
+                digital_caption + "\\n\\n⚙️ El banner visual todavía no está configurado.",
+                reply_markup=digital_music_menu(),
+            )
         return
 
     if choice == "music_submit":
@@ -2366,6 +2382,28 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Los mensajes de grupos/canales no son solicitudes de clientes.
     # La música de @Una1Red se procesa únicamente en channel_music_ingest.
     if not update.effective_chat or update.effective_chat.type != "private":
+        return
+
+    # El administrador puede configurar la portada de Modo Digital
+    # enviando la imagen al bot con el texto /setdigitalbanner como caption.
+    if (
+        update.message
+        and update.message.photo
+        and (update.message.caption or "").strip().lower() == "/setdigitalbanner"
+        and str(update.effective_user.id) == str(ADMIN_CHAT_ID)
+    ):
+        banner_file_id = update.message.photo[-1].file_id
+        with sqlite3.connect(DATABASE_PATH) as db:
+            db.execute("""CREATE TABLE IF NOT EXISTS digital_banner (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                file_id TEXT NOT NULL
+            )""")
+            db.execute(
+                "INSERT INTO digital_banner (id, file_id) VALUES (1, ?) "
+                "ON CONFLICT(id) DO UPDATE SET file_id = excluded.file_id",
+                (banner_file_id,),
+            )
+        await update.message.reply_text("✅ Banner de Modo Digital guardado correctamente.")
         return
 
     if context.user_data.get("music_upload_mode"):
