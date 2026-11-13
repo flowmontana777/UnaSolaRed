@@ -1860,7 +1860,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("🛒 Comprar US$250", callback_data="edit_upload_buy")],
                 [InlineKeyboardButton("✅ Ya Pagué", callback_data="edit_upload_paid")],
                 [InlineKeyboardButton("💳 Otro método de pago", url="https://t.me/flowmontana777")],
-                [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("ℹ️ Quiero Saber Más", url="https://t.me/flowmontana777")],
             ]),
         )
         return
