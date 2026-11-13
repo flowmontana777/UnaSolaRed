@@ -558,6 +558,24 @@ async def ask_for_details(query, context, service):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
 
+    user = update.effective_user
+    if user:
+        with sqlite3.connect(DATABASE_PATH) as db:
+            db.execute("""CREATE TABLE IF NOT EXISTS digital_music_subscribers (
+                telegram_id INTEGER PRIMARY KEY,
+                username TEXT NOT NULL DEFAULT '',
+                full_name TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )""")
+            db.execute(
+                """INSERT INTO digital_music_subscribers (telegram_id, username, full_name)
+                   VALUES (?, ?, ?)
+                   ON CONFLICT(telegram_id) DO UPDATE SET
+                     username = excluded.username,
+                     full_name = excluded.full_name""",
+                (user.id, user.username or "", user.full_name or ""),
+            )
+
     welcome = (
         "💚 UNARED | LA RED QUE MUEVE TU DINERO\n\n"
         "Todos tus servicios en un solo lugar.\n"
@@ -2237,6 +2255,12 @@ async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYP
             status TEXT NOT NULL DEFAULT 'PENDING',
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )""")
+        db.execute("""CREATE TABLE IF NOT EXISTS digital_music_subscribers (
+            telegram_id INTEGER PRIMARY KEY,
+            username TEXT NOT NULL DEFAULT '',
+            full_name TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )""")
         exists = db.execute(
             "SELECT id FROM digital_music WHERE file_id = ? LIMIT 1",
             (audio.file_id,),
@@ -2249,7 +2273,31 @@ async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYP
                VALUES (?, ?, ?, ?, ?, 'APPROVED')""",
             (audio.file_id, title, performer, 0, "Canal @Una1Red"),
         )
-    logger.info("Canción importada desde @Una1Red: %s", title)
+        subscribers = [
+            row[0] for row in db.execute(
+                "SELECT telegram_id FROM digital_music_subscribers"
+            ).fetchall()
+        ]
+
+    notification = (
+        "🎵 ¡NUEVA MÚSICA EN UNARED!\n\n"
+        f"🎧 {title}\n"
+        + (f"👤 {performer}\n" if performer else "")
+        + "\nYa está disponible en Modo Digital. "
+          "Entra al bot y selecciona «Modo Digital» → «Escuchar música»."
+    )
+    sent = 0
+    for telegram_id in subscribers:
+        try:
+            await context.bot.send_message(chat_id=telegram_id, text=notification)
+            sent += 1
+        except Exception as exc:
+            logger.warning("No se pudo notificar al usuario %s: %s", telegram_id, exc)
+
+    logger.info(
+        "Canción importada desde @Una1Red: %s. Notificaciones enviadas: %s/%s",
+        title, sent, len(subscribers)
+    )
 
 
 # =====================================
