@@ -285,8 +285,8 @@ def amazon_menu():
         ],
         [
             InlineKeyboardButton(
-                "ℹ️ Tengo Amazon, pero necesito saber más",
-                callback_data="amazon_info",
+                "📞 Agendar Llamada!",
+                url="https://t.me/flowmontana777",
             )
         ],
         more_button("amazon"),
@@ -662,14 +662,6 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "amazon_have":
         await ask_for_details(query, context, "Amazon - Tengo Amazon")
-        return
-
-    if choice == "amazon_info":
-        await ask_for_details(
-            query,
-            context,
-            "Amazon - Tengo Amazon, necesito más información",
-        )
         return
 
     # APPLE
