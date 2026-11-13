@@ -384,6 +384,14 @@ def pages_coin_menu():
     ])
 
 
+def icloud_coin_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("₿ Bitcoin (BTC)", callback_data="icloud_coin_btc")],
+        [InlineKeyboardButton("₮ USDT (TRC20)", callback_data="icloud_coin_trc20_usdt")],
+        [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_icloud")],
+    ])
+
+
 def bill_amount_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("1", callback_data="bill_digit_1"), InlineKeyboardButton("2", callback_data="bill_digit_2"), InlineKeyboardButton("3", callback_data="bill_digit_3")],
@@ -1528,21 +1536,140 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    if choice in ("tool_amazon", "tool_icloud", "tool_loans"):
-        labels = {
-            "tool_amazon": "AMAZON",
-            "tool_icloud": "ICLOUD",
-            "tool_loans": "PRÉSTAMOS",
-        }
+    if choice in ("tool_amazon", "tool_loans"):
+        label = "AMAZON" if choice == "tool_amazon" else "PRÉSTAMOS"
         await query.message.reply_text(
-            f"💚 UNARED | {labels[choice]}\n\n"
-            "Consulta los servicios disponibles con nuestro equipo. "
-            "No compartas contraseñas ni códigos de verificación.",
+            f"💚 UNARED | {label}\n\nEste servicio estará disponible próximamente.",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💬 Consultar servicio", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⏳ Próximamente", callback_data="profiles_coming_soon")],
                 [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
             ]),
         )
+        return
+
+    if choice == "profiles_coming_soon":
+        await query.answer("Este servicio estará disponible próximamente.")
+        return
+
+    if choice == "tool_icloud":
+        await query.message.reply_text(
+            "💚 UNARED | ICLOUD\n\nAsistencia legítima para configurar iCloud en tu propio dispositivo. "
+            "No compartas contraseñas ni códigos de verificación.\n\n"
+            "🏷️ Precio por servicio: US$25\n📦 Cantidad: 1\n💵 Total: US$25",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💳 ¡Pagar US$25!", callback_data="icloud_pay")],
+                [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
+            ]),
+        )
+        return
+
+    if choice == "icloud_pay":
+        await query.message.reply_text(
+            "💚 UNARED | PAGO DE ICLOUD\n\nImporte: US$25\n\nSelecciona tu método de pago:",
+            reply_markup=icloud_coin_menu(),
+        )
+        return
+
+    if choice.startswith("icloud_coin_"):
+        coin = choice.replace("icloud_coin_", "", 1)
+        if coin not in ("btc", "trc20_usdt"):
+            await query.message.reply_text("Método de pago no disponible.")
+            return
+        if not WOLVPAY_API_KEY:
+            await query.message.reply_text("El pago automático no está configurado. Contacta al equipo de UnaRed.")
+            return
+        user = update.effective_user
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{WOLVPAY_API_URL}/invoices",
+                    headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}", "Content-Type": "application/json"},
+                    json={"amount": 25, "currency": "USD", "coin": coin,
+                          "description": f"UNARED_ICLOUD|telegram_id={user.id}", "white_label": False},
+                    timeout=aiohttp.ClientTimeout(total=25),
+                ) as response:
+                    payload = await response.json(content_type=None)
+                    if response.status not in (200, 201) or payload.get("success") is False:
+                        logger.error("WolvPay iCloud invoice error: HTTP %s; response=%s", response.status, payload)
+                        raise RuntimeError("Invoice creation failed")
+            data = payload.get("data") or payload
+            invoice_id = data.get("invoice_id")
+            invoice_url = data.get("url") or data.get("payment_url")
+            if not invoice_id or not invoice_url:
+                raise RuntimeError("Incomplete invoice response")
+            with sqlite3.connect(DATABASE_PATH) as db:
+                db.execute("""CREATE TABLE IF NOT EXISTS icloud_invoices (
+                    invoice_id TEXT PRIMARY KEY, telegram_id INTEGER NOT NULL,
+                    amount TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'PENDING'
+                )""")
+                db.execute("INSERT INTO icloud_invoices (invoice_id, telegram_id, amount, status) VALUES (?, ?, '25.00', 'PENDING')", (invoice_id, user.id))
+            await query.message.reply_text(
+                "💚 UNARED | FACTURA ICLOUD\n\nImporte: US$25\n"
+                f"Factura: {invoice_id}\n\nCompleta el pago desde WolvPay.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
+                    [InlineKeyboardButton("🔎 Verificar pago", callback_data="icloud_verify")],
+                    [InlineKeyboardButton("✅ ¡Ya pagué!", callback_data="icloud_paid")],
+                    [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
+                ]),
+            )
+        except Exception:
+            logger.exception("No se pudo generar la factura WolvPay para iCloud.")
+            await query.message.reply_text("No pudimos generar la factura. Inténtalo más tarde o contacta al equipo.")
+        return
+
+    if choice in ("icloud_paid", "icloud_verify"):
+        if not WOLVPAY_API_KEY:
+            await query.message.reply_text("La verificación automática no está disponible.")
+            return
+        try:
+            with sqlite3.connect(DATABASE_PATH) as db:
+                db.execute("""CREATE TABLE IF NOT EXISTS icloud_invoices (
+                    invoice_id TEXT PRIMARY KEY, telegram_id INTEGER NOT NULL,
+                    amount TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'PENDING'
+                )""")
+                row = db.execute("SELECT invoice_id, amount, status FROM icloud_invoices WHERE telegram_id = ? ORDER BY rowid DESC LIMIT 1", (update.effective_user.id,)).fetchone()
+            if not row:
+                await query.message.reply_text("No encontramos una factura de iCloud asociada a tu cuenta.")
+                return
+            invoice_id, expected_amount, current_status = row
+            if current_status == "PAID":
+                await query.message.reply_text("✅ Tu pago ya está confirmado. El equipo continuará con tu solicitud.")
+                return
+            if choice == "icloud_paid":
+                await context.bot.send_message(
+                    chat_id=int(ADMIN_CHAT_ID),
+                    text=("🔔 AVISO DE PAGO | ICLOUD\n"
+                          f"Cliente Telegram ID: {update.effective_user.id}\n"
+                          f"Importe: US${expected_amount}\nFactura: {invoice_id}\n"
+                          "El cliente pulsó «¡Ya pagué!». El pago sigue pendiente de verificación automática."),
+                )
+                await query.message.reply_text("📩 Avisamos al equipo de UnaRed. El pago aún debe ser confirmado por WolvPay.")
+                return
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{WOLVPAY_API_URL}/invoices/{invoice_id}",
+                    headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}"},
+                    timeout=aiohttp.ClientTimeout(total=20)) as response:
+                    payload = await response.json(content_type=None)
+                    if response.status != 200:
+                        await query.message.reply_text("No pudimos consultar la factura. Inténtalo de nuevo.")
+                        return
+            invoice = payload.get("data") or payload
+            paid = (str(invoice.get("status", "")).upper() == "PAID"
+                    and str(invoice.get("invoice_id", invoice_id)) == invoice_id
+                    and Decimal(str(invoice.get("amount", "0"))) == Decimal(expected_amount))
+            if not paid:
+                await query.message.reply_text("⏳ WolvPay todavía no confirma el pago. Vuelve a verificar en unos minutos.")
+                return
+            with sqlite3.connect(DATABASE_PATH) as db:
+                db.execute("UPDATE icloud_invoices SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'", (invoice_id,))
+            await query.message.reply_text("✅ WolvPay confirma tu pago. El equipo de UnaRed continuará con tu solicitud.")
+            await context.bot.send_message(chat_id=int(ADMIN_CHAT_ID),
+                text=f"💚 PAGO ICLOUD CONFIRMADO | UNARED\nCliente Telegram ID: {update.effective_user.id}\nImporte: US${expected_amount}\nFactura: {invoice_id}")
+        except (aiohttp.ClientError, asyncio.TimeoutError, sqlite3.Error, InvalidOperation, ValueError, TypeError):
+            logger.exception("Error procesando iCloud payment action.")
+            await query.message.reply_text("No pudimos procesar la solicitud en este momento.")
         return
 
     if choice == "tool_giftcards":
@@ -1962,6 +2089,12 @@ async def wolvpay_webhook(request):
                 invoice_type = "pages"
             if not row:
                 row = db.execute(
+                    "SELECT telegram_id, amount, status FROM icloud_invoices WHERE invoice_id = ?",
+                    (invoice_id,),
+                ).fetchone()
+                invoice_type = "icloud"
+            if not row:
+                row = db.execute(
                     "SELECT telegram_id, amount, product, username, status FROM demo_bot_invoices WHERE invoice_id = ?",
                     (invoice_id,),
                 ).fetchone()
@@ -1984,6 +2117,11 @@ async def wolvpay_webhook(request):
         customer_description = "Tu pago de US$" + str(expected_amount) + f" por {quantity} página(s) web fue confirmado automáticamente."
         order_detail = f"Cantidad de páginas web: {quantity}"
         admin_detail = f"Cantidad: {quantity}\nImporte confirmado: US$" + str(expected_amount)
+    elif invoice_type == "icloud":
+        telegram_id, expected_amount, current_status = row
+        customer_description = "Tu pago de US$25 para asistencia de configuración de iCloud fue confirmado automáticamente."
+        order_detail = "Servicio: configuración de iCloud en dispositivo propio"
+        admin_detail = "Servicio: iCloud\nImporte confirmado: US$" + str(expected_amount)
     else:
         telegram_id, expected_amount, product, username, current_status = row
         product_labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK"}
@@ -2018,7 +2156,7 @@ async def wolvpay_webhook(request):
 
     try:
         with sqlite3.connect(DATABASE_PATH) as db:
-            table_name = {"dayler": "dayler_invoices", "pages": "pages_invoices", "demo": "demo_bot_invoices"}[invoice_type]
+            table_name = {"dayler": "dayler_invoices", "pages": "pages_invoices", "icloud": "icloud_invoices", "demo": "demo_bot_invoices"}[invoice_type]
             db.execute(
                 f"UPDATE {table_name} SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'",
                 (invoice_id,),
@@ -2058,7 +2196,7 @@ async def wolvpay_webhook(request):
         "El equipo de UnaRed continuará con la preparación de tu servicio."
     )
     admin_text = (
-        "💚 PAGO " + ({"dayler": "DAYLER", "pages": "PÁGINAS WEB", "demo": "DEMO SANDBOX"}[invoice_type]) + " CONFIRMADO | UNARED\n\n"
+        "💚 PAGO " + ({"dayler": "DAYLER", "pages": "PÁGINAS WEB", "icloud": "ICLOUD", "demo": "DEMO SANDBOX"}[invoice_type]) + " CONFIRMADO | UNARED\n\n"
         f"Cliente Telegram ID: {telegram_id}\n{admin_detail}\n"
         f"Factura WolvPay: {invoice_id}\n"
         "Estado: PAGADO (verificado con WolvPay)."
