@@ -788,12 +788,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(
                 chat_id=int(ADMIN_CHAT_ID),
                 text=(
-                    "📞 NUEVA SOLICITUD DE LLAMADA | UNARED\\n\\n"
-                    f"Cliente: {user.full_name}\\n"
-                    f"Usuario: {username}\\n"
-                    f"Telegram ID: {user.id}\\n"
-                    f"Servicio: {service}\\n"
-                    "Estado: El cliente solicitó agendar una llamada."
+                    "📞 NUEVA SOLICITUD DE LLAMADA | UNARED\n\n"
+                    f"👤 Cliente: {user.full_name}\n"
+                    f"🔗 Usuario: {username}\n"
+                    f"🆔 Telegram ID: {user.id}\n"
+                    f"📲 Servicio: {service}\n"
+                    "🟢 Estado: Solicitud recibida; pendiente de coordinar."
                 ),
             )
             await query.message.reply_text(
