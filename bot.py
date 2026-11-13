@@ -1036,11 +1036,18 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             banner[0] if banner
             else "https://i.ibb.co/nNrT98Jp/743800-F9-4-E12-4093-91-E2-4-F05-EB16161-E.png"
         )
-        await query.message.reply_photo(
-            photo=banner_photo,
-            caption=digital_caption,
-            reply_markup=digital_music_menu(),
-        )
+        try:
+            await query.message.reply_photo(
+                photo=banner_photo,
+                caption=digital_caption,
+                reply_markup=digital_music_menu(),
+            )
+        except Exception as exc:
+            logger.exception("No se pudo mostrar el banner de Modo Digital: %s", exc)
+            await query.message.reply_text(
+                digital_caption,
+                reply_markup=digital_music_menu(),
+            )
         return
 
     if choice == "music_submit":
