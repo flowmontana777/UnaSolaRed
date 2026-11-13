@@ -1547,21 +1547,63 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if choice == "tool_icloud":
+        quantity = int(context.user_data.get("icloud_quantity", 1))
+        quantity = max(1, min(quantity, 99))
+        context.user_data["icloud_quantity"] = quantity
+        total = quantity * 25
         await query.message.reply_text(
             "💚 UNARED | ICLOUD\n\nAsistencia legítima para configurar iCloud en tu propio dispositivo. "
             "No compartas contraseñas ni códigos de verificación.\n\n"
-            "🏷️ Precio por servicio: US$25\n📦 Cantidad: 1\n💵 Total: US$25",
+            "🏷️ Precio por servicio: US$25\n"
+            f"📦 Cantidad: {quantity}\n💵 Total: US$\{total}",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💳 ¡Pagar US$25!", callback_data="icloud_pay")],
+                [
+                    InlineKeyboardButton("➖", callback_data="icloud_qty_minus"),
+                    InlineKeyboardButton(str(quantity), callback_data="icloud_qty_display"),
+                    InlineKeyboardButton("➕", callback_data="icloud_qty_plus"),
+                ],
+                [InlineKeyboardButton("💳 ¡Pagar!", callback_data="icloud_pay")],
                 [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
             ]),
         )
         return
 
+    if choice in ("icloud_qty_plus", "icloud_qty_minus"):
+        quantity = int(context.user_data.get("icloud_quantity", 1))
+        quantity = min(quantity + 1, 99) if choice == "icloud_qty_plus" else max(quantity - 1, 1)
+        context.user_data["icloud_quantity"] = quantity
+        total = quantity * 25
+        await query.edit_message_text(
+            "💚 UNARED | ICLOUD\n\nAsistencia legítima para configurar iCloud en tu propio dispositivo. "
+            "No compartas contraseñas ni códigos de verificación.\n\n"
+            "🏷️ Precio por servicio: US$25\n"
+            f"📦 Cantidad: {quantity}\n💵 Total: US$\{total}",
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("➖", callback_data="icloud_qty_minus"),
+                    InlineKeyboardButton(str(quantity), callback_data="icloud_qty_display"),
+                    InlineKeyboardButton("➕", callback_data="icloud_qty_plus"),
+                ],
+                [InlineKeyboardButton("💳 ¡Pagar!", callback_data="icloud_pay")],
+                [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
+            ]),
+        )
+        return
+
+    if choice == "icloud_qty_display":
+        await query.answer("Usa ➕ o ➖ para cambiar la cantidad.")
+        return
+
     if choice == "icloud_pay":
+        quantity = int(context.user_data.get("icloud_quantity", 1))
+        total = quantity * 25
+        context.user_data["icloud_checkout_quantity"] = quantity
         await query.message.reply_text(
-            "💚 UNARED | PAGO DE ICLOUD\n\nImporte: US$25\n\nSelecciona tu método de pago:",
+            "💚 UNARED | PAGO DE ICLOUD\n\n"
+            f"📦 Cantidad: {quantity}\n💵 Total: US$\{total}\n\n"
+            "Selecciona tu método de pago:",
             reply_markup=icloud_coin_menu(),
         )
         return
@@ -1575,13 +1617,15 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text("El pago automático no está configurado. Contacta al equipo de UnaRed.")
             return
         user = update.effective_user
+        quantity = int(context.user_data.get("icloud_checkout_quantity", 1))
+        total = quantity * 25
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     f"{WOLVPAY_API_URL}/invoices",
                     headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}", "Content-Type": "application/json"},
-                    json={"amount": 25, "currency": "USD", "coin": coin,
-                          "description": f"UNARED_ICLOUD|telegram_id={user.id}", "white_label": False},
+                    json={"amount": total, "currency": "USD", "coin": coin,
+                          "description": f"UNARED_ICLOUD|telegram_id={user.id}|quantity={quantity}", "white_label": False},
                     timeout=aiohttp.ClientTimeout(total=25),
                 ) as response:
                     payload = await response.json(content_type=None)
@@ -1596,11 +1640,16 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             with sqlite3.connect(DATABASE_PATH) as db:
                 db.execute("""CREATE TABLE IF NOT EXISTS icloud_invoices (
                     invoice_id TEXT PRIMARY KEY, telegram_id INTEGER NOT NULL,
-                    amount TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'PENDING'
+                    amount TEXT NOT NULL, quantity INTEGER NOT NULL DEFAULT 1,
+                    status TEXT NOT NULL DEFAULT 'PENDING'
                 )""")
-                db.execute("INSERT INTO icloud_invoices (invoice_id, telegram_id, amount, status) VALUES (?, ?, '25.00', 'PENDING')", (invoice_id, user.id))
+                columns = [column[1] for column in db.execute("PRAGMA table_info(icloud_invoices)").fetchall()]
+                if "quantity" not in columns:
+                    db.execute("ALTER TABLE icloud_invoices ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1")
+                db.execute("INSERT INTO icloud_invoices (invoice_id, telegram_id, amount, quantity, status) VALUES (?, ?, ?, ?, 'PENDING')", (invoice_id, user.id, str(total), quantity))
             await query.message.reply_text(
-                "💚 UNARED | FACTURA ICLOUD\n\nImporte: US$25\n"
+                "💚 UNARED | FACTURA ICLOUD\n\n"
+                f"📦 Cantidad: {quantity}\n💵 Total: US$\{total}\n"
                 f"Factura: {invoice_id}\n\nCompleta el pago desde WolvPay.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
@@ -1622,8 +1671,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             with sqlite3.connect(DATABASE_PATH) as db:
                 db.execute("""CREATE TABLE IF NOT EXISTS icloud_invoices (
                     invoice_id TEXT PRIMARY KEY, telegram_id INTEGER NOT NULL,
-                    amount TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'PENDING'
+                    amount TEXT NOT NULL, quantity INTEGER NOT NULL DEFAULT 1,
+                    status TEXT NOT NULL DEFAULT 'PENDING'
                 )""")
+                columns = [column[1] for column in db.execute("PRAGMA table_info(icloud_invoices)").fetchall()]
+                if "quantity" not in columns:
+                    db.execute("ALTER TABLE icloud_invoices ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1")
                 row = db.execute("SELECT invoice_id, amount, status FROM icloud_invoices WHERE telegram_id = ? ORDER BY rowid DESC LIMIT 1", (update.effective_user.id,)).fetchone()
             if not row:
                 await query.message.reply_text("No encontramos una factura de iCloud asociada a tu cuenta.")
@@ -2084,7 +2137,7 @@ async def wolvpay_webhook(request):
                 invoice_type = "pages"
             if not row:
                 row = db.execute(
-                    "SELECT telegram_id, amount, status FROM icloud_invoices WHERE invoice_id = ?",
+                    "SELECT telegram_id, amount, quantity, status FROM icloud_invoices WHERE invoice_id = ?",
                     (invoice_id,),
                 ).fetchone()
                 invoice_type = "icloud"
@@ -2113,10 +2166,10 @@ async def wolvpay_webhook(request):
         order_detail = f"Cantidad de páginas web: {quantity}"
         admin_detail = f"Cantidad: {quantity}\nImporte confirmado: US$" + str(expected_amount)
     elif invoice_type == "icloud":
-        telegram_id, expected_amount, current_status = row
-        customer_description = "Tu pago de US$25 para asistencia de configuración de iCloud fue confirmado automáticamente."
-        order_detail = "Servicio: configuración de iCloud en dispositivo propio"
-        admin_detail = "Servicio: iCloud\nImporte confirmado: US$" + str(expected_amount)
+        telegram_id, expected_amount, quantity, current_status = row
+        customer_description = "Tu pago de US$" + str(expected_amount) + f" por {quantity} servicio(s) de configuración de iCloud fue confirmado automáticamente."
+        order_detail = f"Servicio: configuración de iCloud en dispositivo propio (cantidad: {quantity})"
+        admin_detail = f"Servicio: iCloud\nCantidad: {quantity}\nImporte confirmado: US$" + str(expected_amount)
     else:
         telegram_id, expected_amount, product, username, current_status = row
         product_labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK"}
