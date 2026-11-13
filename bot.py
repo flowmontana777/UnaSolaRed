@@ -1078,21 +1078,34 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text("Canción no válida.")
             return
         with sqlite3.connect(DATABASE_PATH) as db:
+            columns = {item[1] for item in db.execute("PRAGMA table_info(digital_music)")}
+            if "media_type" not in columns:
+                db.execute("ALTER TABLE digital_music ADD COLUMN media_type TEXT NOT NULL DEFAULT 'audio'")
+            if "file_name" not in columns:
+                db.execute("ALTER TABLE digital_music ADD COLUMN file_name TEXT NOT NULL DEFAULT ''")
             row = db.execute(
-                "SELECT file_id, title, performer FROM digital_music WHERE id = ? AND status = 'APPROVED'",
+                "SELECT file_id, title, performer, media_type, file_name FROM digital_music WHERE id = ? AND status = 'APPROVED'",
                 (song_id,),
             ).fetchone()
         if not row:
             await query.message.reply_text("Esta canción ya no está disponible.")
             return
-        file_id, title, performer = row
-        await context.bot.send_audio(
-            chat_id=update.effective_chat.id,
-            audio=file_id,
-            title=title,
-            performer=performer or None,
-            caption=f"🎵 UNARED | MODO DIGITAL\n{title}",
-        )
+        file_id, title, performer, media_type, file_name = row
+        if media_type == "document":
+            await context.bot.send_document(
+                chat_id=update.effective_chat.id,
+                document=file_id,
+                filename=file_name or None,
+                caption=f"🎵 UNARED | MODO DIGITAL\n{title}",
+            )
+        else:
+            await context.bot.send_audio(
+                chat_id=update.effective_chat.id,
+                audio=file_id,
+                title=title,
+                performer=performer or None,
+                caption=f"🎵 UNARED | MODO DIGITAL\n{title}",
+            )
         return
 
     if choice.startswith("music_approve_") or choice.startswith("music_reject_"):
@@ -2241,22 +2254,47 @@ async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYP
     if channel_username != "una1red":
         return
 
-    logger.info(
-        "Publicación recibida en @Una1Red: message_id=%s, audio=%s, document=%s",
-        message.message_id, bool(message.audio), bool(message.document)
-    )
     audio = message.audio
-    if not audio:
-        if message.document and (message.document.mime_type or "").lower() in ("audio/mpeg", "audio/mp3"):
-            logger.warning("La canción llegó como DOCUMENTO, no como AUDIO. Reenvíala usando Telegram «Enviar como audio».")
-        else:
-            logger.warning("La publicación de @Una1Red no contiene un audio compatible.")
-        return
-    if audio.mime_type and audio.mime_type not in ("audio/mpeg", "audio/mp3"):
+    document = message.document
+    media = audio or document
+    if not media:
         return
 
-    title = (audio.title or message.caption or "Canción de UnaRed").strip()[:120]
-    performer = (audio.performer or "").strip()[:120]
+    file_name = (getattr(media, "file_name", None) or "").strip()
+    mime_type = (getattr(media, "mime_type", None) or "").lower()
+    extension = os.path.splitext(file_name)[1].lower()
+    music_extensions = {
+        ".mp3", ".m4a", ".m4b", ".aac", ".ogg", ".oga", ".opus",
+        ".wav", ".flac", ".wma", ".aiff", ".aif", ".alac", ".amr",
+        ".mid", ".midi", ".mpga", ".weba",
+    }
+    is_music_document = bool(document) and (
+        mime_type.startswith("audio/") or extension in music_extensions
+    )
+    if document and not is_music_document:
+        logger.info(
+            "Documento ignorado en @Una1Red: no parece un archivo musical (mime=%s, nombre=%s).",
+            mime_type, file_name
+        )
+        return
+    if not audio and not is_music_document:
+        return
+
+    media_type = "audio" if audio else "document"
+    title = (
+        (getattr(media, "title", None) or "").strip()
+        or (os.path.splitext(file_name)[0] if file_name else "")
+        or (message.caption or "").strip()
+        or "Canción de UnaRed"
+    )[:120]
+    performer = (getattr(media, "performer", None) or "").strip()[:120]
+    file_id = media.file_id
+
+    logger.info(
+        "Música detectada en @Una1Red: message_id=%s, tipo=%s, mime=%s, archivo=%s",
+        message.message_id, media_type, mime_type or "no indicado", file_name or title
+    )
+
     with sqlite3.connect(DATABASE_PATH) as db:
         db.execute("""CREATE TABLE IF NOT EXISTS digital_music (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2268,6 +2306,11 @@ async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYP
             status TEXT NOT NULL DEFAULT 'PENDING',
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )""")
+        columns = {row[1] for row in db.execute("PRAGMA table_info(digital_music)")}
+        if "media_type" not in columns:
+            db.execute("ALTER TABLE digital_music ADD COLUMN media_type TEXT NOT NULL DEFAULT 'audio'")
+        if "file_name" not in columns:
+            db.execute("ALTER TABLE digital_music ADD COLUMN file_name TEXT NOT NULL DEFAULT ''")
         db.execute("""CREATE TABLE IF NOT EXISTS digital_music_subscribers (
             telegram_id INTEGER PRIMARY KEY,
             username TEXT NOT NULL DEFAULT '',
@@ -2276,15 +2319,16 @@ async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYP
         )""")
         exists = db.execute(
             "SELECT id FROM digital_music WHERE file_id = ? LIMIT 1",
-            (audio.file_id,),
+            (file_id,),
         ).fetchone()
         if exists:
+            logger.info("La música ya estaba registrada en el catálogo: %s", title)
             return
         db.execute(
             """INSERT INTO digital_music
-               (file_id, title, performer, submitted_by, submitter_name, status)
-               VALUES (?, ?, ?, ?, ?, 'APPROVED')""",
-            (audio.file_id, title, performer, 0, "Canal @Una1Red"),
+               (file_id, title, performer, submitted_by, submitter_name, status, media_type, file_name)
+               VALUES (?, ?, ?, ?, ?, 'APPROVED', ?, ?)""",
+            (file_id, title, performer, 0, "Canal @Una1Red", media_type, file_name),
         )
         subscribers = [
             row[0] for row in db.execute(
@@ -2296,7 +2340,8 @@ async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYP
         "🎵 ¡NUEVA MÚSICA EN UNARED!\n\n"
         f"🎧 {title}\n"
         + (f"👤 {performer}\n" if performer else "")
-        + "\nYa está disponible en Modo Digital. "
+        + f"📁 Formato: {extension.lstrip('.') or media_type.upper()}\n\n"
+        + "Ya está disponible en Modo Digital. "
           "Entra al bot y selecciona «Modo Digital» → «Escuchar música»."
     )
     sent = 0
@@ -2308,8 +2353,8 @@ async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYP
             logger.warning("No se pudo notificar al usuario %s: %s", telegram_id, exc)
 
     logger.info(
-        "Canción importada desde @Una1Red: %s. Notificaciones enviadas: %s/%s",
-        title, sent, len(subscribers)
+        "Música importada desde @Una1Red: %s (tipo=%s). Notificaciones enviadas: %s/%s",
+        title, media_type, sent, len(subscribers)
     )
 
 
