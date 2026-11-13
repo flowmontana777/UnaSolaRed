@@ -2367,6 +2367,11 @@ async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYP
                 "SELECT telegram_id FROM digital_music_subscribers"
             ).fetchall()
         ]
+        banner_row = db.execute(
+            "SELECT file_id FROM digital_banner WHERE id = 1"
+        ).fetchone() if db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'digital_banner'"
+        ).fetchone() else None
 
     notification = (
         "🎵 ¡NUEVA MÚSICA EN UNARED!\n\n"
@@ -2376,10 +2381,18 @@ async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYP
         + "Ya está disponible en Modo Digital. "
           "Entra al bot y selecciona «Modo Digital» → «Escuchar música»."
     )
+    banner_file_id = banner_row[0].strip() if banner_row and banner_row[0] else ""
     sent = 0
     for telegram_id in subscribers:
         try:
-            await context.bot.send_message(chat_id=telegram_id, text=notification)
+            if banner_file_id and not banner_file_id.startswith(("http://", "https://")):
+                await context.bot.send_photo(
+                    chat_id=telegram_id,
+                    photo=banner_file_id,
+                    caption=notification,
+                )
+            else:
+                await context.bot.send_message(chat_id=telegram_id, text=notification)
             sent += 1
         except Exception as exc:
             logger.warning("No se pudo notificar al usuario %s: %s", telegram_id, exc)
