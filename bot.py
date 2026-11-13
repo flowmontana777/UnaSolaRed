@@ -1898,7 +1898,6 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar US$250", callback_data="edit_upload_buy")],
-                [InlineKeyboardButton("✅ Ya Pagué", callback_data="edit_upload_paid")],
                 [InlineKeyboardButton("💳 Otro método de pago", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("ℹ️ Quiero Saber Más", url="https://t.me/flowmontana777")],
             ]),
@@ -1967,6 +1966,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Este servicio es únicamente para documentos propios y legítimos.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
+                    [InlineKeyboardButton("✅ Ya Pagué", callback_data="edit_upload_invoice_paid")],
                     [InlineKeyboardButton("💬 Contactar a UnaRed", url="https://t.me/flowmontana777")],
                     [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
                 ]),
@@ -1989,6 +1989,39 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    if choice == "edit_upload_invoice_paid":
+        user = update.effective_user
+        with sqlite3.connect(DATABASE_PATH) as db:
+            invoice = db.execute(
+                "SELECT invoice_id, amount, status FROM edit_upload_invoices WHERE telegram_id = ? ORDER BY rowid DESC LIMIT 1",
+                (user.id,),
+            ).fetchone()
+        if not invoice:
+            await query.message.reply_text("No encontramos una factura de este servicio asociada a tu cuenta.")
+            return
+        invoice_id, amount, status = invoice
+        if str(status).upper() == "PAID":
+            await query.message.reply_text("✅ El pago de esta factura ya está confirmado.")
+            return
+        username = f"@{user.username}" if user.username else "Sin username público"
+        await context.bot.send_message(
+            chat_id=int(ADMIN_CHAT_ID),
+            text=(
+                "💚 UNARED | AVISO: CLIENTE INDICA QUE PAGÓ\\n\\n"
+                f"👤 Cliente: {user.full_name}\\n"
+                f"🔗 Usuario: {username}\\n"
+                f"🆔 Telegram ID: {user.id}\\n"
+                "📄 Servicio: Quiero Editar y Subir Papel\\n"
+                f"💵 Importe: US${amount}\\n"
+                f"🧾 Factura: {invoice_id}\\n"
+                "🟡 Estado: Cliente pulsó «Ya Pagué»; pendiente de confirmación automática de WolvPay."
+            ),
+        )
+        await query.message.reply_text(
+            "📩 Recibimos tu aviso. Estamos esperando la confirmación del pago por WolvPay. "
+            "No necesitas enviar el comprobante por aquí."
+        )
+        return
     if choice == "edit_upload_paid":
         context.user_data["edit_upload_step"] = "receipt"
         await query.message.reply_text(
