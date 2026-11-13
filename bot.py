@@ -1974,12 +1974,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(
                 chat_id=int(ADMIN_CHAT_ID),
                 text=(
-                    "📩 NUEVA SOLICITUD DE INFORMACIÓN | UNARED\\n\\n"
-                    f"Cliente: {user.full_name}\\n"
-                    f"Telegram: {username}\\n"
-                    f"ID: {user.id}\\n"
-                    f"Consulta: {description}\\n\\n"
-                    "Abre el perfil del cliente en Telegram para comunicarte con él."
+                    "📩 NUEVA SOLICITUD DE INFORMACIÓN | UNARED\n\n"
+                    f"👤 Cliente: {user.full_name}\n"
+                    f"🔗 Telegram: {username}\n"
+                    f"🆔 ID: {user.id}\n"
+                    f"📝 Consulta: {description}\n\n"
+                    "📲 Abre el perfil del cliente en Telegram para comunicarte con él."
                 ),
             )
             await query.message.reply_text(
@@ -2092,12 +2092,12 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         admin_message = (
             "💚 NUEVA ORDEN DAYLER - UNARED\n\n"
-            f"Cliente: {user.full_name}\n"
-            f"Usuario Telegram: @{user.username or 'Sin usuario'}\n"
-            f"ID Telegram: {user.id}\n"
-            f"Usuario SIP solicitado: {context.user_data.get('dayler_username', 'No indicado')}\n"
-            f"Referencia de pago: {reference}\n"
-            "Estado: pendiente de verificación manual."
+            f"👤 Cliente: {user.full_name}\n"
+            f"🔗 Usuario Telegram: @{user.username or 'Sin usuario'}\n"
+            f"🆔 ID Telegram: {user.id}\n"
+            f"📞 Usuario SIP solicitado: {context.user_data.get('dayler_username', 'No indicado')}\n"
+            f"🧾 Referencia de pago: {reference}\n"
+            "🟡 Estado: pendiente de verificación manual."
         )
         try:
             await context.bot.send_message(chat_id=int(ADMIN_CHAT_ID), text=admin_message)
@@ -2116,13 +2116,13 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reference = update.message.text.strip()
         user = update.effective_user
         admin_message = (
-            "💚 PAGO DE SERVICIO - UNARED\\n\\n"
-            f"Cliente: {user.full_name}\\n"
-            f"Usuario Telegram: @{user.username or 'Sin usuario'}\\n"
-            f"Categoría: {context.user_data.get('bill_category')}\\n"
-            f"Monto: USD {context.user_data.get('bill_amount')}\\n"
-            f"Referencia: {reference}\\n"
-            "Estado: pendiente de verificación."
+            "💚 PAGO DE SERVICIO - UNARED\n\n"
+            f"👤 Cliente: {user.full_name}\n"
+            f"🔗 Usuario Telegram: @{user.username or 'Sin usuario'}\n"
+            f"🧾 Categoría: {context.user_data.get('bill_category')}\n"
+            f"💵 Monto: USD {context.user_data.get('bill_amount')}\n"
+            f"🧾 Referencia: {reference}\n"
+            "🟡 Estado: pendiente de verificación."
         )
         try:
             await context.bot.send_message(chat_id=int(ADMIN_CHAT_ID), text=admin_message)
