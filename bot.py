@@ -1048,7 +1048,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.message.reply_text("✅ WolvPay confirma que tu pago está realizado. El equipo de UnaRed continuará con tu solicitud.")
                 await context.bot.send_message(
                     chat_id=int(ADMIN_CHAT_ID),
-                    text=f"💚 PAGO DAYLER CONFIRMADO | UNARED\\nFactura: {invoice_id}\\nCliente Telegram ID: {update.effective_user.id}\\nEstado: PAGADO (consulta manual verificada con WolvPay)."
+                    text=f"💚 PAGO DAYLER CONFIRMADO | UNARED\\nCliente: {'@' + update.effective_user.username if update.effective_user.username else 'No tiene username público'}\\nFactura: {invoice_id}\\nCliente Telegram ID: {update.effective_user.id}\\nEstado: PAGADO (consulta manual verificada con WolvPay)."
                 )
             else:
                 await query.message.reply_text("⏳ WolvPay todavía no confirma el pago. Espera unos minutos y vuelve a pulsar «Verificar pago».")
@@ -1689,6 +1689,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await context.bot.send_message(
                     chat_id=int(ADMIN_CHAT_ID),
                     text=("🔔 AVISO DE PAGO | ICLOUD\n"
+                          f"Cliente: {'@' + update.effective_user.username if update.effective_user.username else 'No tiene username público'}\n"
                           f"Cliente Telegram ID: {update.effective_user.id}\n"
                           f"Importe: US${expected_amount}\nFactura: {invoice_id}\n"
                           "El cliente pulsó «¡Ya pagué!». El pago sigue pendiente de verificación automática."),
@@ -2237,6 +2238,12 @@ async def wolvpay_webhook(request):
         return web.Response(status=500, text="Database error.")
 
     application = request.app["telegram_application"]
+    try:
+        customer_chat = await application.bot.get_chat(int(telegram_id))
+        customer_username = "@" + customer_chat.username if customer_chat.username else "No tiene username público"
+    except Exception:
+        logger.exception("Could not retrieve Telegram username for customer %s.", telegram_id)
+        customer_username = "No disponible"
     customer_text = (
         "✅ PAGO CONFIRMADO | UNARED\n\n"
         f"{customer_description}\n{order_detail}\n"
@@ -2245,6 +2252,7 @@ async def wolvpay_webhook(request):
     )
     admin_text = (
         "💚 PAGO " + ({"dayler": "DAYLER", "pages": "PÁGINAS WEB", "icloud": "ICLOUD", "demo": "DEMO SANDBOX"}[invoice_type]) + " CONFIRMADO | UNARED\n\n"
+        f"Cliente: {customer_username}\n"
         f"Cliente Telegram ID: {telegram_id}\n{admin_detail}\n"
         f"Factura WolvPay: {invoice_id}\n"
         "Estado: PAGADO (verificado con WolvPay)."
