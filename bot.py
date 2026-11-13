@@ -2887,7 +2887,7 @@ def main():
     app.add_handler(CallbackQueryHandler(select_option))
     # Recibir todas las actualizaciones y filtrar channel_post dentro de la función.
     # Así evitamos que un filtro de mensaje descarte publicaciones del canal.
-    app.add_handler(TypeHandler(Update, channel_music_ingest))
+    app.add_handler(TypeHandler(Update, channel_music_ingest), group=-1)
 
     app.add_handler(
         MessageHandler(
