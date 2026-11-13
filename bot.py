@@ -1032,17 +1032,31 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 file_id TEXT NOT NULL
             )""")
             banner = db.execute("SELECT file_id FROM digital_banner WHERE id = 1").fetchone()
-        banner_photo = banner[0] if banner and banner[0] else "https://i.ibb.co/nNrT98Jp/743800-F9-4-E12-4093-91-E2-4-F05-EB16161-E.png"
-        try:
-            await query.message.reply_photo(
-                photo=banner_photo,
-                caption=digital_caption,
-                reply_markup=digital_music_menu(),
-            )
-        except Exception as exc:
-            logger.exception("No se pudo mostrar el banner de Modo Digital: %s", exc)
+
+        # Usar exclusivamente el file_id entregado por Telegram al guardar la foto.
+        # No pasar enlaces externos: Telegram puede rechazarlos con
+        # "Failed to get http url content".
+        banner_file_id = banner[0].strip() if banner and banner[0] else ""
+        if banner_file_id and not banner_file_id.startswith(("http://", "https://")):
+            try:
+                await query.message.reply_photo(
+                    photo=banner_file_id,
+                    caption=digital_caption,
+                    reply_markup=digital_music_menu(),
+                )
+                logger.info("Banner de Modo Digital enviado usando file_id guardado.")
+            except Exception:
+                logger.exception("Telegram no pudo enviar el file_id guardado del banner.")
+                await query.message.reply_text(
+                    "⚠️ No se pudo cargar la portada. Vuelve a enviar la imagen al bot "
+                    "con /setdigitalbanner escrito en el pie de foto.",
+                    reply_markup=digital_music_menu(),
+                )
+        else:
+            logger.warning("No hay un file_id válido guardado para el banner de Modo Digital.")
             await query.message.reply_text(
-                digital_caption,
+                "⚠️ La portada todavía no está disponible. Envíame la imagen como foto "
+                "con /setdigitalbanner en el pie de foto y vuelve a abrir Modo Digital.",
                 reply_markup=digital_music_menu(),
             )
         return
