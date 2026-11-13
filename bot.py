@@ -1555,7 +1555,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "💚 UNARED | ICLOUD\n\nAsistencia legítima para configurar iCloud en tu propio dispositivo. "
             "No compartas contraseñas ni códigos de verificación.\n\n"
             "🏷️ Precio por servicio: US$25\n"
-            f"📦 Cantidad: {quantity}\n💵 Total: US$\{total}",
+            f"📦 Cantidad: {quantity}\n💵 Total: US${total}",
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("➖", callback_data="icloud_qty_minus"),
@@ -1578,7 +1578,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "💚 UNARED | ICLOUD\n\nAsistencia legítima para configurar iCloud en tu propio dispositivo. "
             "No compartas contraseñas ni códigos de verificación.\n\n"
             "🏷️ Precio por servicio: US$25\n"
-            f"📦 Cantidad: {quantity}\n💵 Total: US$\{total}",
+            f"📦 Cantidad: {quantity}\n💵 Total: US${total}",
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("➖", callback_data="icloud_qty_minus"),
@@ -1602,7 +1602,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["icloud_checkout_quantity"] = quantity
         await query.message.reply_text(
             "💚 UNARED | PAGO DE ICLOUD\n\n"
-            f"📦 Cantidad: {quantity}\n💵 Total: US$\{total}\n\n"
+            f"📦 Cantidad: {quantity}\n💵 Total: US${total}\n\n"
             "Selecciona tu método de pago:",
             reply_markup=icloud_coin_menu(),
         )
@@ -1649,7 +1649,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 db.execute("INSERT INTO icloud_invoices (invoice_id, telegram_id, amount, quantity, status) VALUES (?, ?, ?, ?, 'PENDING')", (invoice_id, user.id, str(total), quantity))
             await query.message.reply_text(
                 "💚 UNARED | FACTURA ICLOUD\n\n"
-                f"📦 Cantidad: {quantity}\n💵 Total: US$\{total}\n"
+                f"📦 Cantidad: {quantity}\n💵 Total: US${total}\n"
                 f"Factura: {invoice_id}\n\nCompleta el pago desde WolvPay.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
