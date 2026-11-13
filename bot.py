@@ -188,6 +188,18 @@ def back_button(destination="menu_home"):
 
 
 # =====================================
+# MODO DIGITAL - MUSICA
+# =====================================
+
+def digital_music_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🎧 Escuchar música", callback_data="music_catalog")],
+        [InlineKeyboardButton("📥 Enviar una canción", callback_data="music_submit")],
+        back_button(),
+    ])
+
+
+# =====================================
 # MENU PRINCIPAL
 # =====================================
 
@@ -986,16 +998,119 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         return
 
-    # DIGITAL MONEY
+    # MODO DIGITAL - MUSICA
 
     if choice == "digital":
-        await query.message.reply_photo(
-            photo="photo_2026-11-09_00-00-25.jpg",
-            caption=(
-                "📟 UNARED | MODO DIGITAL\n\n"
-                "PRÓXIMAMENTE."
-            ),
-            reply_markup=back_button(),
+        context.user_data.pop("music_upload_mode", None)
+        await query.message.reply_text(
+            "📟 UNARED | MODO DIGITAL\n\n"
+            "🎵 Música para escuchar directamente en Telegram.\n"
+            "Explora el catálogo aprobado o envía una canción para revisión.",
+            reply_markup=digital_music_menu(),
+        )
+        return
+
+    if choice == "music_submit":
+        context.user_data["music_upload_mode"] = True
+        await query.message.reply_text(
+            "📥 ENVIAR CANCIÓN | UNARED\n\n"
+            "Envía tu canción en formato audio MP3 usando la opción «Enviar como audio» de Telegram. "
+            "La canción quedará pendiente de aprobación antes de aparecer en el catálogo.\n\n"
+            "Envía /cancel si deseas salir."
+        )
+        return
+
+    if choice == "music_catalog":
+        with sqlite3.connect(DATABASE_PATH) as db:
+            db.execute("""CREATE TABLE IF NOT EXISTS digital_music (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                performer TEXT NOT NULL DEFAULT '',
+                submitted_by INTEGER NOT NULL,
+                submitter_name TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )""")
+            songs = db.execute(
+                "SELECT id, title, performer FROM digital_music WHERE status = 'APPROVED' ORDER BY id DESC LIMIT 20"
+            ).fetchall()
+        if not songs:
+            await query.message.reply_text(
+                "🎵 El catálogo todavía está vacío. Puedes enviar una canción para que UnaRed la revise.",
+                reply_markup=digital_music_menu(),
+            )
+            return
+        keyboard = [
+            [InlineKeyboardButton(
+                f"🎧 {title[:35]} - {performer[:25]}".strip(" -"),
+                callback_data=f"music_play_{song_id}",
+            )]
+            for song_id, title, performer in songs
+        ]
+        keyboard.append([InlineKeyboardButton("⬅️ Volver a Modo Digital", callback_data="digital")])
+        await query.message.reply_text("🎼 UNARED | CATÁLOGO MUSICAL", reply_markup=InlineKeyboardMarkup(keyboard))
+        return
+
+    if choice.startswith("music_play_"):
+        try:
+            song_id = int(choice.rsplit("_", 1)[1])
+        except ValueError:
+            await query.message.reply_text("Canción no válida.")
+            return
+        with sqlite3.connect(DATABASE_PATH) as db:
+            row = db.execute(
+                "SELECT file_id, title, performer FROM digital_music WHERE id = ? AND status = 'APPROVED'",
+                (song_id,),
+            ).fetchone()
+        if not row:
+            await query.message.reply_text("Esta canción ya no está disponible.")
+            return
+        file_id, title, performer = row
+        await context.bot.send_audio(
+            chat_id=update.effective_chat.id,
+            audio=file_id,
+            title=title,
+            performer=performer or None,
+            caption=f"🎵 UNARED | MODO DIGITAL\n{title}",
+        )
+        return
+
+    if choice.startswith("music_approve_") or choice.startswith("music_reject_"):
+        if str(update.effective_user.id) != str(ADMIN_CHAT_ID):
+            await query.answer("Esta acción es solo para el administrador.", show_alert=True)
+            return
+        action = "approve" if choice.startswith("music_approve_") else "reject"
+        try:
+            song_id = int(choice.rsplit("_", 1)[1])
+        except ValueError:
+            await query.message.reply_text("Solicitud no válida.")
+            return
+        new_status = "APPROVED" if action == "approve" else "REJECTED"
+        with sqlite3.connect(DATABASE_PATH) as db:
+            db.execute(
+                "UPDATE digital_music SET status = ? WHERE id = ? AND status = 'PENDING'",
+                (new_status, song_id),
+            )
+            row = db.execute(
+                "SELECT submitted_by, title FROM digital_music WHERE id = ?",
+                (song_id,),
+            ).fetchone()
+        if not row:
+            await query.message.reply_text("No encontramos esa canción.")
+            return
+        try:
+            await context.bot.send_message(
+                chat_id=int(row[0]),
+                text=("✅ Tu canción fue aprobada y ya está disponible en el catálogo de UnaRed."
+                      if new_status == "APPROVED"
+                      else "ℹ️ Tu canción no fue aprobada para el catálogo de UnaRed.")
+            )
+        except Exception:
+            logger.warning("No se pudo notificar al usuario sobre la revisión musical %s.", song_id)
+        await query.edit_message_caption(
+            caption=f"🎵 Revisión musical: {row[1]}\nEstado: {new_status}",
+            reply_markup=None,
         )
         return
 
@@ -2099,6 +2214,69 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =====================================
 
 async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.user_data.get("music_upload_mode"):
+        message = update.message
+        if not message.audio:
+            await message.reply_text(
+                "Para que se pueda reproducir dentro de Telegram, envía el MP3 como audio, no como documento. "
+                "Pulsa el clip y selecciona «Audio»."
+            )
+            return
+        audio = message.audio
+        if audio.mime_type and audio.mime_type not in ("audio/mpeg", "audio/mp3"):
+            await message.reply_text("Por ahora solo aceptamos archivos MP3.")
+            return
+        user = update.effective_user
+        title = (audio.title or "Canción enviada").strip()[:120]
+        performer = (audio.performer or "").strip()[:120]
+        with sqlite3.connect(DATABASE_PATH) as db:
+            db.execute("""CREATE TABLE IF NOT EXISTS digital_music (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                performer TEXT NOT NULL DEFAULT '',
+                submitted_by INTEGER NOT NULL,
+                submitter_name TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )""")
+            cursor = db.execute(
+                """INSERT INTO digital_music
+                   (file_id, title, performer, submitted_by, submitter_name, status)
+                   VALUES (?, ?, ?, ?, ?, 'PENDING')""",
+                (audio.file_id, title, performer, user.id, user.full_name[:120]),
+            )
+            song_id = cursor.lastrowid
+        admin_caption = (
+            "🎵 NUEVA CANCIÓN PARA REVISAR | UNARED\n\n"
+            f"🎼 Título: {title}\n"
+            f"🎤 Artista: {performer or 'No indicado'}\n"
+            f"👤 Enviada por: {user.full_name}\n"
+            f"🆔 Telegram ID: {user.id}\n"
+            "🟡 Estado: pendiente de aprobación.\n"
+            "Confirma que tienes autorización para compartir esta grabación."
+        )
+        try:
+            await context.bot.send_audio(
+                chat_id=int(ADMIN_CHAT_ID),
+                audio=audio.file_id,
+                caption=admin_caption,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("✅ Aprobar", callback_data=f"music_approve_{song_id}")],
+                    [InlineKeyboardButton("❌ Rechazar", callback_data=f"music_reject_{song_id}")],
+                ]),
+            )
+            context.user_data.pop("music_upload_mode", None)
+            await message.reply_text(
+                "✅ Recibimos tu canción. Quedó pendiente de revisión y solo aparecerá en el catálogo si UnaRed la aprueba."
+            )
+        except Exception:
+            logger.exception("No se pudo enviar la canción %s al administrador.", song_id)
+            await message.reply_text(
+                "La canción quedó registrada, pero no pudimos enviarla para revisión. Inténtalo más tarde."
+            )
+        return
+
     dayler_step = context.user_data.get("dayler_step")
     if context.user_data.get("edit_upload_step") == "receipt":
         if not update.message.photo and not update.message.document:
@@ -2601,7 +2779,7 @@ def main():
 
     app.add_handler(
         MessageHandler(
-            (filters.TEXT & ~filters.COMMAND) | filters.PHOTO | filters.Document.ALL,
+            (filters.TEXT & ~filters.COMMAND) | filters.PHOTO | filters.AUDIO | filters.Document.ALL,
             receive_request,
         )
     )
