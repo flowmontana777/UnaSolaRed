@@ -992,7 +992,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "La orden se confirmará automáticamente cuando WolvPay valide el pago.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
-                    [InlineKeyboardButton("🔎 Verificar pago", callback_data="dayler_verify")]
+                    [InlineKeyboardButton("🔎 Verificar pago", callback_data="dayler_verify")],
+                    [InlineKeyboardButton("✅ ¡Ya pagué!", callback_data="dayler_paid")]
                 ]),
             )
         except Exception:
@@ -1393,6 +1394,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
                     [InlineKeyboardButton("🔎 Verificar pago", callback_data="pages_verify")],
+                    [InlineKeyboardButton("✅ ¡Ya pagué!", callback_data="pages_paid")],
                     [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
                 ]),
             )
@@ -1403,6 +1405,34 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         return
 
+    if choice == "pages_paid":
+        try:
+            with sqlite3.connect(DATABASE_PATH) as db:
+                row = db.execute(
+                    "SELECT invoice_id, amount, quantity, status FROM pages_invoices WHERE telegram_id = ? ORDER BY rowid DESC LIMIT 1",
+                    (update.effective_user.id,),
+                ).fetchone()
+            if not row:
+                await query.message.reply_text("No encontramos una factura de páginas web asociada a tu cuenta.")
+                return
+            invoice_id, amount, quantity, status = row
+            if status == "PAID":
+                await query.message.reply_text("✅ Tu pago ya está confirmado. El equipo continuará con tu solicitud.")
+                return
+            await context.bot.send_message(
+                chat_id=int(ADMIN_CHAT_ID),
+                text=(
+                    "🔔 AVISO DE PAGO | PÁGINAS WEB\\n"
+                    f"Cliente Telegram ID: {update.effective_user.id}\\n"
+                    f"Cantidad: {quantity}\\nImporte: US${amount}\\nFactura: {invoice_id}\\n"
+                    "El cliente pulsó «¡Ya pagué!». El pago sigue pendiente de verificación automática."
+                ),
+            )
+            await query.message.reply_text("📩 Avisamos al equipo de UnaRed. Tu pago todavía debe ser confirmado por WolvPay; no envíes otro pago.")
+        except (sqlite3.Error, ValueError, TypeError):
+            logger.exception("Error procesando el aviso de pago de Páginas Web.")
+            await query.message.reply_text("No pudimos registrar el aviso ahora. Inténtalo de nuevo.")
+        return
     if choice == "pages_verify":
         if not WOLVPAY_API_KEY:
             await query.message.reply_text("La verificación automática no está disponible.")
