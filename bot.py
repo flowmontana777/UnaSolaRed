@@ -2390,23 +2390,50 @@ async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYP
         or (banner_file_id if not banner_file_id.startswith(("http://", "https://")) else "")
     )
     sent = 0
+    if not subscribers:
+        logger.warning(
+            "La música %s se agregó al catálogo, pero no hay suscriptores registrados. "
+            "Los clientes deben abrir el bot y pulsar /start.",
+            title,
+        )
+
     for telegram_id in subscribers:
         try:
+            # Si la portada no se puede enviar (por ejemplo, miniatura no válida),
+            # enviar igualmente la notificación de texto para no perder el aviso.
             if notification_photo:
-                await context.bot.send_photo(
-                    chat_id=telegram_id,
-                    photo=notification_photo,
-                    caption=notification,
-                )
+                try:
+                    await context.bot.send_photo(
+                        chat_id=telegram_id,
+                        photo=notification_photo,
+                        caption=notification,
+                    )
+                except Exception as photo_exc:
+                    logger.warning(
+                        "No se pudo enviar la portada al usuario %s; se enviará texto: %s",
+                        telegram_id, photo_exc
+                    )
+                    await context.bot.send_message(
+                        chat_id=telegram_id,
+                        text=notification,
+                    )
             else:
-                await context.bot.send_message(chat_id=telegram_id, text=notification)
+                await context.bot.send_message(
+                    chat_id=telegram_id,
+                    text=notification,
+                )
             sent += 1
         except Exception as exc:
-            logger.warning("No se pudo notificar al usuario %s: %s", telegram_id, exc)
+            logger.warning(
+                "No se pudo notificar al usuario %s sobre %s: %s",
+                telegram_id, title, exc
+            )
 
     logger.info(
-        "Música importada desde @Una1Red: %s (tipo=%s). Notificaciones enviadas: %s/%s",
-        title, media_type, sent, len(subscribers)
+        "Música importada desde @Una1Red: %s (tipo=%s, extensión=%s, mime=%s). "
+        "Notificaciones enviadas: %s/%s",
+        title, media_type, extension or "sin extensión",
+        mime_type or "no indicado", sent, len(subscribers)
     )
 
 
