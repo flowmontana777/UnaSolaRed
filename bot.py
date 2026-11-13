@@ -45,7 +45,7 @@ GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
 async def schedule_payment_reminder(application, table_name, invoice_id, telegram_id, amount, service, invoice_url=None):
     """Send a reminder after 10 minutes only if this invoice is still pending."""
     await asyncio.sleep(600)
-    if table_name not in {"dayler_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "bill_invoices"}:
+    if table_name not in {"dayler_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "bill_invoices", "edit_upload_invoices"}:
         return
     try:
         with sqlite3.connect(DATABASE_PATH) as db:
@@ -422,6 +422,14 @@ def icloud_coin_menu():
         [InlineKeyboardButton("₿ Bitcoin (BTC)", callback_data="icloud_coin_btc")],
         [InlineKeyboardButton("₮ USDT (TRC20)", callback_data="icloud_coin_trc20_usdt")],
         [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_icloud")],
+    ])
+
+
+def edit_upload_coin_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("₿ Bitcoin (BTC)", callback_data="edit_upload_coin_btc")],
+        [InlineKeyboardButton("₮ USDT (TRC20)", callback_data="edit_upload_coin_trc20_usdt")],
+        [InlineKeyboardButton("⬅️ Volver al servicio", callback_data="tool_edit_upload")],
     ])
 
 
@@ -1899,16 +1907,75 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "edit_upload_buy":
         await query.message.reply_text(
-            "💚 UNARED | MÉTODO DE PAGO\n\n"
-            "💵 Importe: US$250\n"
-            "🌐 Moneda: USDT\n"
-            "Red: TRON (TRC20)\n\n"
-            "💳 Dirección de pago:\n"
-            f"{PAYMENT_WALLET}\n\n"
-            "Envía únicamente USDT por la red TRC20. "
-            "Después del pago, pulsa «✅ Ya Pagué» en el mensaje del servicio y envía el comprobante. "
-            "Este servicio es únicamente para documentos propios y legítimos."
+            "💚 UNARED | PAGO DE QUIERO EDITAR Y SUBIR PAPEL\n\n"
+            "💵 Importe: US$250\n\n"
+            "Selecciona tu método de pago:",
+            reply_markup=edit_upload_coin_menu(),
         )
+        return
+
+    if choice.startswith("edit_upload_coin_"):
+        coin = choice.replace("edit_upload_coin_", "", 1)
+        if coin not in ("btc", "trc20_usdt"):
+            await query.message.reply_text("Método de pago no disponible.")
+            return
+        if not WOLVPAY_API_KEY:
+            await query.message.reply_text("El pago automático no está configurado. Contacta al equipo de UnaRed.")
+            return
+        user = update.effective_user
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{WOLVPAY_API_URL}/invoices",
+                    headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}", "Content-Type": "application/json"},
+                    json={
+                        "amount": 250,
+                        "currency": "USD",
+                        "coin": coin,
+                        "description": f"UNARED_EDITAR_SUBIR_PAPEL|telegram_id={user.id}",
+                        "white_label": False,
+                    },
+                    timeout=aiohttp.ClientTimeout(total=25),
+                ) as response:
+                    payload = await response.json(content_type=None)
+                    if response.status not in (200, 201) or payload.get("success") is False:
+                        logger.error("WolvPay edit/upload invoice error: HTTP %s; response=%s", response.status, payload)
+                        raise RuntimeError("Invoice creation failed")
+            data = payload.get("data") or payload
+            invoice_id = data.get("invoice_id")
+            invoice_url = data.get("url") or data.get("payment_url")
+            if not invoice_id or not invoice_url:
+                logger.error("Incomplete WolvPay edit/upload response: %s", payload)
+                raise RuntimeError("Incomplete invoice response")
+            with sqlite3.connect(DATABASE_PATH) as db:
+                db.execute("""CREATE TABLE IF NOT EXISTS edit_upload_invoices (
+                    invoice_id TEXT PRIMARY KEY,
+                    telegram_id INTEGER NOT NULL,
+                    amount TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'PENDING'
+                )""")
+                db.execute(
+                    "INSERT INTO edit_upload_invoices (invoice_id, telegram_id, amount, status) VALUES (?, ?, '250', 'PENDING')",
+                    (invoice_id, user.id),
+                )
+            asyncio.create_task(schedule_payment_reminder(context.application, "edit_upload_invoices", invoice_id, user.id, "250", "Editar y subir papel", invoice_url))
+            await query.message.reply_text(
+                "💚 UNARED | FACTURA - QUIERO EDITAR Y SUBIR PAPEL\n\n"
+                "💵 Total: US$250\n"
+                f"🧾 Factura: {invoice_id}\n\n"
+                "Completa el pago desde WolvPay. La confirmación se enviará automáticamente cuando el proveedor verifique el pago.\n"
+                "Este servicio es únicamente para documentos propios y legítimos.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
+                    [InlineKeyboardButton("💬 Contactar a UnaRed", url="https://t.me/flowmontana777")],
+                    [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
+                ]),
+            )
+        except Exception:
+            logger.exception("No se pudo crear la factura WolvPay para Editar y Subir Papel.")
+            await query.message.reply_text(
+                "No pudimos generar la factura. No realices transferencias manuales; inténtalo más tarde o contacta al equipo."
+            )
         return
 
     if choice == "edit_buy_paper":
@@ -2304,6 +2371,12 @@ async def wolvpay_webhook(request):
                     (invoice_id,),
                 ).fetchone()
                 invoice_type = "bill"
+            if not row:
+                row = db.execute(
+                    "SELECT telegram_id, amount, status FROM edit_upload_invoices WHERE invoice_id = ?",
+                    (invoice_id,),
+                ).fetchone()
+                invoice_type = "edit_upload"
     except sqlite3.Error:
         logger.exception("Could not read WolvPay invoice record.")
         return web.Response(status=500, text="Database error.")
@@ -2327,6 +2400,11 @@ async def wolvpay_webhook(request):
         customer_description = "Tu pago de US$" + str(expected_amount) + f" por {quantity} servicio(s) de configuración de iCloud fue confirmado automáticamente."
         order_detail = f"Servicio: configuración de iCloud en dispositivo propio (cantidad: {quantity})"
         admin_detail = f"Servicio: iCloud\nCantidad: {quantity}\nImporte confirmado: US$" + str(expected_amount)
+    elif invoice_type == "edit_upload":
+        telegram_id, expected_amount, current_status = row
+        customer_description = "Tu pago de US$250 para el servicio Editar y Subir Papel fue confirmado automáticamente."
+        order_detail = "Servicio: edición y preparación legítima de documentos propios"
+        admin_detail = "Servicio: Editar y Subir Papel\\nImporte confirmado: US$" + str(expected_amount)
     elif invoice_type == "demo":
         telegram_id, expected_amount, product, username, current_status = row
         product_labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK"}
@@ -2366,7 +2444,7 @@ async def wolvpay_webhook(request):
 
     try:
         with sqlite3.connect(DATABASE_PATH) as db:
-            table_name = {"dayler": "dayler_invoices", "pages": "pages_invoices", "icloud": "icloud_invoices", "demo": "demo_bot_invoices", "bill": "bill_invoices"}[invoice_type]
+            table_name = {"dayler": "dayler_invoices", "pages": "pages_invoices", "icloud": "icloud_invoices", "demo": "demo_bot_invoices", "bill": "bill_invoices", "edit_upload": "edit_upload_invoices"}[invoice_type]
             db.execute(
                 f"UPDATE {table_name} SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'",
                 (invoice_id,),
@@ -2412,7 +2490,7 @@ async def wolvpay_webhook(request):
         "El equipo de UnaRed continuará con la preparación de tu servicio."
     )
     admin_text = (
-        "💚 PAGO " + ({"dayler": "DAYLER", "pages": "PÁGINAS WEB", "icloud": "ICLOUD", "demo": "DEMO SANDBOX", "bill": "PAGO DE SERVICIOS"}[invoice_type]) + " CONFIRMADO | UNARED\n\n"
+        "💚 PAGO " + ({"dayler": "DAYLER", "pages": "PÁGINAS WEB", "icloud": "ICLOUD", "demo": "DEMO SANDBOX", "bill": "PAGO DE SERVICIOS", "edit_upload": "EDITAR Y SUBIR PAPEL"}[invoice_type]) + " CONFIRMADO | UNARED\n\n"
         f"Cliente: {customer_username}\n"
         f"Cliente Telegram ID: {telegram_id}\n{admin_detail}\n"
         f"Factura WolvPay: {invoice_id}\n"
