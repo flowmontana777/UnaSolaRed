@@ -15,8 +15,6 @@ from telegram import (
     Update,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    KeyboardButton,
-    ReplyKeyboardMarkup,
 )
 from telegram.ext import (
     Application,
@@ -624,17 +622,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=main_menu(),
     )
 
-    # Botón permanente en la parte inferior del chat, como en la referencia.
-    bottom_keyboard = ReplyKeyboardMarkup(
-        [[KeyboardButton("Empezar 🚀")]],
-        resize_keyboard=True,
-        is_persistent=True,
-        one_time_keyboard=False,
-    )
-    await update.effective_message.reply_text(
-        "Pulsa Empezar para abrir el menú de UnaRed.",
-        reply_markup=bottom_keyboard,
-    )
 
 
 # =====================================
@@ -3148,10 +3135,6 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(CallbackQueryHandler(select_option))
-    # El botón inferior "Empezar 🚀" vuelve a mostrar el menú principal.
-    app.add_handler(
-        MessageHandler(filters.Regex(r"^Empezar 🚀$"), start)
-    )
     # Detecta automáticamente las entradas de nuevos clientes al grupo.
     app.add_handler(
         MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_new_members)
