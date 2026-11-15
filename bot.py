@@ -2185,8 +2185,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "🌐 Catálogo de páginas web Cc.\n\n"
                 "━━━━━━━━━━━━━━━━━━\n\n"
                 "🏷️ Precio especial: US$17\n"
-                "💰 Precio regular: <s>US$20</s>\n\n"
-                f"📦 Cantidad: {quantity} unidad(es)\n"
+                "💰 Precio regular: <del>US$20</del>\n\n"
+                f"📦 Cantidad: {quantity} {'unidad' if quantity == 1 else 'unidades'}\n"
                 f"🧾 Total a pagar: US${total}"
             ),
             parse_mode="HTML",
@@ -2214,8 +2214,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "🌐 Catálogo de páginas web Cc.\n\n"
                 "━━━━━━━━━━━━━━━━━━\n\n"
                 "🏷️ Precio especial: US$17\n"
-                "💰 Precio regular: <s>US$20</s>\n\n"
-                f"📦 Cantidad: {quantity} unidad(es)\n"
+                "💰 Precio regular: <del>US$20</del>\n\n"
+                f"📦 Cantidad: {quantity} {'unidad' if quantity == 1 else 'unidades'}\n"
                 f"🧾 Total a pagar: US${total}"
             ),
             parse_mode="HTML",
