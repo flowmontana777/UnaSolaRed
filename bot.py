@@ -32,6 +32,7 @@ from telegram.ext import (
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID", "5864523026")
+BOT_OWNER_ID = os.getenv("BOT_OWNER_ID", "6823401070")
 WOLVPAY_API_KEY = os.getenv("WOLVPAY_API_KEY")
 WOLVPAY_WEBHOOK_SECRET = os.getenv("WOLVPAY_WEBHOOK_SECRET")
 WOLVPAY_API_URL = "https://wolvpay.com/api/v1"
@@ -572,7 +573,8 @@ def save_customer(user):
             last_seen=CURRENT_TIMESTAMP""", (user.id, user.username or "", user.full_name or ""))
 
 def is_admin(user):
-    return bool(user and str(user.id) == str(ADMIN_CHAT_ID))
+    allowed_ids = {str(ADMIN_CHAT_ID), str(BOT_OWNER_ID)}
+    return bool(user and str(user.id) in allowed_ids)
 
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
@@ -755,6 +757,23 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.debug("No se pudo retirar el teclado anterior para %s.", choice, exc_info=True)
     else:
         await query.answer()
+
+    # ACCIONES DEL PANEL ADMINISTRATIVO
+    if choice == "admin_stats":
+        await admin_stats(update, context)
+        return
+
+    if choice == "admin_search_help":
+        if not is_admin(update.effective_user):
+            await query.message.reply_text("⛔ Panel privado.")
+            return
+        await query.message.reply_text(
+            "🔎 UNARED | BUSCAR CLIENTE\\n\\n"
+            "Usa el comando:\\n/buscarcliente TELEGRAM_ID\\n\\n"
+            "Ejemplo: /buscarcliente 123456789\\n"
+            "El cliente debe haber iniciado o interactuado con el bot para aparecer en el registro."
+        )
+        return
 
     # VOLVER AL MENU PRINCIPAL
 
