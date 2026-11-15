@@ -7,6 +7,8 @@ import hashlib
 import json
 import sqlite3
 from decimal import Decimal, InvalidOperation
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import aiohttp
 from aiohttp import web
@@ -42,9 +44,49 @@ DATABASE_PATH = os.getenv("DATABASE_PATH", "unared_payments.sqlite3")
 GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
 
 # =====================================
-# METODO DE PAGO UNARED
+# UTILIDADES DE ADMINISTRACIÓN
 # =====================================
 
+def copy_id_keyboard(telegram_id):
+    """Muestra una acción para enviar el ID en un mensaje fácil de copiar."""
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("📋 Copiar ID", callback_data=f"copy_id:{int(telegram_id)}")
+    ]])
+
+
+async def reply_with_copyable_id(query, telegram_id):
+    """Telegram Bot API 21.6 no ofrece botón nativo de portapapeles; envía el ID como texto."""
+    await query.answer("Te envié el ID para que puedas copiarlo.")
+    await query.message.reply_text(
+        f"📋 ID de Telegram:\n<code>{int(telegram_id)}</code>",
+        parse_mode="HTML",
+    )
+
+
+async def notify_new_customer(application, user):
+    """Notifica al propietario una sola vez, cuando el cliente se registra por primera vez."""
+    admin_bot = application.bot_data.get("admin_bot") or application.bot
+    now = datetime.now(ZoneInfo("America/Santo_Domingo")).strftime("%d/%m/%Y %I:%M %p")
+    caption = (
+        "💚 UNARED | NUEVO CLIENTE\n\n"
+        f"👤 Cliente: {user.full_name or 'Sin nombre'}\n"
+        f"📛 Usuario: @{user.username if user.username else 'Sin nombre de usuario'}\n"
+        f"🆔 ID Telegram: {user.id}\n"
+        f"🕒 Registro: {now}"
+    )
+    try:
+        await admin_bot.send_message(
+            chat_id=int(BOT_OWNER_ID),
+            text=caption,
+            reply_markup=copy_id_keyboard(user.id),
+        )
+    except Exception:
+        logger.exception("No se pudo notificar el registro del nuevo cliente %s.", user.id)
+
+
+# =====================================
+# METODO DE PAGO UNARED
+# =====================================
 
 
 async def notify_invoice_pending(
@@ -90,7 +132,8 @@ async def notify_invoice_pending(
             if not admin_bot:
                 raise RuntimeError("El bot administrativo no está inicializado.")
             await admin_bot.send_photo(
-                chat_id=int(BOT_OWNER_ID), photo=image_url, caption=admin_caption
+                chat_id=int(BOT_OWNER_ID), photo=image_url, caption=admin_caption,
+                reply_markup=copy_id_keyboard(telegram_id),
             )
         except Exception:
             logger.exception("No se pudo enviar la notificación de factura pendiente al administrador %s.", invoice_id)
@@ -613,17 +656,27 @@ async def ask_for_details(query, context, service):
 INVOICE_TABLES = ("bill_invoices", "dayler_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "edit_upload_invoices")
 
 def save_customer(user):
+    """Guarda/actualiza al cliente y devuelve True únicamente en su primer registro."""
     if not user or is_admin(user):
-        return
+        return False
     with sqlite3.connect(DATABASE_PATH) as db:
         db.execute("""CREATE TABLE IF NOT EXISTS unared_customers (
             telegram_id INTEGER PRIMARY KEY, username TEXT NOT NULL DEFAULT '',
             full_name TEXT NOT NULL DEFAULT '', first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
-        db.execute("""INSERT INTO unared_customers (telegram_id, username, full_name)
-            VALUES (?, ?, ?) ON CONFLICT(telegram_id) DO UPDATE SET
-            username=excluded.username, full_name=excluded.full_name,
-            last_seen=CURRENT_TIMESTAMP""", (user.id, user.username or "", user.full_name or ""))
+        cursor = db.execute(
+            """INSERT OR IGNORE INTO unared_customers (telegram_id, username, full_name)
+               VALUES (?, ?, ?)""",
+            (user.id, user.username or "", user.full_name or ""),
+        )
+        is_new = cursor.rowcount == 1
+        if not is_new:
+            db.execute(
+                """UPDATE unared_customers SET username=?, full_name=?,
+                   last_seen=CURRENT_TIMESTAMP WHERE telegram_id=?""",
+                (user.username or "", user.full_name or "", user.id),
+            )
+    return is_new
 
 def log_customer_interaction(user, button_key):
     """Guarda qué botón pulsó cada cliente, sin almacenar el contenido de sus mensajes."""
@@ -699,6 +752,13 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.answer("⛔ Acceso denegado.", show_alert=True)
         return
     await query.answer()
+    if query.data.startswith("copy_id:"):
+        try:
+            telegram_id = int(query.data.split(":", 1)[1])
+            await reply_with_copyable_id(query, telegram_id)
+        except (ValueError, IndexError):
+            await query.answer("ID no válido.", show_alert=True)
+        return
     if query.data == "admin_stats":
         await admin_stats(update, context)
     elif query.data == "admin_stats_more":
@@ -763,15 +823,15 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
             FROM unared_interactions WHERE telegram_id != ?
             GROUP BY button_key, button_label
             ORDER BY total DESC LIMIT 8""", (int(BOT_OWNER_ID),)).fetchall()
-        recent = db.execute("""SELECT full_name, username, button_label, created_at
+        recent = db.execute("""SELECT full_name, username, telegram_id, button_label, created_at
             FROM unared_interactions WHERE telegram_id != ?
             ORDER BY id DESC LIMIT 10""", (int(BOT_OWNER_ID),)).fetchall()
     top_text = "\n".join(
         f"  • {label}: {count} clics" for label, count in top_buttons
     ) or "  • Todavía no hay clics registrados."
     recent_text = "\n".join(
-        f"  • {name or ('@' + username if username else 'Cliente')} → {label} ({when})"
-        for name, username, label, when in recent
+        f"  • {name or ('@' + username if username else 'Cliente')} → {label} | ID {tid} ({when})"
+        for name, username, tid, label, when in recent
     ) or "  • Todavía no hay actividad registrada."
     report = (
         "📊 UNARED | ESTADÍSTICAS\n"
@@ -794,10 +854,14 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"• Ingresos: USD {income:,.2f}\n"
         "━━━━━━━━━━━━━━━━━━"
     )
-    keyboard = InlineKeyboardMarkup([[
+    keyboard_rows = [
+        [InlineKeyboardButton(f"📋 Copiar ID {tid}", callback_data=f"copy_id:{tid}")]
+        for _, _, tid, _, _ in recent
+    ]
+    keyboard_rows.append([
         InlineKeyboardButton("🔎 Ver más estadísticas", callback_data="admin_stats_more")
-    ]])
-    await update.effective_message.reply_text(report, reply_markup=keyboard)
+    ])
+    await update.effective_message.reply_text(report, reply_markup=InlineKeyboardMarkup(keyboard_rows))
 
 
 async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -837,11 +901,16 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"{activity_text}\n"
         "━━━━━━━━━━━━━━━━━━"
     )
+    keyboard_rows = [
+        [InlineKeyboardButton(f"📋 Copiar ID {tid}", callback_data=f"copy_id:{tid}")]
+        for _, _, tid, _, _ in all_activity
+    ]
+    keyboard_rows.append([
+        InlineKeyboardButton("⬅️ Volver a estadísticas", callback_data="admin_stats")
+    ])
     await update.effective_message.reply_text(
         detail,
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("⬅️ Volver a estadísticas", callback_data="admin_stats")
-        ]])
+        reply_markup=InlineKeyboardMarkup(keyboard_rows)
     )
 
 
@@ -871,7 +940,10 @@ async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "👤 UNARED | FICHA DEL CLIENTE\n\n"
         f"🆔 ID: {tid}\n👤 Nombre: {name}\n📛 Usuario: " + (("@" + username) if username else "Sin username") +
         f"\n📅 Registro: {first_seen}\n🕒 Última actividad: {last_seen}\n🧾 Facturas: {total}",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📩 Abrir perfil", url="tg://user?id=" + str(tid))]]))
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("📋 Copiar ID", callback_data=f"copy_id:{tid}")],
+            [InlineKeyboardButton("📩 Abrir perfil", url="tg://user?id=" + str(tid))],
+        ]))
 
 # =====================================
 # INICIO DEL BOT CON PORTADA
@@ -913,7 +985,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
 
     user = update.effective_user
-    save_customer(user)
+    is_new_customer = save_customer(user)
+    if is_new_customer:
+        await notify_new_customer(context.application, user)
 
     # Enlace privado: /start admin_panel abre el panel solo al propietario.
     if context.args and context.args[0] == "admin_panel":
@@ -963,6 +1037,17 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     save_customer(update.effective_user)
     choice = query.data
+
+    if choice.startswith("copy_id:"):
+        if not is_admin(update.effective_user):
+            await query.answer("⛔ No autorizado.", show_alert=True)
+            return
+        try:
+            telegram_id = int(choice.split(":", 1)[1])
+            await reply_with_copyable_id(query, telegram_id)
+        except (ValueError, IndexError):
+            await query.answer("ID no válido.", show_alert=True)
+        return
 
     if choice.startswith("cancel_invoice:"):
         try:
