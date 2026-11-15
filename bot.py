@@ -258,7 +258,10 @@ def main_menu(user=None):
     # El acceso al panel solo aparece para las cuentas autorizadas.
     if is_admin(user):
         keyboard.append([
-            InlineKeyboardButton("⚙️ Panel de administración", callback_data="open_admin_panel")
+            InlineKeyboardButton(
+                "⚙️ Panel de administración",
+                url="https://t.me/UnaRed_Bot?start=admin_panel",
+            )
         ])
 
     return InlineKeyboardMarkup(keyboard)
@@ -703,6 +706,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user = update.effective_user
     save_customer(user)
+
+    # Enlace privado: /start admin_panel abre el panel solo al propietario.
+    if context.args and context.args[0] == "admin_panel":
+        if not is_admin(user):
+            await update.effective_message.reply_text("⛔ Este panel es privado y no tienes autorización.")
+            return
+        await admin_panel(update, context)
+        return
+
     if user:
         with sqlite3.connect(DATABASE_PATH) as db:
             db.execute("""CREATE TABLE IF NOT EXISTS digital_music_subscribers (
