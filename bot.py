@@ -6,6 +6,7 @@ import hmac
 import hashlib
 import json
 import sqlite3
+from io import BytesIO
 from decimal import Decimal, InvalidOperation
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -1463,18 +1464,32 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🧾 UNARED | PAGO DE SERVICIOS\n\n"
             "Selecciona una opción:"
         )
+        banner_url = "https://i.ibb.co/HTHNhsPk/10298-B3B-996-F-4BAF-8-D43-87552-B663-C6A.png"
         try:
+            # Descargar el banner desde el servidor del bot y enviarlo como archivo.
+            # Así Telegram no tiene que acceder directamente al alojamiento de ImgBB.
+            timeout = aiohttp.ClientTimeout(total=25, connect=10, sock_read=20)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(banner_url) as response:
+                    response.raise_for_status()
+                    content_type = response.headers.get("Content-Type", "").lower()
+                    if not content_type.startswith("image/"):
+                        raise ValueError(
+                            f"ImgBB devolvió un contenido que no es imagen: {content_type or 'tipo desconocido'}"
+                        )
+                    image_data = await response.read()
+
+            if not image_data:
+                raise ValueError("ImgBB devolvió una imagen vacía.")
+
             await query.message.reply_photo(
-                photo="https://i.ibb.co/HTHNhsPk/10298-B3B-996-F-4BAF-8-D43-87552-B663-C6A.png",
+                photo=BytesIO(image_data),
+                filename="unared-pago-bill.png",
                 caption=caption,
                 reply_markup=bills_menu(),
-                connect_timeout=10,
-                read_timeout=20,
-                write_timeout=20,
-                pool_timeout=10,
             )
         except Exception:
-            logger.exception("No se pudo cargar el banner de Pago Bill; se muestra el menú sin imagen.")
+            logger.exception("No se pudo descargar o enviar el banner de Pago Bill desde ImgBB.")
             await query.message.reply_text(
                 caption,
                 reply_markup=bills_menu(),
