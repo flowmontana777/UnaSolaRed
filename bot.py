@@ -621,24 +621,21 @@ def payment_types_menu():
 
 def tools_menu():
     keyboard = [
-        # Botones principales en filas completas.
+        # Cuatro servicios principales en filas completas.
         [InlineKeyboardButton("📞 Alquilar Línea Dialer", callback_data="tool_dayler")],
+        [InlineKeyboardButton("🗂️ Páginas Buy CC", callback_data="tool_pages")],
 
-        # Servicios organizados en dos columnas.
+        # Servicios secundarios organizados en dos columnas.
         [
-            InlineKeyboardButton("🗂️ Páginas Buy CC | OFERTA US$17", callback_data="tool_pages"),
             InlineKeyboardButton("🤖 Comprar Bot", callback_data="tool_bots"),
-        ],
-        [
             InlineKeyboardButton("🪪 SSN", callback_data="tool_ssn_info"),
-            InlineKeyboardButton("👤 Perfiles", callback_data="tool_profiles"),
         ],
         [
-            InlineKeyboardButton("💵 Método PyP | OFERTA US$100", callback_data="tool_pyp"),
+            InlineKeyboardButton("👤 Perfiles", callback_data="tool_profiles"),
             InlineKeyboardButton("📄 Papeles", callback_data="edit_buy_paper"),
         ],
 
-        # Edición y subida de papel en una fila completa.
+        [InlineKeyboardButton("💵 Método PyP", callback_data="tool_pyp")],
         [InlineKeyboardButton("📝 Editar y subir papel", callback_data="tool_edit_upload")],
         more_button("tools"),
         back_button(),
