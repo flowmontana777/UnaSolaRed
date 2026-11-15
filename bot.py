@@ -56,7 +56,6 @@ def copy_id_keyboard(telegram_id):
 
 async def reply_with_copyable_id(query, telegram_id):
     """Telegram Bot API 21.6 no ofrece botón nativo de portapapeles; envía el ID como texto."""
-    await query.answer("Te envié el ID para que puedas copiarlo.")
     await query.message.reply_text(
         f"📋 ID de Telegram:\n<code>{int(telegram_id)}</code>",
         parse_mode="HTML",
@@ -1044,6 +1043,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         try:
             telegram_id = int(choice.split(":", 1)[1])
+            await query.answer("Te envié el ID para que puedas copiarlo.")
             await reply_with_copyable_id(query, telegram_id)
         except (ValueError, IndexError):
             await query.answer("ID no válido.", show_alert=True)
