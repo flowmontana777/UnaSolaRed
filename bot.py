@@ -1565,10 +1565,10 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )""")
             banner = db.execute("SELECT file_id FROM digital_banner WHERE id = 1").fetchone()
 
-        # Usar exclusivamente el file_id entregado por Telegram al guardar la foto.
-        # No pasar enlaces externos: Telegram puede rechazarlos con
-        # "Failed to get http url content".
+        # Primero intenta usar el file_id guardado por Telegram; si no existe
+        # o queda inválido, utiliza la portada fija configurada en el código.
         banner_file_id = banner[0].strip() if banner and banner[0] else ""
+        banner_url = "https://i.ibb.co/C5NDDGjZ/743800-F9-4-E12-4093-91-E2-4-F05-EB16161-E.png"
         if banner_file_id and not banner_file_id.startswith(("http://", "https://")):
             try:
                 await query.message.reply_photo(
@@ -1577,18 +1577,20 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     reply_markup=digital_music_menu(),
                 )
                 logger.info("Banner de Modo Digital enviado usando file_id guardado.")
+                return
             except Exception:
-                logger.exception("Telegram no pudo enviar el file_id guardado del banner.")
-                await query.message.reply_text(
-                    "⚠️ No se pudo cargar la portada. Vuelve a enviar la imagen al bot "
-                    "con /setdigitalbanner escrito en el pie de foto.",
-                    reply_markup=digital_music_menu(),
-                )
-        else:
-            logger.warning("No hay un file_id válido guardado para el banner de Modo Digital.")
+                logger.exception("Falló el file_id guardado; se usará la portada fija.")
+        try:
+            await query.message.reply_photo(
+                photo=banner_url,
+                caption=digital_caption,
+                reply_markup=digital_music_menu(),
+            )
+            logger.info("Banner de Modo Digital enviado desde la URL fija.")
+        except Exception:
+            logger.exception("No se pudo enviar la portada fija de Modo Digital.")
             await query.message.reply_text(
-                "⚠️ La portada todavía no está disponible. Envíame la imagen como foto "
-                "con /setdigitalbanner en el pie de foto y vuelve a abrir Modo Digital.",
+                "⚠️ No se pudo cargar la portada de Modo Digital. Inténtalo de nuevo más tarde.",
                 reply_markup=digital_music_menu(),
             )
         return
