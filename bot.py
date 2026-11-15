@@ -570,7 +570,7 @@ async def ask_for_details(query, context, service):
 INVOICE_TABLES = ("bill_invoices", "dayler_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "edit_upload_invoices")
 
 def save_customer(user):
-    if not user:
+    if not user or is_admin(user):
         return
     with sqlite3.connect(DATABASE_PATH) as db:
         db.execute("""CREATE TABLE IF NOT EXISTS unared_customers (
@@ -584,7 +584,7 @@ def save_customer(user):
 
 def log_customer_interaction(user, button_key):
     """Guarda qué botón pulsó cada cliente, sin almacenar el contenido de sus mensajes."""
-    if not user or not button_key:
+    if not user or not button_key or is_admin(user):
         return
     labels = {
         "menu_banks": "🏦 Bancos",
@@ -712,12 +712,17 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
             username TEXT NOT NULL DEFAULT '', full_name TEXT NOT NULL DEFAULT '',
             button_key TEXT NOT NULL, button_label TEXT NOT NULL,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
-        total_clicks = db.execute("SELECT COUNT(*) FROM unared_interactions").fetchone()[0]
+        total_clicks = db.execute(
+            "SELECT COUNT(*) FROM unared_interactions WHERE telegram_id != ?",
+            (int(BOT_OWNER_ID),)
+        ).fetchone()[0]
         top_buttons = db.execute("""SELECT button_label, COUNT(*) AS total
-            FROM unared_interactions GROUP BY button_key, button_label
-            ORDER BY total DESC LIMIT 8""").fetchall()
+            FROM unared_interactions WHERE telegram_id != ?
+            GROUP BY button_key, button_label
+            ORDER BY total DESC LIMIT 8""", (int(BOT_OWNER_ID),)).fetchall()
         recent = db.execute("""SELECT full_name, username, button_label, created_at
-            FROM unared_interactions ORDER BY id DESC LIMIT 10""").fetchall()
+            FROM unared_interactions WHERE telegram_id != ?
+            ORDER BY id DESC LIMIT 10""", (int(BOT_OWNER_ID),)).fetchall()
     top_text = "\n".join(
         f"  • {label}: {count} clics" for label, count in top_buttons
     ) or "  • Todavía no hay clics registrados."
@@ -761,11 +766,17 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
             username TEXT NOT NULL DEFAULT '', full_name TEXT NOT NULL DEFAULT '',
             button_key TEXT NOT NULL, button_label TEXT NOT NULL,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
-        unique_clients = db.execute("SELECT COUNT(DISTINCT telegram_id) FROM unared_interactions").fetchone()[0]
+        unique_clients = db.execute(
+            "SELECT COUNT(DISTINCT telegram_id) FROM unared_interactions WHERE telegram_id != ?",
+            (int(BOT_OWNER_ID),)
+        ).fetchone()[0]
         all_buttons = db.execute("""SELECT button_label, COUNT(*) FROM unared_interactions
-            GROUP BY button_key, button_label ORDER BY COUNT(*) DESC, button_label ASC""").fetchall()
+            WHERE telegram_id != ?
+            GROUP BY button_key, button_label ORDER BY COUNT(*) DESC, button_label ASC""",
+            (int(BOT_OWNER_ID),)).fetchall()
         all_activity = db.execute("""SELECT full_name, username, telegram_id, button_label, created_at
-            FROM unared_interactions ORDER BY id DESC LIMIT 30""").fetchall()
+            FROM unared_interactions WHERE telegram_id != ?
+            ORDER BY id DESC LIMIT 30""", (int(BOT_OWNER_ID),)).fetchall()
     buttons_text = "\n".join(
         f"• {label}: {count} clics" for label, count in all_buttons
     ) or "• Todavía no hay botones registrados."
