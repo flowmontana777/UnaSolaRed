@@ -3366,8 +3366,9 @@ async def wolvpay_webhook(request):
     except Exception:
         logger.exception("Could not retrieve Telegram username for customer %s.", telegram_id)
         customer_username = "No disponible"
+    payment_image_url = "https://i.ibb.co/ccmC4XsG/86-DE6634-72-C2-4544-9-DB5-351541-A91286.png"
     customer_text = (
-        "✅ PAGO CONFIRMADO | UNARED\n\n"
+        "✅ PAGO REALIZADO | UNARED\n\n"
         f"{customer_description}\n{order_detail}\n"
         f"Factura: {invoice_id}\n\n"
         "El equipo de UnaRed continuará con la preparación de tu servicio."
@@ -3382,7 +3383,11 @@ async def wolvpay_webhook(request):
 
     try:
         if not notification_state[0]:
-            await application.bot.send_message(chat_id=int(telegram_id), text=customer_text)
+            await application.bot.send_photo(
+                chat_id=int(telegram_id),
+                photo=payment_image_url,
+                caption=customer_text,
+            )
             with sqlite3.connect(DATABASE_PATH) as db:
                 db.execute(
                     "UPDATE wolvpay_notifications SET customer_sent = 1 WHERE invoice_id = ?",
@@ -3390,7 +3395,16 @@ async def wolvpay_webhook(request):
                 )
 
         if not notification_state[1]:
-            await application.bot_data["admin_bot"].send_message(chat_id=int(BOT_OWNER_ID), text=admin_text)
+            admin_bot = application.bot_data["admin_bot"]
+            await admin_bot.send_photo(
+                chat_id=int(BOT_OWNER_ID),
+                photo=payment_image_url,
+                caption=(
+                    "💚 PAGO REALIZADO | UNARED\n"
+                    "Pago verificado correctamente con WolvPay."
+                ),
+            )
+            await admin_bot.send_message(chat_id=int(BOT_OWNER_ID), text=admin_text)
             with sqlite3.connect(DATABASE_PATH) as db:
                 db.execute(
                     "UPDATE wolvpay_notifications SET admin_sent = 1 WHERE invoice_id = ?",
