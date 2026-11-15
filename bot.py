@@ -586,10 +586,19 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
         await update.effective_message.reply_text("⛔ Panel privado.")
         return
-    await update.effective_message.reply_text("💚 UNARED | PANEL DE ADMINISTRACIÓN",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("📊 Estadísticas", callback_data="admin_stats")],
-            [InlineKeyboardButton("🔎 Cómo buscar un cliente", callback_data="admin_search_help")]]))
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📊 Estadísticas", callback_data="admin_stats")],
+        [InlineKeyboardButton("🔎 Cómo buscar un cliente", callback_data="admin_search_help")],
+    ])
+
+    # Banner de UnaRed mostrado al abrir el panel administrativo.
+    banner_url = "https://i.ibb.co/PvB4jdJT/E1-ED4248-C0-F3-45-C2-A875-5165-EF2-D4504.png"
+    await update.effective_message.reply_photo(
+        photo=banner_url,
+        caption="💚 UNARED | PANEL DE ADMINISTRACIÓN",
+        reply_markup=keyboard,
+    )
 
 async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
