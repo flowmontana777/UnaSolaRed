@@ -45,6 +45,39 @@ GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
 # METODO DE PAGO UNARED
 # =====================================
 
+
+
+async def notify_invoice_pending(application, telegram_id, invoice_id, amount, service):
+    """Notify the customer and the admin bot when a new invoice is created as pending."""
+    image_url = "https://i.ibb.co/99pb657f/6-D87-B76-C-02-AD-4-AEA-97-EB-DB3409-D6-F803.png"
+    customer_caption = (
+        "⌛️ PAGO EN ESPERA | UNARED\\n\\n"
+        f"Tu factura de {service} fue creada y está pendiente de pago.\\n"
+        f"Importe: USD {amount}\\nFactura: {invoice_id}\\n\\n"
+        "Completa el pago desde el enlace de tu factura."
+    )
+    admin_caption = (
+        "⌛️ FACTURA PENDIENTE | UNARED\\n\\n"
+        f"Cliente Telegram ID: {telegram_id}\\n"
+        f"Servicio: {service}\\nImporte: USD {amount}\\n"
+        f"Factura: {invoice_id}\\nEstado: PENDIENTE"
+    )
+    try:
+        await application.bot.send_photo(
+            chat_id=int(telegram_id), photo=image_url, caption=customer_caption
+        )
+    except Exception:
+        logger.exception("No se pudo enviar la imagen de pago pendiente al cliente %s.", telegram_id)
+    try:
+        admin_bot = application.bot_data.get("admin_bot")
+        if not admin_bot:
+            raise RuntimeError("El bot administrativo no está inicializado.")
+        await admin_bot.send_photo(
+            chat_id=int(BOT_OWNER_ID), photo=image_url, caption=admin_caption
+        )
+    except Exception:
+        logger.exception("No se pudo enviar la notificación de factura pendiente al administrador %s.", invoice_id)
+
 async def schedule_payment_reminder(application, table_name, invoice_id, telegram_id, amount, service, invoice_url=None):
     """Send a reminder after 10 minutes only if this invoice is still pending."""
     await asyncio.sleep(600)
@@ -1373,6 +1406,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             asyncio.create_task(schedule_payment_reminder(
                 context.application, "bill_invoices", invoice_id, user.id, amount, category, invoice_url
             ))
+            await notify_invoice_pending(context.application, user.id, invoice_id, amount, category)
             await query.message.reply_text(
                 "💚 UNARED | FACTURA DE PAGO DE SERVICIOS\\n\\n"
                 f"Servicio: {category}\\nImporte: USD {amount}\\n"
@@ -1679,6 +1713,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     (invoice_id, update.effective_user.id, "150.00", username),
                 )
             asyncio.create_task(schedule_payment_reminder(context.application, "dayler_invoices", invoice_id, update.effective_user.id, "150", "Dayler", invoice_url))
+            await notify_invoice_pending(context.application, update.effective_user.id, invoice_id, "150", "Dayler")
             await query.message.reply_text(
                 f"💚 UNARED | FACTURA DAYLER\n\n"
                 f"Importe: US$150\n"
@@ -1850,6 +1885,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     (invoice_id, user.id, "35.00", product, user.username or ""),
                 )
             asyncio.create_task(schedule_payment_reminder(context.application, "demo_bot_invoices", invoice_id, user.id, "35", labels[product], invoice_url))
+            await notify_invoice_pending(context.application, user.id, invoice_id, "35", labels[product])
             await query.message.reply_text(
                 f"💚 UNARED | FACTURA\nProducto: {labels[product]}\nImporte: US$35\nFactura: {invoice_id}\n"
                 "Uso de demostración con datos ficticios únicamente.",
@@ -2083,6 +2119,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     (invoice_id, user.id, str(total), quantity),
                 )
             asyncio.create_task(schedule_payment_reminder(context.application, "pages_invoices", invoice_id, user.id, str(total), "Páginas Web", invoice_url))
+            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "Páginas Web")
             await query.message.reply_text(
                 "💚 UNARED | FACTURA DE PÁGINAS WEB\n\n"
                 f"📦 Cantidad: {quantity}\n"
@@ -2346,6 +2383,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     db.execute("ALTER TABLE icloud_invoices ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1")
                 db.execute("INSERT INTO icloud_invoices (invoice_id, telegram_id, amount, quantity, status) VALUES (?, ?, ?, ?, 'PENDING')", (invoice_id, user.id, str(total), quantity))
             asyncio.create_task(schedule_payment_reminder(context.application, "icloud_invoices", invoice_id, user.id, str(total), "iCloud", invoice_url))
+            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "iCloud")
             await query.message.reply_text(
                 "💚 UNARED | FACTURA ICLOUD\n\n"
                 f"📦 Cantidad: {quantity}\n💵 Total: US${total}\n"
@@ -2511,6 +2549,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     (invoice_id, user.id),
                 )
             asyncio.create_task(schedule_payment_reminder(context.application, "edit_upload_invoices", invoice_id, user.id, "250", "Editar y subir papel", invoice_url))
+            await notify_invoice_pending(context.application, user.id, invoice_id, "250", "Editar y subir papel")
             await query.message.reply_text(
                 "💚 UNARED | FACTURA - QUIERO EDITAR Y SUBIR PAPEL\n\n"
                 "💵 Total: US$250\n"
