@@ -582,6 +582,45 @@ def save_customer(user):
             username=excluded.username, full_name=excluded.full_name,
             last_seen=CURRENT_TIMESTAMP""", (user.id, user.username or "", user.full_name or ""))
 
+def log_customer_interaction(user, button_key):
+    """Guarda qué botón pulsó cada cliente, sin almacenar el contenido de sus mensajes."""
+    if not user or not button_key:
+        return
+    labels = {
+        "menu_banks": "🏦 Bancos",
+        "remesas": "💸 Envíos y remesas",
+        "pagos": "🧾 Pago de servicios",
+        "amazon": "🛒 Amazon",
+        "apple": "🍎 Apple",
+        "vuelos": "✈️ Vuelos",
+        "menu_tools": "🧰 Herramientas",
+        "digital": "📟 Modo Digital",
+        "menu_home": "🏠 Menú principal",
+        "bill_pay": "💡 Pago de bill",
+        "dayler_pay": "💳 Servicio Dayler",
+        "music_catalog": "🎵 Catálogo de música",
+        "music_submit": "🎧 Enviar música",
+        "tool_edit_upload": "🛠️ Editar y subir",
+    }
+    label = labels.get(button_key, "🔘 " + button_key.replace("_", " ").strip().capitalize())
+    with sqlite3.connect(DATABASE_PATH) as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS unared_interactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            telegram_id INTEGER NOT NULL,
+            username TEXT NOT NULL DEFAULT '',
+            full_name TEXT NOT NULL DEFAULT '',
+            button_key TEXT NOT NULL,
+            button_label TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )""")
+        db.execute(
+            """INSERT INTO unared_interactions
+               (telegram_id, username, full_name, button_key, button_label)
+               VALUES (?, ?, ?, ?, ?)""",
+            (user.id, user.username or "", user.full_name or "", str(button_key), label),
+        )
+
+
 def is_admin(user):
     # Únicamente la cuenta propietaria puede ver y usar el panel.
     return bool(user and str(user.id) == BOT_OWNER_ID)
@@ -666,13 +705,35 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         elif status_value in {"PENDING", "UNPAID", "PROCESSING"}:
                             pending += 1
         music = db.execute("SELECT COUNT(*) FROM digital_music_subscribers").fetchone()[0] if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='digital_music_subscribers'").fetchone() else 0
+        db.execute("""CREATE TABLE IF NOT EXISTS unared_interactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id INTEGER NOT NULL,
+            username TEXT NOT NULL DEFAULT '', full_name TEXT NOT NULL DEFAULT '',
+            button_key TEXT NOT NULL, button_label TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
+        total_clicks = db.execute("SELECT COUNT(*) FROM unared_interactions").fetchone()[0]
+        top_buttons = db.execute("""SELECT button_label, COUNT(*) AS total
+            FROM unared_interactions GROUP BY button_key, button_label
+            ORDER BY total DESC LIMIT 8""").fetchall()
+        recent = db.execute("""SELECT full_name, username, button_label, created_at
+            FROM unared_interactions ORDER BY id DESC LIMIT 10""").fetchall()
+    top_text = "\\n".join(
+        f"  • {label}: {count} clics" for label, count in top_buttons
+    ) or "  • Todavía no hay clics registrados."
+    recent_text = "\\n".join(
+        f"  • {name or ('@' + username if username else 'Cliente')} → {label} ({when})"
+        for name, username, label, when in recent
+    ) or "  • Todavía no hay actividad registrada."
     await update.effective_message.reply_text(
-        "📊 UNARED | ESTADÍSTICAS DEL BOT\n\n"
-        f"👥 Usuarios/clientes registrados: {customers}\n🆕 Nuevos hoy: {today}\n"
-        f"📅 Nuevos últimos 7 días: {week}\n🎵 Usuarios Modo Digital: {music}\n\n"
-        f"🧾 Facturas creadas: {invoices}\n⏳ Facturas pendientes: {pending}\n"
-        f"✅ Pagos confirmados: {paid}\n💵 Ingresos confirmados: USD {income:,.2f}\n\n"
-        "📌 Se cuentan los usuarios que inician el bot o interactúan con sus botones y solicitudes.")
+        "📊 UNARED | ESTADÍSTICAS DEL BOT\\n\\n"
+        f"👥 Usuarios/clientes registrados: {customers}\\n🆕 Nuevos hoy: {today}\\n"
+        f"📅 Nuevos últimos 7 días: {week}\\n🎵 Usuarios Modo Digital: {music}\\n\\n"
+        f"🖱️ INTERACCIÓN DE CLIENTES\\n"
+        f"🔢 Total de botones pulsados: {total_clicks}\\n"
+        f"🏆 BOTONES MÁS UTILIZADOS\\n{top_text}\\n\\n"
+        f"🕘 ÚLTIMOS MOVIMIENTOS\\n{recent_text}\\n\\n"
+        f"🧾 Facturas creadas: {invoices}\\n⏳ Facturas pendientes: {pending}\\n"
+        f"✅ Pagos confirmados: {paid}\\n💵 Ingresos confirmados: USD {income:,.2f}\\n\\n"
+        "📌 Se registra el botón pulsado, el nombre del cliente y la hora. No se guarda el contenido de sus mensajes.")
 
 async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
@@ -792,6 +853,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     save_customer(update.effective_user)
     choice = query.data
+    if update.effective_chat and update.effective_chat.type == "private":
+        log_customer_interaction(update.effective_user, choice)
 
     # Feedback visual para las acciones principales de UnaRed.
     # Telegram no permite animar el botón; mostramos estado de proceso
