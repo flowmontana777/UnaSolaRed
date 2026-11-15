@@ -1128,7 +1128,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data["bank_input_id"] = bank_id
             context.user_data["bank_limit_value"] = ""
             await query.message.reply_text(
-                f"🏦 {bank_name}\\n\\nIntroduce el límite que aparece en tu cuenta con los botones numéricos y pulsa Confirmar.",
+                f"🏦 {bank_name}\n\nIntroduce el límite que aparece en tu cuenta con los botones numéricos y pulsa Confirmar.",
                 reply_markup=bank_limit_keyboard(),
             )
         return
@@ -1323,7 +1323,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "pagos":
         await query.message.reply_text(
-            "🧾 UNARED | PAGO DE SERVICIOS\\n\\n"
+            "🧾 UNARED | PAGO DE SERVICIOS\n\n"
             "Selecciona una opción:",
             reply_markup=bills_menu(),
         )
@@ -1352,7 +1352,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data["bill_category"] = payment_name
             context.user_data["bill_amount"] = ""
             await query.message.reply_text(
-                f"🧾 {payment_name}\\n\\nMonto: USD 0\\nUsa los botones numéricos:",
+                f"🧾 {payment_name}\n\nMonto: USD 0\nUsa los botones numéricos:",
                 reply_markup=bill_amount_keyboard(),
             )
         return
@@ -1364,7 +1364,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             amount += digit
         context.user_data["bill_amount"] = amount
         await query.edit_message_text(
-            f"🧾 {context.user_data.get('bill_category', 'Pago')}\\n\\nMonto: USD {amount or '0'}",
+            f"🧾 {context.user_data.get('bill_category', 'Pago')}\n\nMonto: USD {amount or '0'}",
             reply_markup=bill_amount_keyboard(),
         )
         return
@@ -1373,7 +1373,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         amount = context.user_data.get("bill_amount", "")[:-1]
         context.user_data["bill_amount"] = amount
         await query.edit_message_text(
-            f"🧾 {context.user_data.get('bill_category', 'Pago')}\\n\\nMonto: USD {amount or '0'}",
+            f"🧾 {context.user_data.get('bill_category', 'Pago')}\n\nMonto: USD {amount or '0'}",
             reply_markup=bill_amount_keyboard(),
         )
         return
@@ -1386,9 +1386,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         amount = str(Decimal(amount).quantize(Decimal("0.01")))
         context.user_data["bill_amount"] = amount
         await query.message.reply_text(
-            "💚 UNARED | MÉTODO DE PAGO\\n\\n"
-            f"Categoría: {context.user_data.get('bill_category')}\\n"
-            f"Monto: USD {amount}\\n\\n"
+            "💚 UNARED | MÉTODO DE PAGO\n\n"
+            f"Categoría: {context.user_data.get('bill_category')}\n"
+            f"Monto: USD {amount}\n\n"
             "Selecciona cómo deseas pagar mediante una factura de WolvPay:",
             reply_markup=bill_coin_menu(),
         )
@@ -1445,18 +1445,20 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             asyncio.create_task(schedule_payment_reminder(
                 context.application, "bill_invoices", invoice_id, user.id, amount, category, invoice_url
             ))
-            await notify_invoice_pending(context.application, user.id, invoice_id, amount, category, "bill_invoices")
             await query.message.reply_text(
-                "💚 UNARED | FACTURA DE PAGO DE SERVICIOS\\n\\n"
-                f"Servicio: {category}\\nImporte: USD {amount}\\n"
-                f"Moneda: {'Bitcoin (BTC)' if coin == 'btc' else 'USDT (TRC20)'}\\n"
-                f"Factura: {invoice_id}\\n\\n"
-                "Completa el pago desde la factura. WolvPay confirmará el pago automáticamente.",
+                "💚 UNARED | FACTURA DE PAGO DE SERVICIOS\n\n"
+                f"🛠️ Servicio: {category}\n"
+                f"💵 Importe: USD {amount}\n"
+                f"💳 Moneda: {'Bitcoin (BTC)' if coin == 'btc' else 'USDT (TRC20)'}\n"
+                f"🧾 Factura: {invoice_id}\n\n"
+                "🔐 Pulsa «Abrir factura y pagar» para completar el pago.\n"
+                "⚡️ WolvPay confirmará el pago automáticamente.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
                     [InlineKeyboardButton("⬅️ Volver a Pago de servicios", callback_data="pagos")],
                 ]),
             )
+            await notify_invoice_pending(context.application, user.id, invoice_id, amount, category, "bill_invoices")
         except Exception:
             logger.exception("No se pudo crear la factura WolvPay para Pago de servicios.")
             await query.message.reply_text(
@@ -1752,7 +1754,6 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     (invoice_id, update.effective_user.id, "150.00", username),
                 )
             asyncio.create_task(schedule_payment_reminder(context.application, "dayler_invoices", invoice_id, update.effective_user.id, "150", "Dayler", invoice_url))
-            await notify_invoice_pending(context.application, update.effective_user.id, invoice_id, "150", "Dayler", "dayler_invoices")
             await query.message.reply_text(
                 f"💚 UNARED | FACTURA DAYLER\n\n"
                 f"Importe: US$150\n"
@@ -1766,6 +1767,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("✅ ¡Ya pagué!", callback_data="dayler_paid")]
                 ]),
             )
+            await notify_invoice_pending(context.application, update.effective_user.id, invoice_id, "150", "Dayler", "dayler_invoices")
         except Exception:
             logger.exception("No se pudo crear la factura WolvPay para Dayler.")
             await query.message.reply_text(
@@ -1818,7 +1820,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.message.reply_text("✅ WolvPay confirma que tu pago está realizado. El equipo de UnaRed continuará con tu solicitud.")
                 await context.application.bot_data["admin_bot"].send_message(
                     chat_id=int(BOT_OWNER_ID),
-                    text=f"💚 PAGO DAYLER CONFIRMADO | UNARED\\nCliente: {'@' + update.effective_user.username if update.effective_user.username else 'No tiene username público'}\\nFactura: {invoice_id}\\nCliente Telegram ID: {update.effective_user.id}\\nEstado: PAGADO (consulta manual verificada con WolvPay)."
+                    text=f"💚 PAGO DAYLER CONFIRMADO | UNARED\nCliente: {'@' + update.effective_user.username if update.effective_user.username else 'No tiene username público'}\nFactura: {invoice_id}\nCliente Telegram ID: {update.effective_user.id}\nEstado: PAGADO (consulta manual verificada con WolvPay)."
                 )
             else:
                 await query.message.reply_text("⏳ WolvPay todavía no confirma el pago. Espera unos minutos y vuelve a pulsar «Verificar pago».")
@@ -1864,7 +1866,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice == "botproduct_ssn":
         await query.message.reply_photo(
             photo="https://i.ibb.co/RpJHvdrL/Create-promotional-image-with-logo-fb0d71ac.jpg",
-            caption="💚 UNARED | BOT SSN\\n\\nConsulta información y disponibilidad con nuestro equipo.",
+            caption="💚 UNARED | BOT SSN\n\nConsulta información y disponibilidad con nuestro equipo.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_ssn")],
                 [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
@@ -1876,7 +1878,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice == "botproduct_check":
         await query.message.reply_photo(
             photo="https://i.ibb.co/HDb1BtDq/Create-Bot-Check-promotional-image-2a47bb9b.jpg",
-            caption="💚 UNARED | BOT CHECK\\n\\nConsulta información y disponibilidad con nuestro equipo.",
+            caption="💚 UNARED | BOT CHECK\n\nConsulta información y disponibilidad con nuestro equipo.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_check")],
                 [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
@@ -1924,7 +1926,6 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     (invoice_id, user.id, "35.00", product, user.username or ""),
                 )
             asyncio.create_task(schedule_payment_reminder(context.application, "demo_bot_invoices", invoice_id, user.id, "35", labels[product], invoice_url))
-            await notify_invoice_pending(context.application, user.id, invoice_id, "35", labels[product], "demo_bot_invoices")
             await query.message.reply_text(
                 f"💚 UNARED | FACTURA\nProducto: {labels[product]}\nImporte: US$35\nFactura: {invoice_id}\n"
                 "Uso de demostración con datos ficticios únicamente.",
@@ -1935,6 +1936,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("⬅️ Volver", callback_data="tool_bots")],
                 ]),
             )
+            await notify_invoice_pending(context.application, user.id, invoice_id, "35", labels[product], "demo_bot_invoices")
         except Exception:
             logger.exception("Error creando factura de demo sandbox.")
             await query.message.reply_text("No pudimos generar la factura. Inténtalo más tarde.")
@@ -2158,7 +2160,6 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     (invoice_id, user.id, str(total), quantity),
                 )
             asyncio.create_task(schedule_payment_reminder(context.application, "pages_invoices", invoice_id, user.id, str(total), "Páginas Web", invoice_url))
-            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "Páginas Web", "pages_invoices")
             await query.message.reply_text(
                 "💚 UNARED | FACTURA DE PÁGINAS WEB\n\n"
                 f"📦 Cantidad: {quantity}\n"
@@ -2172,6 +2173,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
                 ]),
             )
+            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "Páginas Web", "pages_invoices")
         except Exception:
             logger.exception("No se pudo crear la factura WolvPay para Páginas Web.")
             await query.message.reply_text(
@@ -2198,10 +2200,10 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.application.bot_data["admin_bot"].send_message(
                 chat_id=int(BOT_OWNER_ID),
                 text=(
-                    "🔔 AVISO DE PAGO | PÁGINAS WEB\\n"
-                    f"Cliente: {username_text}\\n"
-                    f"Cliente Telegram ID: {update.effective_user.id}\\n"
-                    f"Cantidad: {quantity}\\nImporte: US${amount}\\nFactura: {invoice_id}\\n"
+                    "🔔 AVISO DE PAGO | PÁGINAS WEB\n"
+                    f"Cliente: {username_text}\n"
+                    f"Cliente Telegram ID: {update.effective_user.id}\n"
+                    f"Cantidad: {quantity}\nImporte: US${amount}\nFactura: {invoice_id}\n"
                     "El cliente pulsó «¡Ya pagué!». El pago sigue pendiente de verificación automática."
                 ),
             )
@@ -2422,7 +2424,6 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     db.execute("ALTER TABLE icloud_invoices ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1")
                 db.execute("INSERT INTO icloud_invoices (invoice_id, telegram_id, amount, quantity, status) VALUES (?, ?, ?, ?, 'PENDING')", (invoice_id, user.id, str(total), quantity))
             asyncio.create_task(schedule_payment_reminder(context.application, "icloud_invoices", invoice_id, user.id, str(total), "iCloud", invoice_url))
-            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "iCloud", "icloud_invoices")
             await query.message.reply_text(
                 "💚 UNARED | FACTURA ICLOUD\n\n"
                 f"📦 Cantidad: {quantity}\n💵 Total: US${total}\n"
@@ -2434,6 +2435,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
                 ]),
             )
+            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "iCloud", "icloud_invoices")
         except Exception:
             logger.exception("No se pudo generar la factura WolvPay para iCloud.")
             await query.message.reply_text("No pudimos generar la factura. Inténtalo más tarde o contacta al equipo.")
@@ -2588,7 +2590,6 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     (invoice_id, user.id),
                 )
             asyncio.create_task(schedule_payment_reminder(context.application, "edit_upload_invoices", invoice_id, user.id, "250", "Editar y subir papel", invoice_url))
-            await notify_invoice_pending(context.application, user.id, invoice_id, "250", "Editar y subir papel", "edit_upload_invoices")
             await query.message.reply_text(
                 "💚 UNARED | FACTURA - QUIERO EDITAR Y SUBIR PAPEL\n\n"
                 "💵 Total: US$250\n"
@@ -2601,6 +2602,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
                 ]),
             )
+            await notify_invoice_pending(context.application, user.id, invoice_id, "250", "Editar y subir papel", "edit_upload_invoices")
         except Exception:
             logger.exception("No se pudo crear la factura WolvPay para Editar y Subir Papel.")
             await query.message.reply_text(
@@ -2637,13 +2639,13 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.application.bot_data["admin_bot"].send_message(
             chat_id=int(BOT_OWNER_ID),
             text=(
-                "💚 UNARED | AVISO: CLIENTE INDICA QUE PAGÓ\\n\\n"
-                f"👤 Cliente: {user.full_name}\\n"
-                f"🔗 Usuario: {username}\\n"
-                f"🆔 Telegram ID: {user.id}\\n"
-                "📄 Servicio: Quiero Editar y Subir Papel\\n"
-                f"💵 Importe: US${amount}\\n"
-                f"🧾 Factura: {invoice_id}\\n"
+                "💚 UNARED | AVISO: CLIENTE INDICA QUE PAGÓ\n\n"
+                f"👤 Cliente: {user.full_name}\n"
+                f"🔗 Usuario: {username}\n"
+                f"🆔 Telegram ID: {user.id}\n"
+                "📄 Servicio: Quiero Editar y Subir Papel\n"
+                f"💵 Importe: US${amount}\n"
+                f"🧾 Factura: {invoice_id}\n"
                 "🟡 Estado: Cliente pulsó «Ya Pagué»; pendiente de confirmación automática de WolvPay."
             ),
         )
@@ -3365,19 +3367,19 @@ async def wolvpay_webhook(request):
         telegram_id, expected_amount, current_status = row
         customer_description = "Tu pago de US$250 para el servicio Editar y Subir Papel fue confirmado automáticamente."
         order_detail = "Servicio: edición y preparación legítima de documentos propios"
-        admin_detail = "Servicio: Editar y Subir Papel\\nImporte confirmado: US$" + str(expected_amount)
+        admin_detail = "Servicio: Editar y Subir Papel\nImporte confirmado: US$" + str(expected_amount)
     elif invoice_type == "demo":
         telegram_id, expected_amount, product, username, current_status = row
         product_labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK"}
         product_label = product_labels.get(product, "DEMO SANDBOX")
         customer_description = "Tu pago de US$35 para la demostración sandbox fue confirmado automáticamente."
         order_detail = f"Producto: {product_label} (datos sintéticos únicamente)"
-        admin_detail = f"Producto: {product_label}\\nCliente: @{username or 'sin_username'}\\nImporte confirmado: US$" + str(expected_amount)
+        admin_detail = f"Producto: {product_label}\nCliente: @{username or 'sin_username'}\nImporte confirmado: US$" + str(expected_amount)
     else:
         telegram_id, expected_amount, category, username, current_status = row
         customer_description = "Tu pago de servicios fue confirmado automáticamente."
         order_detail = f"Servicio solicitado: {category}"
-        admin_detail = f"Servicio: {category}\\nCliente: @{username or 'sin_username'}\\nImporte confirmado: US$" + str(expected_amount)
+        admin_detail = f"Servicio: {category}\nCliente: @{username or 'sin_username'}\nImporte confirmado: US$" + str(expected_amount)
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(
