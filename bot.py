@@ -639,7 +639,14 @@ def run_admin_bot():
     admin_app.add_handler(CommandHandler("buscarcliente", find_customer))
     admin_app.add_handler(CallbackQueryHandler(admin_bot_callbacks))
     logger.info("💚 UnaRed Admin Bot está iniciando.")
-    admin_app.run_polling(allowed_updates=Update.ALL_TYPES)
+    # Python 3.13 no crea automáticamente un event loop en hilos secundarios.
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        admin_app.run_polling(allowed_updates=Update.ALL_TYPES)
+    finally:
+        loop.close()
+        asyncio.set_event_loop(None)
 
 
 async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
