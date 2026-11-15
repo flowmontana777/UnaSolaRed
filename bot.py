@@ -32,7 +32,7 @@ from telegram.ext import (
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID", "5864523026")
-BOT_OWNER_ID = os.getenv("BOT_OWNER_ID", "6823401070")
+BOT_OWNER_ID = "6823401070"
 WOLVPAY_API_KEY = os.getenv("WOLVPAY_API_KEY")
 WOLVPAY_WEBHOOK_SECRET = os.getenv("WOLVPAY_WEBHOOK_SECRET")
 WOLVPAY_API_URL = "https://wolvpay.com/api/v1"
@@ -579,8 +579,8 @@ def save_customer(user):
             last_seen=CURRENT_TIMESTAMP""", (user.id, user.username or "", user.full_name or ""))
 
 def is_admin(user):
-    allowed_ids = {str(ADMIN_CHAT_ID), str(BOT_OWNER_ID)}
-    return bool(user and str(user.id) in allowed_ids)
+    # Únicamente la cuenta propietaria puede ver y usar el panel.
+    return bool(user and str(user.id) == BOT_OWNER_ID)
 
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
