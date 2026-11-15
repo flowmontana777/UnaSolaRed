@@ -298,39 +298,41 @@ def main_menu(user=None):
                 "🏦 Bancos",
                 callback_data="menu_banks",
             ),
-            InlineKeyboardButton(
-                "💸 Envíos y remesas",
-                callback_data="remesas",
-            ),
         ],
         [
             InlineKeyboardButton(
-                "🧾 Pago de servicios",
+                "💸 Remesas",
+                callback_data="remesas",
+            ),
+            InlineKeyboardButton(
+                "💡 Pago Bill",
                 callback_data="pagos",
             ),
+        ],
+        [
             InlineKeyboardButton(
                 "🛒 Amazon",
                 callback_data="amazon",
             ),
-        ],
-        [
             InlineKeyboardButton(
                 "🍎 Apple",
                 callback_data="apple",
             ),
+        ],
+        [
             InlineKeyboardButton(
                 "✈️ Vuelos",
                 callback_data="vuelos",
+            ),
+            InlineKeyboardButton(
+                "📟 Modo Digital",
+                callback_data="digital",
             ),
         ],
         [
             InlineKeyboardButton(
                 "🧰 Herramientas",
                 callback_data="menu_tools",
-            ),
-            InlineKeyboardButton(
-                "📟 Modo Digital",
-                callback_data="digital",
             ),
         ],
         [
