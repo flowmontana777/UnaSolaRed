@@ -768,9 +768,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text("⛔ Panel privado.")
             return
         await query.message.reply_text(
-            "🔎 UNARED | BUSCAR CLIENTE\\n\\n"
-            "Usa el comando:\\n/buscarcliente TELEGRAM_ID\\n\\n"
-            "Ejemplo: /buscarcliente 123456789\\n"
+            "🔎 UNARED | BUSCAR CLIENTE\n\n"
+            "Usa el comando:\n/buscarcliente TELEGRAM_ID\n\n"
+            "Ejemplo: /buscarcliente 123456789\n"
             "El cliente debe haber iniciado o interactuado con el bot para aparecer en el registro."
         )
         return
