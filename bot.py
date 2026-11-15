@@ -3386,8 +3386,9 @@ async def wolvpay_webhook(request):
             await application.bot.send_photo(
                 chat_id=int(telegram_id),
                 photo=payment_image_url,
-                caption=customer_text,
+                caption="✅ PAGO REALIZADO | UNARED",
             )
+            await application.bot.send_message(chat_id=int(telegram_id), text=customer_text)
             with sqlite3.connect(DATABASE_PATH) as db:
                 db.execute(
                     "UPDATE wolvpay_notifications SET customer_sent = 1 WHERE invoice_id = ?",
