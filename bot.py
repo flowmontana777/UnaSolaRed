@@ -2,7 +2,6 @@
 import os
 import logging
 import asyncio
-import threading
 import hmac
 import hashlib
 import json
@@ -628,25 +627,14 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
 
 
-def run_admin_bot():
-    if not ADMIN_BOT_TOKEN:
-        logger.warning("ADMIN_BOT_TOKEN no está configurado; el bot administrativo no se iniciará.")
-        return
+def build_admin_application():
     admin_app = Application.builder().token(ADMIN_BOT_TOKEN).build()
     admin_app.add_handler(CommandHandler("start", admin_bot_start))
     admin_app.add_handler(CommandHandler("panel", admin_panel))
     admin_app.add_handler(CommandHandler("stats", admin_stats))
     admin_app.add_handler(CommandHandler("buscarcliente", find_customer))
     admin_app.add_handler(CallbackQueryHandler(admin_bot_callbacks))
-    logger.info("💚 UnaRed Admin Bot está iniciando.")
-    # Python 3.13 no crea automáticamente un event loop en hilos secundarios.
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        admin_app.run_polling(allowed_updates=Update.ALL_TYPES)
-    finally:
-        loop.close()
-        asyncio.set_event_loop(None)
+    return admin_app
 
 
 async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -3306,61 +3294,70 @@ async def stop_webhook_server(application):
 # EJECUTAR BOT
 # =====================================
 
-def main():
-    if not TOKEN:
-        raise RuntimeError(
-            "Falta configurar TELEGRAM_BOT_TOKEN en Railway."
-        )
-
-    if not ADMIN_CHAT_ID:
-        raise RuntimeError(
-            "Falta configurar ADMIN_CHAT_ID en Railway."
-        )
-
-    app = (
-        Application.builder()
-        .token(TOKEN)
-        .build()
-    )
-
+def build_main_application():
+    app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(CommandHandler("panel", admin_panel))
     app.add_handler(CommandHandler("stats", admin_stats))
     app.add_handler(CommandHandler("buscarcliente", find_customer))
     app.add_handler(CallbackQueryHandler(select_option))
-    # Detecta automáticamente las entradas de nuevos clientes al grupo.
-    app.add_handler(
-        MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_new_members)
-    )
-    # Recibir todas las actualizaciones y filtrar channel_post dentro de la función.
-    # Así evitamos que un filtro de mensaje descarte publicaciones del canal.
+    app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_new_members))
     app.add_handler(TypeHandler(Update, channel_music_ingest), group=-1)
-
-    app.add_handler(
-        MessageHandler(
-            (filters.TEXT & ~filters.COMMAND) | filters.PHOTO | filters.AUDIO | filters.Document.ALL,
-            receive_request,
-        )
-    )
-
+    app.add_handler(MessageHandler(
+        (filters.TEXT & ~filters.COMMAND) | filters.PHOTO | filters.AUDIO | filters.Document.ALL,
+        receive_request,
+    ))
     app.add_error_handler(error_handler)
-    app.post_init = start_webhook_server
-    app.post_shutdown = stop_webhook_server
+    return app
 
-    print("💚 UnaRed Bot está funcionando.")
 
+async def main():
+    if not TOKEN:
+        raise RuntimeError("Falta configurar TELEGRAM_BOT_TOKEN en Railway.")
+    if not ADMIN_CHAT_ID:
+        raise RuntimeError("Falta configurar ADMIN_CHAT_ID en Railway.")
+
+    app = build_main_application()
+    admin_app = None
+    applications = [app]
     if ADMIN_BOT_TOKEN:
-        threading.Thread(
-            target=run_admin_bot,
-            name="unared-admin-bot",
-            daemon=True,
-        ).start()
+        admin_app = build_admin_application()
+        applications.append(admin_app)
     else:
         logger.warning("ADMIN_BOT_TOKEN no configurado; solo se iniciará el bot principal.")
 
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    initialized = []
+    started = []
+    polling = []
+    try:
+        for current in applications:
+            await current.initialize()
+            initialized.append(current)
+
+        await start_webhook_server(app)
+        for current in applications:
+            await current.start()
+            started.append(current)
+
+        # Ambos bots comparten el mismo event loop; no se usan hilos ni señales del sistema.
+        for current in applications:
+            await current.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+            polling.append(current)
+
+        print("💚 UnaRed Bot está funcionando.")
+        if admin_app:
+            logger.info("💚 UnaRed Admin Bot está funcionando.")
+        await asyncio.Event().wait()
+    finally:
+        for current in reversed(polling):
+            await current.updater.stop()
+        for current in reversed(started):
+            await current.stop()
+        await stop_webhook_server(app)
+        for current in reversed(initialized):
+            await current.shutdown()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
