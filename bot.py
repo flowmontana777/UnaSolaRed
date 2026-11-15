@@ -716,24 +716,35 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ORDER BY total DESC LIMIT 8""").fetchall()
         recent = db.execute("""SELECT full_name, username, button_label, created_at
             FROM unared_interactions ORDER BY id DESC LIMIT 10""").fetchall()
-    top_text = "\\n".join(
+    top_text = "\n".join(
         f"  • {label}: {count} clics" for label, count in top_buttons
     ) or "  • Todavía no hay clics registrados."
-    recent_text = "\\n".join(
+    recent_text = "\n".join(
         f"  • {name or ('@' + username if username else 'Cliente')} → {label} ({when})"
         for name, username, label, when in recent
     ) or "  • Todavía no hay actividad registrada."
-    await update.effective_message.reply_text(
-        "📊 UNARED | ESTADÍSTICAS DEL BOT\\n\\n"
-        f"👥 Usuarios/clientes registrados: {customers}\\n🆕 Nuevos hoy: {today}\\n"
-        f"📅 Nuevos últimos 7 días: {week}\\n🎵 Usuarios Modo Digital: {music}\\n\\n"
-        f"🖱️ INTERACCIÓN DE CLIENTES\\n"
-        f"🔢 Total de botones pulsados: {total_clicks}\\n"
-        f"🏆 BOTONES MÁS UTILIZADOS\\n{top_text}\\n\\n"
-        f"🕘 ÚLTIMOS MOVIMIENTOS\\n{recent_text}\\n\\n"
-        f"🧾 Facturas creadas: {invoices}\\n⏳ Facturas pendientes: {pending}\\n"
-        f"✅ Pagos confirmados: {paid}\\n💵 Ingresos confirmados: USD {income:,.2f}\\n\\n"
-        "📌 Se registra el botón pulsado, el nombre del cliente y la hora. No se guarda el contenido de sus mensajes.")
+    report = (
+        "📊 UNARED | ESTADÍSTICAS\\n"
+        "━━━━━━━━━━━━━━━━━━\\n\\n"
+        "👥 CLIENTES\\n"
+        f"• Registrados: {customers}\\n"
+        f"• Nuevos hoy: {today}\\n"
+        f"• Últimos 7 días: {week}\\n"
+        f"• Modo Digital: {music}\\n\\n"
+        "🖱️ INTERACCIÓN DE CLIENTES\\n"
+        f"• Botones pulsados: {total_clicks}\\n\\n"
+        "🏆 BOTONES MÁS UTILIZADOS\\n"
+        f"{top_text}\\n\\n"
+        "🕘 ACTIVIDAD RECIENTE\\n"
+        f"{recent_text}\\n\\n"
+        "💳 FACTURACIÓN Y PAGOS\\n"
+        f"• Facturas creadas: {invoices}\\n"
+        f"• Pendientes: {pending}\\n"
+        f"• Pagos confirmados: {paid}\\n"
+        f"• Ingresos: USD {income:,.2f}\\n"
+        "━━━━━━━━━━━━━━━━━━"
+    )
+    await update.effective_message.reply_text(report)
 
 async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
