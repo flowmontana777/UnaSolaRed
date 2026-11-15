@@ -1452,9 +1452,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # PAGOS DE SERVICIOS
 
     if choice == "pagos":
-        await query.message.reply_text(
-            "🧾 UNARED | PAGO DE SERVICIOS\n\n"
-            "Selecciona una opción:",
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/HTHNhsPk/10298-B3B-996-F-4BAF-8-D43-87552-B663-C6A.png",
+            caption=(
+                "🧾 UNARED | PAGO DE SERVICIOS\n\n"
+                "Selecciona una opción:"
+            ),
             reply_markup=bills_menu(),
         )
         return
