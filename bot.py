@@ -2183,7 +2183,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption=(
                 "💚 UNARED | PÁGINAS WEB\n\n"
                 "🌐 Catálogo de páginas web Cc.\n\n"
-                "━━━━━━━━━━━━━━━━━━\n\n"
+                "━━━━━━━━━━\n\n"
                 "🏷️ Precio especial: US$17\n"
                 "💰 Precio regular: <del>US$20</del>\n\n"
                 f"📦 Cantidad: {quantity} {'unidad' if quantity == 1 else 'unidades'}\n"
@@ -2212,7 +2212,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption=(
                 "💚 UNARED | PÁGINAS WEB\n\n"
                 "🌐 Catálogo de páginas web Cc.\n\n"
-                "━━━━━━━━━━━━━━━━━━\n\n"
+                "━━━━━━━━━━\n\n"
                 "🏷️ Precio especial: US$17\n"
                 "💰 Precio regular: <del>US$20</del>\n\n"
                 f"📦 Cantidad: {quantity} {'unidad' if quantity == 1 else 'unidades'}\n"
