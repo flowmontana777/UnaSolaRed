@@ -32,7 +32,7 @@ from telegram.ext import (
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID", "5864523026")
-BOT_OWNER_ID = "6823401070"
+BOT_OWNER_ID = "5864523026"
 WOLVPAY_API_KEY = os.getenv("WOLVPAY_API_KEY")
 WOLVPAY_WEBHOOK_SECRET = os.getenv("WOLVPAY_WEBHOOK_SECRET")
 WOLVPAY_API_URL = "https://wolvpay.com/api/v1"
