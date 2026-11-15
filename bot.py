@@ -552,6 +552,99 @@ async def ask_for_details(query, context, service):
     )
 
 
+
+# =====================================
+# PANEL PRIVADO UNARED
+# =====================================
+INVOICE_TABLES = ("bill_invoices", "dayler_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "edit_upload_invoices")
+
+def save_customer(user):
+    if not user:
+        return
+    with sqlite3.connect(DATABASE_PATH) as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS unared_customers (
+            telegram_id INTEGER PRIMARY KEY, username TEXT NOT NULL DEFAULT '',
+            full_name TEXT NOT NULL DEFAULT '', first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
+        db.execute("""INSERT INTO unared_customers (telegram_id, username, full_name)
+            VALUES (?, ?, ?) ON CONFLICT(telegram_id) DO UPDATE SET
+            username=excluded.username, full_name=excluded.full_name,
+            last_seen=CURRENT_TIMESTAMP""", (user.id, user.username or "", user.full_name or ""))
+
+def is_admin(user):
+    return bool(user and str(user.id) == str(ADMIN_CHAT_ID))
+
+async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user):
+        await update.effective_message.reply_text("⛔ Panel privado.")
+        return
+    await update.effective_message.reply_text("💚 UNARED | PANEL DE ADMINISTRACIÓN",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("📊 Estadísticas", callback_data="admin_stats")],
+            [InlineKeyboardButton("🔎 Cómo buscar un cliente", callback_data="admin_search_help")]]))
+
+async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user):
+        return
+    with sqlite3.connect(DATABASE_PATH) as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS unared_customers (
+            telegram_id INTEGER PRIMARY KEY, username TEXT NOT NULL DEFAULT '',
+            full_name TEXT NOT NULL DEFAULT '', first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
+        customers = db.execute("SELECT COUNT(*) FROM unared_customers").fetchone()[0]
+        today = db.execute("SELECT COUNT(*) FROM unared_customers WHERE date(first_seen)=date('now','localtime')").fetchone()[0]
+        week = db.execute("SELECT COUNT(*) FROM unared_customers WHERE first_seen >= datetime('now','-7 days')").fetchone()[0]
+        invoices = paid = 0
+        income = 0.0
+        for table in INVOICE_TABLES:
+            exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()
+            if exists:
+                cols = {x[1] for x in db.execute("PRAGMA table_info(" + table + ")")}
+                if "amount" in cols and "status" in cols:
+                    rows = db.execute("SELECT amount,status FROM " + table).fetchall()
+                    invoices += len(rows)
+                    for amount,status in rows:
+                        if str(status).upper() == "PAID":
+                            paid += 1
+                            try: income += float(amount)
+                            except (ValueError, TypeError): pass
+        music = db.execute("SELECT COUNT(*) FROM digital_music_subscribers").fetchone()[0] if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='digital_music_subscribers'").fetchone() else 0
+    await update.effective_message.reply_text(
+        "📊 UNARED | ESTADÍSTICAS\n\n"
+        f"👥 Clientes registrados: {customers}\n🆕 Nuevos hoy: {today}\n"
+        f"📅 Nuevos últimos 7 días: {week}\n🎵 Usuarios Modo Digital: {music}\n"
+        f"🧾 Facturas registradas: {invoices}\n✅ Pagos confirmados: {paid}\n"
+        f"💵 Ingresos registrados: USD {income:,.2f}\n\n"
+        "Los registros de clientes comienzan con esta actualización.")
+
+async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user):
+        await update.effective_message.reply_text("⛔ No autorizado.")
+        return
+    if not context.args or not context.args[0].isdigit():
+        await update.effective_message.reply_text("Uso: /buscarcliente TELEGRAM_ID")
+        return
+    tid = int(context.args[0])
+    with sqlite3.connect(DATABASE_PATH) as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS unared_customers (
+            telegram_id INTEGER PRIMARY KEY, username TEXT NOT NULL DEFAULT '',
+            full_name TEXT NOT NULL DEFAULT '', first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
+        row = db.execute("SELECT telegram_id,username,full_name,first_seen,last_seen FROM unared_customers WHERE telegram_id=?", (tid,)).fetchone()
+        total = 0
+        for table in INVOICE_TABLES:
+            if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
+                total += db.execute("SELECT COUNT(*) FROM " + table + " WHERE telegram_id=?", (tid,)).fetchone()[0]
+    if not row:
+        await update.effective_message.reply_text("No encontramos ese cliente. Debe haber iniciado o interactuado con UnaRed.")
+        return
+    tid, username, name, first_seen, last_seen = row
+    await update.effective_message.reply_text(
+        "👤 UNARED | FICHA DEL CLIENTE\n\n"
+        f"🆔 ID: {tid}\n👤 Nombre: {name}\n📛 Usuario: " + (("@" + username) if username else "Sin username") +
+        f"\n📅 Registro: {first_seen}\n🕒 Última actividad: {last_seen}\n🧾 Facturas: {total}",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📩 Abrir perfil", url="tg://user?id=" + str(tid))]]))
+
 # =====================================
 # INICIO DEL BOT CON PORTADA
 # =====================================
@@ -592,6 +685,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
 
     user = update.effective_user
+    save_customer(user)
     if user:
         with sqlite3.connect(DATABASE_PATH) as db:
             db.execute("""CREATE TABLE IF NOT EXISTS digital_music_subscribers (
@@ -3134,6 +3228,9 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("cancel", cancel))
+    app.add_handler(CommandHandler("panel", admin_panel))
+    app.add_handler(CommandHandler("stats", admin_stats))
+    app.add_handler(CommandHandler("buscarcliente", find_customer))
     app.add_handler(CallbackQueryHandler(select_option))
     # Detecta automáticamente las entradas de nuevos clientes al grupo.
     app.add_handler(
