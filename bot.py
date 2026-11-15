@@ -2,6 +2,7 @@
 import os
 import logging
 import asyncio
+import threading
 import hmac
 import hashlib
 import json
@@ -31,6 +32,7 @@ from telegram.ext import (
 # =====================================
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+ADMIN_BOT_TOKEN = os.getenv("ADMIN_BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID", "5864523026")
 BOT_OWNER_ID = "5864523026"
 WOLVPAY_API_KEY = os.getenv("WOLVPAY_API_KEY")
@@ -260,7 +262,7 @@ def main_menu(user=None):
         keyboard.append([
             InlineKeyboardButton(
                 "⚙️ Panel de administración",
-                url="https://t.me/UnaRed_Bot?start=admin_panel",
+                url="https://t.me/Unaredadminbot?start=admin_panel",
             )
         ])
 
@@ -602,6 +604,43 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         caption="💚 UNARED | PANEL DE ADMINISTRACIÓN",
         reply_markup=keyboard,
     )
+
+async def admin_bot_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user):
+        await update.effective_message.reply_text("⛔ Acceso denegado. Este bot es privado.")
+        return
+    await admin_panel(update, context)
+
+
+async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not is_admin(update.effective_user):
+        await query.answer("⛔ Acceso denegado.", show_alert=True)
+        return
+    await query.answer()
+    if query.data == "admin_stats":
+        await admin_stats(update, context)
+    elif query.data == "admin_search_help":
+        await query.message.reply_text(
+            "🔎 UNARED | BUSCAR CLIENTE\n\n"
+            "Usa el comando:\n/buscarcliente TELEGRAM_ID\n\n"
+            "Ejemplo: /buscarcliente 123456789"
+        )
+
+
+def run_admin_bot():
+    if not ADMIN_BOT_TOKEN:
+        logger.warning("ADMIN_BOT_TOKEN no está configurado; el bot administrativo no se iniciará.")
+        return
+    admin_app = Application.builder().token(ADMIN_BOT_TOKEN).build()
+    admin_app.add_handler(CommandHandler("start", admin_bot_start))
+    admin_app.add_handler(CommandHandler("panel", admin_panel))
+    admin_app.add_handler(CommandHandler("stats", admin_stats))
+    admin_app.add_handler(CommandHandler("buscarcliente", find_customer))
+    admin_app.add_handler(CallbackQueryHandler(admin_bot_callbacks))
+    logger.info("💚 UnaRed Admin Bot está iniciando.")
+    admin_app.run_polling(allowed_updates=Update.ALL_TYPES)
+
 
 async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
@@ -3303,6 +3342,15 @@ def main():
     app.post_shutdown = stop_webhook_server
 
     print("💚 UnaRed Bot está funcionando.")
+
+    if ADMIN_BOT_TOKEN:
+        threading.Thread(
+            target=run_admin_bot,
+            name="unared-admin-bot",
+            daemon=True,
+        ).start()
+    else:
+        logger.warning("ADMIN_BOT_TOKEN no configurado; solo se iniciará el bot principal.")
 
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
