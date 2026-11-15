@@ -2182,12 +2182,14 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/dJQ4yzbg/Create-promotional-image-for-tel-003ed2cb.jpg",
             caption=(
                 "💚 UNARED | PÁGINAS WEB\n\n"
-                "Catálogo de páginas web Cc.\n"
-                "🏷️ Precio por unidad: US$17\n"
-                "Precio regular: US$20\n\n"
-                f"📦 Cantidad: {quantity}\n"
-                f"💵 Total: US${total}"
+                "🌐 Catálogo de páginas web Cc.\n\n"
+                "━━━━━━━━━━━━━━━━━━\n\n"
+                "🏷️ Precio especial: US$17\n"
+                "💰 Precio regular: <s>US$20</s>\n\n"
+                f"📦 Cantidad: {quantity} unidad(es)\n"
+                f"🧾 Total a pagar: US${total}"
             ),
+            parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("➖", callback_data="pages_qty_minus"),
@@ -2209,12 +2211,14 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_caption(
             caption=(
                 "💚 UNARED | PÁGINAS WEB\n\n"
-                "Catálogo de páginas web Cc.\n"
-                "🏷️ Precio por unidad: US$17\n"
-                "Precio regular: US$20\n\n"
-                f"📦 Cantidad: {quantity}\n"
-                f"💵 Total: US${total}"
+                "🌐 Catálogo de páginas web Cc.\n\n"
+                "━━━━━━━━━━━━━━━━━━\n\n"
+                "🏷️ Precio especial: US$17\n"
+                "💰 Precio regular: <s>US$20</s>\n\n"
+                f"📦 Cantidad: {quantity} unidad(es)\n"
+                f"🧾 Total a pagar: US${total}"
             ),
+            parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("➖", callback_data="pages_qty_minus"),
