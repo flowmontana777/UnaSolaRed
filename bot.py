@@ -205,7 +205,7 @@ def digital_music_menu():
 # MENU PRINCIPAL
 # =====================================
 
-def main_menu():
+def main_menu(user=None):
     keyboard = [
         [
             InlineKeyboardButton(
@@ -254,6 +254,12 @@ def main_menu():
             )
         ],
     ]
+
+    # El acceso al panel solo aparece para las cuentas autorizadas.
+    if is_admin(user):
+        keyboard.append([
+            InlineKeyboardButton("⚙️ Panel de administración", callback_data="open_admin_panel")
+        ])
 
     return InlineKeyboardMarkup(keyboard)
 
@@ -715,7 +721,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.effective_message.reply_photo(
         photo="https://i.ibb.co/XfdhR6bS/photo-2026-11-09-01-28-36.jpg",
         caption=welcome,
-        reply_markup=main_menu(),
+        reply_markup=main_menu(update.effective_user),
     )
 
 
@@ -758,6 +764,11 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await query.answer()
 
+    # ACCESO AL PANEL ADMINISTRATIVO DESDE EL MENÚ PRINCIPAL
+    if choice == "open_admin_panel":
+        await admin_panel(update, context)
+        return
+
     # ACCIONES DEL PANEL ADMINISTRATIVO
     if choice == "admin_stats":
         await admin_stats(update, context)
@@ -783,7 +794,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text(
             "💚 UNARED | MENÚ PRINCIPAL\n\n"
             "LA RED QUE MUEVE TU DINERO.",
-            reply_markup=main_menu(),
+            reply_markup=main_menu(update.effective_user),
         )
         return
 
@@ -2905,7 +2916,7 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.user_data.get("waiting_detail"):
         await update.message.reply_text(
             "Selecciona primero un servicio:",
-            reply_markup=main_menu(),
+            reply_markup=main_menu(update.effective_user),
         )
         return
 
@@ -2952,7 +2963,7 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "✅ ¡Solicitud enviada correctamente!\n\n"
             "Nuestro equipo de UnaRed recibió tu mensaje.\n"
             "Gracias por confiar en nosotros. 💚",
-            reply_markup=main_menu(),
+            reply_markup=main_menu(update.effective_user),
         )
 
     except Exception:
@@ -2976,7 +2987,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "❌ Solicitud cancelada.\n\n"
         "Puedes comenzar nuevamente:",
-        reply_markup=main_menu(),
+        reply_markup=main_menu(update.effective_user),
     )
 
 
