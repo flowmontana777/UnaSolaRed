@@ -648,7 +648,7 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         customers = db.execute("SELECT COUNT(*) FROM unared_customers").fetchone()[0]
         today = db.execute("SELECT COUNT(*) FROM unared_customers WHERE date(first_seen)=date('now','localtime')").fetchone()[0]
         week = db.execute("SELECT COUNT(*) FROM unared_customers WHERE first_seen >= datetime('now','-7 days')").fetchone()[0]
-        invoices = paid = 0
+        invoices = paid = pending = 0
         income = 0.0
         for table in INVOICE_TABLES:
             exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()
@@ -658,18 +658,21 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     rows = db.execute("SELECT amount,status FROM " + table).fetchall()
                     invoices += len(rows)
                     for amount,status in rows:
-                        if str(status).upper() == "PAID":
+                        status_value = str(status).upper()
+                        if status_value == "PAID":
                             paid += 1
                             try: income += float(amount)
                             except (ValueError, TypeError): pass
+                        elif status_value in {"PENDING", "UNPAID", "PROCESSING"}:
+                            pending += 1
         music = db.execute("SELECT COUNT(*) FROM digital_music_subscribers").fetchone()[0] if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='digital_music_subscribers'").fetchone() else 0
     await update.effective_message.reply_text(
-        "📊 UNARED | ESTADÍSTICAS\n\n"
-        f"👥 Clientes registrados: {customers}\n🆕 Nuevos hoy: {today}\n"
-        f"📅 Nuevos últimos 7 días: {week}\n🎵 Usuarios Modo Digital: {music}\n"
-        f"🧾 Facturas registradas: {invoices}\n✅ Pagos confirmados: {paid}\n"
-        f"💵 Ingresos registrados: USD {income:,.2f}\n\n"
-        "Los registros de clientes comienzan con esta actualización.")
+        "📊 UNARED | ESTADÍSTICAS DEL BOT\n\n"
+        f"👥 Usuarios/clientes registrados: {customers}\n🆕 Nuevos hoy: {today}\n"
+        f"📅 Nuevos últimos 7 días: {week}\n🎵 Usuarios Modo Digital: {music}\n\n"
+        f"🧾 Facturas creadas: {invoices}\n⏳ Facturas pendientes: {pending}\n"
+        f"✅ Pagos confirmados: {paid}\n💵 Ingresos confirmados: USD {income:,.2f}\n\n"
+        "📌 Se cuentan los usuarios que inician el bot o interactúan con sus botones y solicitudes.")
 
 async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
@@ -787,6 +790,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    save_customer(update.effective_user)
     choice = query.data
 
     # Feedback visual para las acciones principales de UnaRed.
@@ -2682,6 +2686,7 @@ async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYP
 # =====================================
 
 async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    save_customer(update.effective_user)
     # Los mensajes de grupos/canales no son solicitudes de clientes.
     # La música de @Una1Red se procesa únicamente en channel_music_ingest.
     if not update.effective_chat or update.effective_chat.type != "private":
