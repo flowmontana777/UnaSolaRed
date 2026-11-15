@@ -47,20 +47,26 @@ GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
 
 
 
-async def notify_invoice_pending(application, telegram_id, invoice_id, amount, service, table_name):
-    """Send a clean pending-invoice image to customer and admin with a cancel button."""
+async def notify_invoice_pending(
+    application, telegram_id, invoice_id, amount, service, table_name,
+    send_customer=True, send_admin=True, reminder_number=None
+):
+    """Send the pending-payment image to the customer and/or admin."""
     image_url = "https://i.ibb.co/99pb657f/6-D87-B76-C-02-AD-4-AEA-97-EB-DB3409-D6-F803.png"
     cancel_keyboard = InlineKeyboardMarkup([[
         InlineKeyboardButton("❌ Cancelar pago", callback_data=f"cancel_invoice:{table_name}:{invoice_id}")
     ]])
+    reminder_line = f"🔔 Recordatorio {reminder_number}/3\n\n" if reminder_number else ""
     customer_caption = (
         "⌛️ PAGO EN ESPERA | UNARED\n\n"
+        f"{reminder_line}"
         f"🧾 Tu factura de {service} fue creada correctamente.\n"
         "⏳ Estado: Pendiente de pago\n"
         f"💵 Importe: USD {amount}\n"
         f"🔖 Factura: {invoice_id}\n\n"
-        "🔐 Completa el pago desde el botón de tu factura. "
-        "Si no deseas continuar, puedes cancelar el pago."
+        "🔐 Tu pago todavía no se ha confirmado.\n"
+        "💳 Abre la factura para completar el pago.\n"
+        "❌ Si no deseas continuar, puedes cancelar la factura."
     )
     admin_caption = (
         "💚 UNARED | NUEVA FACTURA PENDIENTE\n\n"
@@ -68,24 +74,26 @@ async def notify_invoice_pending(application, telegram_id, invoice_id, amount, s
         f"🛠️ Servicio: {service}\n"
         f"💵 Importe: USD {amount}\n"
         f"🧾 Factura: {invoice_id}\n"
-        "⌛️ Estado: PENDIENTE"
+        "⌛️ Estado: PENDIENTE DE PAGO"
     )
-    try:
-        await application.bot.send_photo(
-            chat_id=int(telegram_id), photo=image_url,
-            caption=customer_caption, reply_markup=cancel_keyboard
-        )
-    except Exception:
-        logger.exception("No se pudo enviar la imagen de pago pendiente al cliente %s.", telegram_id)
-    try:
-        admin_bot = application.bot_data.get("admin_bot")
-        if not admin_bot:
-            raise RuntimeError("El bot administrativo no está inicializado.")
-        await admin_bot.send_photo(
-            chat_id=int(BOT_OWNER_ID), photo=image_url, caption=admin_caption
-        )
-    except Exception:
-        logger.exception("No se pudo enviar la notificación de factura pendiente al administrador %s.", invoice_id)
+    if send_customer:
+        try:
+            await application.bot.send_photo(
+                chat_id=int(telegram_id), photo=image_url,
+                caption=customer_caption, reply_markup=cancel_keyboard
+            )
+        except Exception:
+            logger.exception("No se pudo enviar la imagen de pago pendiente al cliente %s.", telegram_id)
+    if send_admin:
+        try:
+            admin_bot = application.bot_data.get("admin_bot")
+            if not admin_bot:
+                raise RuntimeError("El bot administrativo no está inicializado.")
+            await admin_bot.send_photo(
+                chat_id=int(BOT_OWNER_ID), photo=image_url, caption=admin_caption
+            )
+        except Exception:
+            logger.exception("No se pudo enviar la notificación de factura pendiente al administrador %s.", invoice_id)
 
 
 async def schedule_payment_reminder(application, table_name, invoice_id, telegram_id, amount, service, invoice_url=None):
@@ -103,28 +111,9 @@ async def schedule_payment_reminder(application, table_name, invoice_id, telegra
                 ).fetchone()
             if not row or str(row[0]).upper() != "PENDING":
                 return
-            if attempt == 1:
-                # El aviso visual de PAGO EN ESPERA se envía al cumplirse
-                # el primer intervalo de recordatorio (3 minutos).
-                await notify_invoice_pending(
-                    application, telegram_id, invoice_id, amount, service, table_name
-                )
-                continue
-
-            buttons = []
-            if invoice_url:
-                buttons.append(InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url))
-            buttons.append(InlineKeyboardButton("❌ Cancelar pago", callback_data=f"cancel_invoice:{table_name}:{invoice_id}"))
-            await application.bot.send_message(
-                chat_id=int(telegram_id),
-                text=(
-                    f"⏰ RECORDATORIO {attempt}/3 | UNARED\\n\\n"
-                    f"🧾 Tu factura de {service} sigue pendiente.\\n"
-                    f"💵 Importe: USD {amount}\\n"
-                    f"🔖 Factura: {invoice_id}\\n\\n"
-                    "⌛️ Completa el pago o cancélalo si ya no deseas continuar."
-                ),
-                reply_markup=InlineKeyboardMarkup([buttons]),
+            await notify_invoice_pending(
+                application, telegram_id, invoice_id, amount, service, table_name,
+                send_customer=True, send_admin=False, reminder_number=attempt
             )
         except Exception:
             logger.exception("No se pudo enviar el recordatorio %s para %s.", attempt, invoice_id)
@@ -1450,6 +1439,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                        VALUES (?, ?, ?, ?, ?, 'PENDING')""",
                     (invoice_id, user.id, amount, category, username),
                 )
+            await notify_invoice_pending(context.application, user.id, invoice_id, amount, category, "bill_invoices", send_customer=False, send_admin=True)
             asyncio.create_task(schedule_payment_reminder(
                 context.application, "bill_invoices", invoice_id, user.id, amount, category, invoice_url
             ))
@@ -1761,6 +1751,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                        VALUES (?, ?, ?, ?, 'PENDING')""",
                     (invoice_id, update.effective_user.id, "150.00", username),
                 )
+            await notify_invoice_pending(context.application, update.effective_user.id, invoice_id, "150", "Dayler", "dayler_invoices", send_customer=False, send_admin=True)
             asyncio.create_task(schedule_payment_reminder(context.application, "dayler_invoices", invoice_id, update.effective_user.id, "150", "Dayler", invoice_url))
             await query.message.reply_text(
                 f"💚 UNARED | FACTURA DAYLER\n\n"
@@ -1933,6 +1924,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "INSERT INTO demo_bot_invoices VALUES (?, ?, ?, ?, ?, 'PENDING')",
                     (invoice_id, user.id, "35.00", product, user.username or ""),
                 )
+            await notify_invoice_pending(context.application, user.id, invoice_id, "35", labels[product], "demo_bot_invoices", send_customer=False, send_admin=True)
             asyncio.create_task(schedule_payment_reminder(context.application, "demo_bot_invoices", invoice_id, user.id, "35", labels[product], invoice_url))
             await query.message.reply_text(
                 f"💚 UNARED | FACTURA\nProducto: {labels[product]}\nImporte: US$35\nFactura: {invoice_id}\n"
@@ -2167,6 +2159,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "INSERT INTO pages_invoices (invoice_id, telegram_id, amount, quantity, status) VALUES (?, ?, ?, ?, 'PENDING')",
                     (invoice_id, user.id, str(total), quantity),
                 )
+            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "Páginas Web", "pages_invoices", send_customer=False, send_admin=True)
             asyncio.create_task(schedule_payment_reminder(context.application, "pages_invoices", invoice_id, user.id, str(total), "Páginas Web", invoice_url))
             await query.message.reply_text(
                 "💚 UNARED | FACTURA DE PÁGINAS WEB\n\n"
@@ -2431,6 +2424,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if "quantity" not in columns:
                     db.execute("ALTER TABLE icloud_invoices ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1")
                 db.execute("INSERT INTO icloud_invoices (invoice_id, telegram_id, amount, quantity, status) VALUES (?, ?, ?, ?, 'PENDING')", (invoice_id, user.id, str(total), quantity))
+            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "iCloud", "icloud_invoices", send_customer=False, send_admin=True)
             asyncio.create_task(schedule_payment_reminder(context.application, "icloud_invoices", invoice_id, user.id, str(total), "iCloud", invoice_url))
             await query.message.reply_text(
                 "💚 UNARED | FACTURA ICLOUD\n\n"
@@ -2597,6 +2591,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "INSERT INTO edit_upload_invoices (invoice_id, telegram_id, amount, status) VALUES (?, ?, '250', 'PENDING')",
                     (invoice_id, user.id),
                 )
+            await notify_invoice_pending(context.application, user.id, invoice_id, "250", "Editar y subir papel", "edit_upload_invoices", send_customer=False, send_admin=True)
             asyncio.create_task(schedule_payment_reminder(context.application, "edit_upload_invoices", invoice_id, user.id, "250", "Editar y subir papel", invoice_url))
             await query.message.reply_text(
                 "💚 UNARED | FACTURA - QUIERO EDITAR Y SUBIR PAPEL\n\n"
