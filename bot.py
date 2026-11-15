@@ -766,21 +766,21 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
             GROUP BY button_key, button_label ORDER BY COUNT(*) DESC, button_label ASC""").fetchall()
         all_activity = db.execute("""SELECT full_name, username, telegram_id, button_label, created_at
             FROM unared_interactions ORDER BY id DESC LIMIT 30""").fetchall()
-    buttons_text = "\\n".join(
+    buttons_text = "\n".join(
         f"• {label}: {count} clics" for label, count in all_buttons
     ) or "• Todavía no hay botones registrados."
-    activity_text = "\\n".join(
-        f"• {name or ('@' + username if username else 'Cliente')} | ID {tid}\\n  {label} | {when}"
+    activity_text = "\n".join(
+        f"• {name or ('@' + username if username else 'Cliente')} | ID {tid}\n  {label} | {when}"
         for name, username, tid, label, when in all_activity
     ) or "• Todavía no hay actividad registrada."
     detail = (
-        "🔎 UNARED | DETALLE DE INTERACCIONES\\n"
-        "━━━━━━━━━━━━━━━━━━\\n\\n"
-        f"👥 Clientes que han interactuado: {unique_clients}\\n\\n"
-        "📌 TODOS LOS BOTONES REGISTRADOS\\n"
-        f"{buttons_text}\\n\\n"
-        "🧾 REGISTRO DE ACTIVIDAD (últimos 30)\\n"
-        f"{activity_text}\\n"
+        "🔎 UNARED | DETALLE DE INTERACCIONES\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
+        f"👥 Clientes que han interactuado: {unique_clients}\n\n"
+        "📌 TODOS LOS BOTONES REGISTRADOS\n"
+        f"{buttons_text}\n\n"
+        "🧾 REGISTRO DE ACTIVIDAD (últimos 30)\n"
+        f"{activity_text}\n"
         "━━━━━━━━━━━━━━━━━━"
     )
     await update.effective_message.reply_text(
