@@ -103,6 +103,14 @@ async def schedule_payment_reminder(application, table_name, invoice_id, telegra
                 ).fetchone()
             if not row or str(row[0]).upper() != "PENDING":
                 return
+            if attempt == 1:
+                # El aviso visual de PAGO EN ESPERA se envía al cumplirse
+                # el primer intervalo de recordatorio (3 minutos).
+                await notify_invoice_pending(
+                    application, telegram_id, invoice_id, amount, service, table_name
+                )
+                continue
+
             buttons = []
             if invoice_url:
                 buttons.append(InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url))
@@ -110,10 +118,10 @@ async def schedule_payment_reminder(application, table_name, invoice_id, telegra
             await application.bot.send_message(
                 chat_id=int(telegram_id),
                 text=(
-                    f"⏰ RECORDATORIO {attempt}/3 | UNARED\n\n"
-                    f"🧾 Tu factura de {service} sigue pendiente.\n"
-                    f"💵 Importe: USD {amount}\n"
-                    f"🔖 Factura: {invoice_id}\n\n"
+                    f"⏰ RECORDATORIO {attempt}/3 | UNARED\\n\\n"
+                    f"🧾 Tu factura de {service} sigue pendiente.\\n"
+                    f"💵 Importe: USD {amount}\\n"
+                    f"🔖 Factura: {invoice_id}\\n\\n"
                     "⌛️ Completa el pago o cancélalo si ya no deseas continuar."
                 ),
                 reply_markup=InlineKeyboardMarkup([buttons]),
@@ -1458,7 +1466,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("⬅️ Volver a Pago de servicios", callback_data="pagos")],
                 ]),
             )
-            await notify_invoice_pending(context.application, user.id, invoice_id, amount, category, "bill_invoices")
+
         except Exception:
             logger.exception("No se pudo crear la factura WolvPay para Pago de servicios.")
             await query.message.reply_text(
@@ -1767,7 +1775,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("✅ ¡Ya pagué!", callback_data="dayler_paid")]
                 ]),
             )
-            await notify_invoice_pending(context.application, update.effective_user.id, invoice_id, "150", "Dayler", "dayler_invoices")
+
         except Exception:
             logger.exception("No se pudo crear la factura WolvPay para Dayler.")
             await query.message.reply_text(
@@ -1936,7 +1944,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("⬅️ Volver", callback_data="tool_bots")],
                 ]),
             )
-            await notify_invoice_pending(context.application, user.id, invoice_id, "35", labels[product], "demo_bot_invoices")
+
         except Exception:
             logger.exception("Error creando factura de demo sandbox.")
             await query.message.reply_text("No pudimos generar la factura. Inténtalo más tarde.")
@@ -2173,7 +2181,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
                 ]),
             )
-            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "Páginas Web", "pages_invoices")
+
         except Exception:
             logger.exception("No se pudo crear la factura WolvPay para Páginas Web.")
             await query.message.reply_text(
@@ -2435,7 +2443,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
                 ]),
             )
-            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "iCloud", "icloud_invoices")
+
         except Exception:
             logger.exception("No se pudo generar la factura WolvPay para iCloud.")
             await query.message.reply_text("No pudimos generar la factura. Inténtalo más tarde o contacta al equipo.")
@@ -2602,7 +2610,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
                 ]),
             )
-            await notify_invoice_pending(context.application, user.id, invoice_id, "250", "Editar y subir papel", "edit_upload_invoices")
+
         except Exception:
             logger.exception("No se pudo crear la factura WolvPay para Editar y Subir Papel.")
             await query.message.reply_text(
