@@ -658,6 +658,8 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
     await query.answer()
     if query.data == "admin_stats":
         await admin_stats(update, context)
+    elif query.data == "admin_stats_more":
+        await admin_stats_more(update, context)
     elif query.data == "admin_search_help":
         await query.message.reply_text(
             "🔎 UNARED | BUSCAR CLIENTE\n\n"
@@ -724,27 +726,70 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for name, username, label, when in recent
     ) or "  • Todavía no hay actividad registrada."
     report = (
-        "📊 UNARED | ESTADÍSTICAS\\n"
-        "━━━━━━━━━━━━━━━━━━\\n\\n"
-        "👥 CLIENTES\\n"
-        f"• Registrados: {customers}\\n"
-        f"• Nuevos hoy: {today}\\n"
-        f"• Últimos 7 días: {week}\\n"
-        f"• Modo Digital: {music}\\n\\n"
-        "🖱️ INTERACCIÓN DE CLIENTES\\n"
-        f"• Botones pulsados: {total_clicks}\\n\\n"
-        "🏆 BOTONES MÁS UTILIZADOS\\n"
-        f"{top_text}\\n\\n"
-        "🕘 ACTIVIDAD RECIENTE\\n"
-        f"{recent_text}\\n\\n"
-        "💳 FACTURACIÓN Y PAGOS\\n"
-        f"• Facturas creadas: {invoices}\\n"
-        f"• Pendientes: {pending}\\n"
-        f"• Pagos confirmados: {paid}\\n"
-        f"• Ingresos: USD {income:,.2f}\\n"
+        "📊 UNARED | ESTADÍSTICAS\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
+        "👥 CLIENTES\n"
+        f"• Registrados: {customers}\n"
+        f"• Nuevos hoy: {today}\n"
+        f"• Últimos 7 días: {week}\n"
+        f"• Modo Digital: {music}\n\n"
+        "🖱️ INTERACCIÓN DE CLIENTES\n"
+        f"• Botones pulsados: {total_clicks}\n\n"
+        "🏆 BOTONES MÁS UTILIZADOS\n"
+        f"{top_text}\n\n"
+        "🕘 ACTIVIDAD RECIENTE\n"
+        f"{recent_text}\n\n"
+        "💳 FACTURACIÓN Y PAGOS\n"
+        f"• Facturas creadas: {invoices}\n"
+        f"• Pendientes: {pending}\n"
+        f"• Pagos confirmados: {paid}\n"
+        f"• Ingresos: USD {income:,.2f}\n"
         "━━━━━━━━━━━━━━━━━━"
     )
-    await update.effective_message.reply_text(report)
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton("🔎 Ver más estadísticas", callback_data="admin_stats_more")
+    ]])
+    await update.effective_message.reply_text(report, reply_markup=keyboard)
+
+
+async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user):
+        return
+    with sqlite3.connect(DATABASE_PATH) as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS unared_interactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id INTEGER NOT NULL,
+            username TEXT NOT NULL DEFAULT '', full_name TEXT NOT NULL DEFAULT '',
+            button_key TEXT NOT NULL, button_label TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
+        unique_clients = db.execute("SELECT COUNT(DISTINCT telegram_id) FROM unared_interactions").fetchone()[0]
+        all_buttons = db.execute("""SELECT button_label, COUNT(*) FROM unared_interactions
+            GROUP BY button_key, button_label ORDER BY COUNT(*) DESC, button_label ASC""").fetchall()
+        all_activity = db.execute("""SELECT full_name, username, telegram_id, button_label, created_at
+            FROM unared_interactions ORDER BY id DESC LIMIT 30""").fetchall()
+    buttons_text = "\\n".join(
+        f"• {label}: {count} clics" for label, count in all_buttons
+    ) or "• Todavía no hay botones registrados."
+    activity_text = "\\n".join(
+        f"• {name or ('@' + username if username else 'Cliente')} | ID {tid}\\n  {label} | {when}"
+        for name, username, tid, label, when in all_activity
+    ) or "• Todavía no hay actividad registrada."
+    detail = (
+        "🔎 UNARED | DETALLE DE INTERACCIONES\\n"
+        "━━━━━━━━━━━━━━━━━━\\n\\n"
+        f"👥 Clientes que han interactuado: {unique_clients}\\n\\n"
+        "📌 TODOS LOS BOTONES REGISTRADOS\\n"
+        f"{buttons_text}\\n\\n"
+        "🧾 REGISTRO DE ACTIVIDAD (últimos 30)\\n"
+        f"{activity_text}\\n"
+        "━━━━━━━━━━━━━━━━━━"
+    )
+    await update.effective_message.reply_text(
+        detail,
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("⬅️ Volver a estadísticas", callback_data="admin_stats")
+        ]])
+    )
+
 
 async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
