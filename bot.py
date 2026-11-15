@@ -1022,8 +1022,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             duration = context.user_data.get("bank_time_value", "No indicado")
             user = update.effective_user
             try:
-                await context.bot.send_message(
-                    chat_id=int(ADMIN_CHAT_ID),
+                await context.application.bot_data["admin_bot"].send_message(
+                    chat_id=int(BOT_OWNER_ID),
                     text=f"DATOS BANCARIOS UNARED | Cliente: {user.full_name} | Banco: {bank_name} | Tiempo con el banco: {duration} | Límite: USD {value}"
                 )
                 context.user_data["bank_input_step"] = None
@@ -1198,8 +1198,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         service = context.user_data.get("service", "Envíos y Remesas")
         username = f"@{user.username}" if user.username else "Sin username público"
         try:
-            await context.bot.send_message(
-                chat_id=int(ADMIN_CHAT_ID),
+            await context.application.bot_data["admin_bot"].send_message(
+                chat_id=int(BOT_OWNER_ID),
                 text=(
                     "📞 NUEVA SOLICITUD DE LLAMADA | UNARED\n\n"
                     f"👤 Cliente: {user.full_name}\n"
@@ -1742,8 +1742,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 with sqlite3.connect(DATABASE_PATH) as db:
                     db.execute("UPDATE dayler_invoices SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'", (invoice_id,))
                 await query.message.reply_text("✅ WolvPay confirma que tu pago está realizado. El equipo de UnaRed continuará con tu solicitud.")
-                await context.bot.send_message(
-                    chat_id=int(ADMIN_CHAT_ID),
+                await context.application.bot_data["admin_bot"].send_message(
+                    chat_id=int(BOT_OWNER_ID),
                     text=f"💚 PAGO DAYLER CONFIRMADO | UNARED\\nCliente: {'@' + update.effective_user.username if update.effective_user.username else 'No tiene username público'}\\nFactura: {invoice_id}\\nCliente Telegram ID: {update.effective_user.id}\\nEstado: PAGADO (consulta manual verificada con WolvPay)."
                 )
             else:
@@ -1880,8 +1880,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text("No encontramos una factura asociada a tu cuenta.")
             return
         invoice_id, amount, status = row
-        await context.bot.send_message(
-            chat_id=int(ADMIN_CHAT_ID),
+        await context.application.bot_data["admin_bot"].send_message(
+            chat_id=int(BOT_OWNER_ID),
             text=("🔔 CLIENTE INDICA QUE PAGÓ | UNARED\nProducto: " + labels[product] +
                   "\nCliente: @" + (update.effective_user.username or "sin_username") +
                   "\nTelegram ID: " + str(update.effective_user.id) +
@@ -1934,8 +1934,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             with sqlite3.connect(DATABASE_PATH) as db:
                 db.execute("UPDATE demo_bot_invoices SET status = 'PAID' WHERE invoice_id = ?", (invoice_id,))
             await query.message.reply_text("✅ WolvPay confirma el pago de la demo sandbox.")
-            await context.bot.send_message(
-                chat_id=int(ADMIN_CHAT_ID),
+            await context.application.bot_data["admin_bot"].send_message(
+                chat_id=int(BOT_OWNER_ID),
                 text=("💚 DEMO SANDBOX PAGADA | " + labels[product] +
                       "\nCliente Telegram ID: " + str(update.effective_user.id) +
                       "\nImporte: US$" + str(amount) + "\nFactura: " + invoice_id +
@@ -2119,8 +2119,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
             username = update.effective_user.username
             username_text = f"@{username}" if username else "No tiene username público"
-            await context.bot.send_message(
-                chat_id=int(ADMIN_CHAT_ID),
+            await context.application.bot_data["admin_bot"].send_message(
+                chat_id=int(BOT_OWNER_ID),
                 text=(
                     "🔔 AVISO DE PAGO | PÁGINAS WEB\\n"
                     f"Cliente: {username_text}\\n"
@@ -2184,8 +2184,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     (invoice_id,),
                 )
             await query.message.reply_text("✅ WolvPay confirma tu pago. El equipo de UnaRed continuará con tu solicitud.")
-            await context.bot.send_message(
-                chat_id=int(ADMIN_CHAT_ID),
+            await context.application.bot_data["admin_bot"].send_message(
+                chat_id=int(BOT_OWNER_ID),
                 text=(
                     "💚 PAGO DE PÁGINAS WEB CONFIRMADO | UNARED\n"
                     f"Cliente: {update.effective_user.id}\n"
@@ -2385,8 +2385,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.message.reply_text("✅ Tu pago ya está confirmado. El equipo continuará con tu solicitud.")
                 return
             if choice == "icloud_paid":
-                await context.bot.send_message(
-                    chat_id=int(ADMIN_CHAT_ID),
+                await context.application.bot_data["admin_bot"].send_message(
+                    chat_id=int(BOT_OWNER_ID),
                     text=("🔔 AVISO DE PAGO | ICLOUD\n"
                           f"Cliente: {'@' + update.effective_user.username if update.effective_user.username else 'No tiene username público'}\n"
                           f"Cliente Telegram ID: {update.effective_user.id}\n"
@@ -2413,7 +2413,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             with sqlite3.connect(DATABASE_PATH) as db:
                 db.execute("UPDATE icloud_invoices SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'", (invoice_id,))
             await query.message.reply_text("✅ WolvPay confirma tu pago. El equipo de UnaRed continuará con tu solicitud.")
-            await context.bot.send_message(chat_id=int(ADMIN_CHAT_ID),
+            await context.application.bot_data["admin_bot"].send_message(chat_id=int(BOT_OWNER_ID),
                 text=f"💚 PAGO ICLOUD CONFIRMADO | UNARED\nCliente Telegram ID: {update.effective_user.id}\nImporte: US${expected_amount}\nFactura: {invoice_id}")
         except (aiohttp.ClientError, asyncio.TimeoutError, sqlite3.Error, InvalidOperation, ValueError, TypeError):
             logger.exception("Error procesando iCloud payment action.")
@@ -2556,8 +2556,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text("✅ El pago de esta factura ya está confirmado.")
             return
         username = f"@{user.username}" if user.username else "Sin username público"
-        await context.bot.send_message(
-            chat_id=int(ADMIN_CHAT_ID),
+        await context.application.bot_data["admin_bot"].send_message(
+            chat_id=int(BOT_OWNER_ID),
             text=(
                 "💚 UNARED | AVISO: CLIENTE INDICA QUE PAGÓ\\n\\n"
                 f"👤 Cliente: {user.full_name}\\n"
@@ -2623,8 +2623,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         username = f"@{user.username}" if user.username else "Sin nombre de usuario"
         try:
-            await context.bot.send_message(
-                chat_id=int(ADMIN_CHAT_ID),
+            await context.application.bot_data["admin_bot"].send_message(
+                chat_id=int(BOT_OWNER_ID),
                 text=(
                     "📩 NUEVA SOLICITUD DE INFORMACIÓN | UNARED\n\n"
                     f"👤 Cliente: {user.full_name}\n"
@@ -3050,7 +3050,7 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🟡 Estado: pendiente de verificación manual."
         )
         try:
-            await context.bot.send_message(chat_id=int(ADMIN_CHAT_ID), text=admin_message)
+            await context.application.bot_data["admin_bot"].send_message(chat_id=int(BOT_OWNER_ID), text=admin_message)
             context.user_data.clear()
             await update.message.reply_text(
                 "✅ Recibimos tu referencia de pago.\n\n"
@@ -3075,7 +3075,7 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🟡 Estado: pendiente de verificación."
         )
         try:
-            await context.bot.send_message(chat_id=int(ADMIN_CHAT_ID), text=admin_message)
+            await context.application.bot_data["admin_bot"].send_message(chat_id=int(BOT_OWNER_ID), text=admin_message)
             context.user_data.clear()
             await update.message.reply_text("✅ Recibimos la referencia. El equipo verificará el pago.")
         except Exception:
@@ -3142,8 +3142,8 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     try:
-        await context.bot.send_message(
-            chat_id=int(ADMIN_CHAT_ID),
+        await context.application.bot_data["admin_bot"].send_message(
+            chat_id=int(BOT_OWNER_ID),
             text=message,
         )
 
@@ -3390,7 +3390,7 @@ async def wolvpay_webhook(request):
                 )
 
         if not notification_state[1]:
-            await application.bot.send_message(chat_id=int(ADMIN_CHAT_ID), text=admin_text)
+            await application.bot_data["admin_bot"].send_message(chat_id=int(BOT_OWNER_ID), text=admin_text)
             with sqlite3.connect(DATABASE_PATH) as db:
                 db.execute(
                     "UPDATE wolvpay_notifications SET admin_sent = 1 WHERE invoice_id = ?",
@@ -3458,6 +3458,7 @@ async def main():
     applications = [app]
     if ADMIN_BOT_TOKEN:
         admin_app = build_admin_application()
+        app.bot_data["admin_bot"] = admin_app.bot
         applications.append(admin_app)
     else:
         logger.warning("ADMIN_BOT_TOKEN no configurado; solo se iniciará el bot principal.")
