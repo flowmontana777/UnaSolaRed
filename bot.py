@@ -948,6 +948,52 @@ async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # INICIO DEL BOT CON PORTADA
 # =====================================
 
+async def publish_group_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Publica el botón persistente Menu en el grupo."""
+    message = update.effective_message
+    chat = update.effective_chat
+    if not message or not chat or chat.type not in ("group", "supergroup"):
+        if message:
+            await message.reply_text("Este comando se configura desde el grupo de UnaRed.")
+        return
+
+    keyboard = ReplyKeyboardMarkup(
+        [[KeyboardButton("Menu")]],
+        resize_keyboard=True,
+        is_persistent=True,
+        input_field_placeholder="Pulsa Menu para abrir UnaRed",
+    )
+    await message.reply_text(
+        "💚 UNARED | MENÚ DEL GRUPO\n\n"
+        "El botón Menu quedará disponible para todos los miembros. "
+        "Al pulsarlo, recibirás el acceso al menú privado de servicios.",
+        reply_markup=keyboard,
+    )
+
+
+async def open_private_menu_from_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Entrega a cualquier miembro un enlace para abrir su menú privado."""
+    message = update.effective_message
+    if not message or message.text != "Menu":
+        return
+    bot_user = await context.bot.get_me()
+    if not bot_user.username:
+        await message.reply_text("Abre el bot de UnaRed desde su perfil para acceder al menú.")
+        return
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton(
+            "💚 Abrir menú de UnaRed",
+            url=f"https://t.me/{bot_user.username}?start=grupo",
+        )
+    ]])
+    await message.reply_text(
+        f"{message.from_user.mention_html()}, aquí tienes tu menú privado de UnaRed:",
+        parse_mode="HTML",
+        reply_markup=keyboard,
+        disable_web_page_preview=True,
+    )
+
+
 async def welcome_new_members(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Da la bienvenida automáticamente a cada nuevo integrante del grupo."""
     message = update.effective_message
@@ -3617,6 +3663,8 @@ async def stop_webhook_server(application):
 def build_main_application():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("menu", publish_group_menu))
+    app.add_handler(MessageHandler(filters.Regex(r"^Menu$"), open_private_menu_from_group))
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(CommandHandler("panel", admin_panel))
     app.add_handler(CommandHandler("stats", admin_stats))
