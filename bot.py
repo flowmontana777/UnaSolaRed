@@ -2182,7 +2182,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/dJQ4yzbg/Create-promotional-image-for-tel-003ed2cb.jpg",
             caption=(
                 "💚 UNARED | PÁGINAS WEB\n\n"
-                "Catálogo de páginas web para comercios legítimos.\n"
+                "Catálogo de páginas web Cc.\n"
                 "🏷️ Precio por unidad: US$17\n"
                 "Precio regular: US$20\n\n"
                 f"📦 Cantidad: {quantity}\n"
@@ -2209,7 +2209,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_caption(
             caption=(
                 "💚 UNARED | PÁGINAS WEB\n\n"
-                "Catálogo de páginas web para comercios legítimos.\n"
+                "Catálogo de páginas web Cc.\n"
                 "🏷️ Precio por unidad: US$17\n"
                 "Precio regular: US$20\n\n"
                 f"📦 Cantidad: {quantity}\n"
