@@ -697,8 +697,7 @@ def log_customer_interaction(user, button_key):
         return
     labels = {
         "menu_banks": "🏦 Bancos",
-        "remesas": "💸 Envíos y remesas",
-        "pagos": "🧾 Pago de servicios",
+        "remesas": "💸 Envíos y remesas",        "pagos": "🧾 Pago de servicios",
         "amazon": "🛒 Amazon",
         "apple": "🍎 Apple",        "vuelos": "✈️ Vuelos",        "menu_tools": "🧰 Herramientas",
         "digital": "📟 Modo Digital",
@@ -1397,8 +1396,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"🏦 {bank_name}\n\nIntroduce el límite que aparece en tu cuenta con los botones numéricos y pulsa Confirmar.",
                 reply_markup=bank_limit_keyboard(),
             )
-        return
-    if choice.startswith("bank_"):
+        return    if choice.startswith("bank_"):
         bank_id = choice.replace("bank_", "", 1)        bank_name = BANKS.get(bank_id)
 
         if not bank_name:
@@ -2097,8 +2095,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if current_status == "PAID":
                 await query.message.reply_text("✅ Tu pago ya está confirmado. El equipo de UnaRed continuará con tu solicitud.")
                 return
-            async with aiohttp.ClientSession() as session:
-                async with session.get(                    f"{WOLVPAY_API_URL}/invoices/{invoice_id}",
+            async with aiohttp.ClientSession() as session:                async with session.get(                    f"{WOLVPAY_API_URL}/invoices/{invoice_id}",
                     headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}"},
                     timeout=aiohttp.ClientTimeout(total=20),
                 ) as response:
@@ -2797,8 +2794,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.application.bot_data["admin_bot"].send_message(chat_id=int(BOT_OWNER_ID),
                 text=f"💚 PAGO ICLOUD CONFIRMADO | UNARED\nCliente Telegram ID: {update.effective_user.id}\nImporte: US${expected_amount}\nFactura: {invoice_id}")
         except (aiohttp.ClientError, asyncio.TimeoutError, sqlite3.Error, InvalidOperation, ValueError, TypeError):
-            logger.exception("Error procesando iCloud payment action.")            await query.message.reply_text("No pudimos procesar la solicitud en este momento.")
-        return
+            logger.exception("Error procesando iCloud payment action.")            await query.message.reply_text("No pudimos procesar la solicitud en este momento.")        return
 
     if choice == "tool_giftcards":
         service = TOOLS.get("giftcards")
@@ -3496,8 +3492,8 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not detail:
         await update.message.reply_text(
             "Escribe los detalles de tu solicitud."
-        )        return
-
+        )
+        return
     if len(detail) > 3000:
         await update.message.reply_text(
             "Tu mensaje es demasiado largo. "
