@@ -64,7 +64,7 @@ async def reply_with_copyable_id(query, telegram_id):
 
 
 async def notify_new_customer(application, user):
-    """Notifica al propietario una sola vez, cuando el cliente se registra por primera vez."""
+    """Notifica al propietario el registro inicial y ofrece copiar el ID o abrir el perfil."""
     admin_bot = application.bot_data.get("admin_bot") or application.bot
     now = datetime.now(ZoneInfo("America/Santo_Domingo")).strftime("%d/%m/%Y %I:%M %p")
     caption = (
@@ -74,15 +74,18 @@ async def notify_new_customer(application, user):
         f"🆔 ID Telegram: {user.id}\n"
         f"🕒 Registro: {now}"
     )
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton("📋 Copiar ID", callback_data=f"copy_id:{int(user.id)}"),
+        InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={int(user.id)}"),
+    ]])
     try:
         await admin_bot.send_message(
             chat_id=int(BOT_OWNER_ID),
             text=caption,
-            reply_markup=copy_id_keyboard(user.id),
+            reply_markup=keyboard,
         )
     except Exception:
         logger.exception("No se pudo notificar el registro del nuevo cliente %s.", user.id)
-
 
 # =====================================
 # METODO DE PAGO UNARED
@@ -697,8 +700,7 @@ def log_customer_interaction(user, button_key):
         "remesas": "💸 Envíos y remesas",
         "pagos": "🧾 Pago de servicios",
         "amazon": "🛒 Amazon",
-        "apple": "🍎 Apple",        "vuelos": "✈️ Vuelos",
-        "menu_tools": "🧰 Herramientas",
+        "apple": "🍎 Apple",        "vuelos": "✈️ Vuelos",        "menu_tools": "🧰 Herramientas",
         "digital": "📟 Modo Digital",
         "menu_home": "🏠 Menú principal",
         "bill_pay": "💡 Pago de bill",
@@ -1397,8 +1399,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         return
     if choice.startswith("bank_"):
-        bank_id = choice.replace("bank_", "", 1)
-        bank_name = BANKS.get(bank_id)
+        bank_id = choice.replace("bank_", "", 1)        bank_name = BANKS.get(bank_id)
 
         if not bank_name:
             await query.message.reply_text("Banco no disponible.")
@@ -2097,8 +2098,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.message.reply_text("✅ Tu pago ya está confirmado. El equipo de UnaRed continuará con tu solicitud.")
                 return
             async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    f"{WOLVPAY_API_URL}/invoices/{invoice_id}",
+                async with session.get(                    f"{WOLVPAY_API_URL}/invoices/{invoice_id}",
                     headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}"},
                     timeout=aiohttp.ClientTimeout(total=20),
                 ) as response:
@@ -2797,8 +2797,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.application.bot_data["admin_bot"].send_message(chat_id=int(BOT_OWNER_ID),
                 text=f"💚 PAGO ICLOUD CONFIRMADO | UNARED\nCliente Telegram ID: {update.effective_user.id}\nImporte: US${expected_amount}\nFactura: {invoice_id}")
         except (aiohttp.ClientError, asyncio.TimeoutError, sqlite3.Error, InvalidOperation, ValueError, TypeError):
-            logger.exception("Error procesando iCloud payment action.")
-            await query.message.reply_text("No pudimos procesar la solicitud en este momento.")
+            logger.exception("Error procesando iCloud payment action.")            await query.message.reply_text("No pudimos procesar la solicitud en este momento.")
         return
 
     if choice == "tool_giftcards":
@@ -3497,8 +3496,7 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not detail:
         await update.message.reply_text(
             "Escribe los detalles de tu solicitud."
-        )
-        return
+        )        return
 
     if len(detail) > 3000:
         await update.message.reply_text(
