@@ -697,8 +697,7 @@ def log_customer_interaction(user, button_key):
         "remesas": "💸 Envíos y remesas",
         "pagos": "🧾 Pago de servicios",
         "amazon": "🛒 Amazon",
-        "apple": "🍎 Apple",
-        "vuelos": "✈️ Vuelos",
+        "apple": "🍎 Apple",        "vuelos": "✈️ Vuelos",
         "menu_tools": "🧰 Herramientas",
         "digital": "📟 Modo Digital",
         "menu_home": "🏠 Menú principal",
@@ -731,23 +730,130 @@ def is_admin(user):
     # Únicamente la cuenta propietaria puede ver y usar el panel.
     return bool(user and str(user.id) == BOT_OWNER_ID)
 
+def admin_dashboard_keyboard():
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("📊 Estadísticas", callback_data="admin_stats"),
+            InlineKeyboardButton("👥 Clientes", callback_data="admin_customers"),
+        ],
+        [
+            InlineKeyboardButton("💳 Facturación", callback_data="admin_billing"),
+            InlineKeyboardButton("🕘 Actividad", callback_data="admin_activity"),
+        ],
+        [InlineKeyboardButton("🔎 Buscar cliente", callback_data="admin_search_help")],
+    ])
+
+
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
         await update.effective_message.reply_text("⛔ Panel privado.")
         return
-
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📊 Estadísticas", callback_data="admin_stats")],
-        [InlineKeyboardButton("🔎 Cómo buscar un cliente", callback_data="admin_search_help")],
-    ])
-
-    # Banner de UnaRed mostrado al abrir el panel administrativo.
     banner_url = "https://i.ibb.co/PvB4jdJT/E1-ED4248-C0-F3-45-C2-A875-5165-EF2-D4504.png"
     await update.effective_message.reply_photo(
         photo=banner_url,
-        caption="💚 UNARED | PANEL DE ADMINISTRACIÓN",
-        reply_markup=keyboard,
+        caption=(
+            "💚 UNARED | ADMIN\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "CENTRO DE CONTROL PRIVADO\n\n"
+            "Administra clientes, revisa la actividad y consulta la facturación "
+            "desde un solo lugar."
+        ),
+        reply_markup=admin_dashboard_keyboard(),
     )
+
+
+async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user):
+        return
+    with sqlite3.connect(DATABASE_PATH) as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS unared_customers (
+            telegram_id INTEGER PRIMARY KEY, username TEXT NOT NULL DEFAULT '',
+            full_name TEXT NOT NULL DEFAULT '', first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
+        rows = db.execute(
+            "SELECT telegram_id, username, full_name FROM unared_customers ORDER BY last_seen DESC LIMIT 12"
+        ).fetchall()
+        total = db.execute("SELECT COUNT(*) FROM unared_customers").fetchone()[0]
+    lines = [f"• {name or 'Cliente'} | @{username or 'sin_usuario'} | {tid}" for tid, username, name in rows]
+    buttons = [
+        [InlineKeyboardButton(f"📋 Copiar ID {tid}", callback_data=f"copy_id:{tid}")]
+        for tid, _, _ in rows
+    ]
+    buttons.append([InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")])
+    await update.effective_message.reply_text(
+        "👥 UNARED | CLIENTES\n━━━━━━━━━━━━━━━━━━\n\n"
+        f"Total registrados: {total}\nÚltimos 12 clientes:\n"
+        + ("\n".join(lines) if lines else "Todavía no hay clientes registrados."),
+        reply_markup=InlineKeyboardMarkup(buttons),
+    )
+
+
+async def admin_billing(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user):
+        return
+    invoices = paid = pending = cancelled = 0
+    income = 0.0
+    with sqlite3.connect(DATABASE_PATH) as db:
+        for table in INVOICE_TABLES:
+            if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
+                continue
+            cols = {row[1] for row in db.execute("PRAGMA table_info(" + table + ")")}
+            if not {"amount", "status"}.issubset(cols):
+                continue
+            rows = db.execute("SELECT amount, status FROM " + table).fetchall()
+            invoices += len(rows)
+            for amount, status in rows:
+                state = str(status).upper()
+                if state == "PAID":
+                    paid += 1
+                    try:
+                        income += float(amount)
+                    except (ValueError, TypeError):
+                        pass
+                elif state in {"PENDING", "UNPAID", "PROCESSING"}:
+                    pending += 1
+                elif state == "CANCELLED":
+                    cancelled += 1
+    await update.effective_message.reply_text(
+        "💳 UNARED | FACTURACIÓN\n━━━━━━━━━━━━━━━━━━\n\n"
+        f"🧾 Facturas: {invoices}\n⌛ Pendientes: {pending}\n"
+        f"✅ Pagadas: {paid}\n❌ Canceladas: {cancelled}\n"
+        f"💵 Ingresos confirmados: USD {income:,.2f}",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
+        ]]),
+    )
+
+
+async def admin_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user):
+        return
+    with sqlite3.connect(DATABASE_PATH) as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS unared_interactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id INTEGER NOT NULL,
+            username TEXT NOT NULL DEFAULT '', full_name TEXT NOT NULL DEFAULT '',
+            button_key TEXT NOT NULL, button_label TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
+        rows = db.execute(
+            """SELECT full_name, username, telegram_id, button_label, created_at
+               FROM unared_interactions WHERE telegram_id != ? ORDER BY id DESC LIMIT 15""",
+            (int(BOT_OWNER_ID),),
+        ).fetchall()
+    lines = [
+        f"• {name or 'Cliente'} (@{username or 'sin_usuario'})\n  {label} | ID {tid} | {when}"
+        for name, username, tid, label, when in rows
+    ]
+    buttons = [
+        [InlineKeyboardButton(f"📋 Copiar ID {tid}", callback_data=f"copy_id:{tid}")]
+        for _, _, tid, _, _ in rows
+    ]
+    buttons.append([InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")])
+    await update.effective_message.reply_text(
+        "🕘 UNARED | ACTIVIDAD RECIENTE\n━━━━━━━━━━━━━━━━━━\n\n"
+        + ("\n".join(lines) if lines else "Todavía no hay actividad registrada."),
+        reply_markup=InlineKeyboardMarkup(buttons),
+    )
+
 
 async def admin_bot_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
@@ -769,15 +875,27 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
         except (ValueError, IndexError):
             await query.answer("ID no válido.", show_alert=True)
         return
-    if query.data == "admin_stats":
+    if query.data == "admin_home":
+        await admin_panel(update, context)
+    elif query.data == "admin_stats":
         await admin_stats(update, context)
     elif query.data == "admin_stats_more":
         await admin_stats_more(update, context)
+    elif query.data == "admin_customers":
+        await admin_customers(update, context)
+    elif query.data == "admin_billing":
+        await admin_billing(update, context)
+    elif query.data == "admin_activity":
+        await admin_activity(update, context)
     elif query.data == "admin_search_help":
         await query.message.reply_text(
             "🔎 UNARED | BUSCAR CLIENTE\n\n"
             "Usa el comando:\n/buscarcliente TELEGRAM_ID\n\n"
-            "Ejemplo: /buscarcliente 123456789"
+            "Ejemplo: /buscarcliente 123456789\n"
+            "El cliente debe haber iniciado o interactuado con UnaRed para aparecer en el registro.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
+            ]]),
         )
 
 
@@ -1397,8 +1515,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             app_id, action = parts[2], parts[3]
             app_name = REMITTANCE_APPS.get(app_id)
             if app_name and action in ("obtener", "historial"):
-                action_label = "Obtener" if action == "obtener" else "Tiene Historial"
-                await ask_for_details(
+                action_label = "Obtener" if action == "obtener" else "Tiene Historial"                await ask_for_details(
                     query,
                     context,
                     f"{app_name} - {action_label}",
@@ -2097,8 +2214,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 raise RuntimeError("Incomplete invoice response")
             with sqlite3.connect(DATABASE_PATH) as db:
                 db.execute("""CREATE TABLE IF NOT EXISTS demo_bot_invoices (
-                    invoice_id TEXT PRIMARY KEY, telegram_id INTEGER NOT NULL, amount TEXT NOT NULL,
-                    product TEXT NOT NULL, username TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'PENDING'
+                    invoice_id TEXT PRIMARY KEY, telegram_id INTEGER NOT NULL, amount TEXT NOT NULL,                    product TEXT NOT NULL, username TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'PENDING'
                 )""")
                 db.execute(
                     "INSERT INTO demo_bot_invoices VALUES (?, ?, ?, ?, ?, 'PENDING')",
@@ -2797,8 +2913,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         return
 
-    if choice == "edit_buy_paper":
-        await query.message.reply_text(
+    if choice == "edit_buy_paper":        await query.message.reply_text(
             "📄 QUIERO COMPRAR PAPEL\n\n"
             "Para consultar la compra de papel, comunícate directamente con UnaRed.",
             reply_markup=InlineKeyboardMarkup([
@@ -3497,8 +3612,7 @@ async def wolvpay_webhook(request):
                 (invoice_id,),
             ).fetchone()
             invoice_type = "dayler"
-            if not row:
-                row = db.execute(
+            if not row:                row = db.execute(
                     "SELECT telegram_id, amount, quantity, status FROM pages_invoices WHERE invoice_id = ?",
                     (invoice_id,),
                 ).fetchone()
