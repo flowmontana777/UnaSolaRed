@@ -1087,7 +1087,10 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "━━━━━━━━━━━━━━━━━━"
     )
     keyboard_rows = [
-        [InlineKeyboardButton(f"📋 Copiar ID {tid}", callback_data=f"copy_id:{tid}")]
+        [
+            InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={int(tid)}"),
+            InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}"),
+        ]
         for _, _, tid, _, _ in recent
     ]
     keyboard_rows.append([
@@ -1134,7 +1137,10 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "━━━━━━━━━━━━━━━━━━"
     )
     keyboard_rows = [
-        [InlineKeyboardButton(f"📋 Copiar ID {tid}", callback_data=f"copy_id:{tid}")]
+        [
+            InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={int(tid)}"),
+            InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}"),
+        ]
         for _, _, tid, _, _ in all_activity
     ]
     keyboard_rows.append([
