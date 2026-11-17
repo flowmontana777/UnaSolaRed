@@ -1268,7 +1268,7 @@ async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📛 Usuario: " + (("@" + username) if username else "Sin username") +
         f"\n📅 Registro: {first_seen or 'No disponible'}\n🕒 Última actividad: {last_seen or 'No disponible'}\n🧾 Facturas: {total}",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={tid}")],
+            [InlineKeyboardButton("👤 Ir al perfil", callback_data=f"view_customer:{int(tid)}")],
             [InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{tid}")],
         ]),
     )
