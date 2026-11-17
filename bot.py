@@ -2099,7 +2099,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if current_status == "PAID":
                 await query.message.reply_text("✅ Tu pago ya está confirmado. El equipo de UnaRed continuará con tu solicitud.")
                 return
-            async with aiohttp.ClientSession() as session:                async with session.get(                    f"{WOLVPAY_API_URL}/invoices/{invoice_id}",
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{WOLVPAY_API_URL}/invoices/{invoice_id}",
                     headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}"},
                     timeout=aiohttp.ClientTimeout(total=20),
                 ) as response:
