@@ -2794,7 +2794,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.application.bot_data["admin_bot"].send_message(chat_id=int(BOT_OWNER_ID),
                 text=f"💚 PAGO ICLOUD CONFIRMADO | UNARED\nCliente Telegram ID: {update.effective_user.id}\nImporte: US${expected_amount}\nFactura: {invoice_id}")
         except (aiohttp.ClientError, asyncio.TimeoutError, sqlite3.Error, InvalidOperation, ValueError, TypeError):
-            logger.exception("Error procesando iCloud payment action.")            await query.message.reply_text("No pudimos procesar la solicitud en este momento.")        return
+            logger.exception("Error procesando iCloud payment action.")
+            await query.message.reply_text("No pudimos procesar la solicitud en este momento.")
+            return
 
     if choice == "tool_giftcards":
         service = TOOLS.get("giftcards")
@@ -2908,7 +2910,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         return
 
-    if choice == "edit_buy_paper":        await query.message.reply_text(
+    if choice == "edit_buy_paper":
+        await query.message.reply_text(
             "📄 QUIERO COMPRAR PAPEL\n\n"
             "Para consultar la compra de papel, comunícate directamente con UnaRed.",
             reply_markup=InlineKeyboardMarkup([
@@ -3606,7 +3609,8 @@ async def wolvpay_webhook(request):
                 (invoice_id,),
             ).fetchone()
             invoice_type = "dayler"
-            if not row:                row = db.execute(
+            if not row:
+                row = db.execute(
                     "SELECT telegram_id, amount, quantity, status FROM pages_invoices WHERE invoice_id = ?",
                     (invoice_id,),
                 ).fetchone()
