@@ -1396,8 +1396,11 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"🏦 {bank_name}\n\nIntroduce el límite que aparece en tu cuenta con los botones numéricos y pulsa Confirmar.",
                 reply_markup=bank_limit_keyboard(),
             )
-        return    if choice.startswith("bank_"):
-        bank_id = choice.replace("bank_", "", 1)        bank_name = BANKS.get(bank_id)
+        return
+
+    if choice.startswith("bank_"):
+        bank_id = choice.replace("bank_", "", 1)
+        bank_name = BANKS.get(bank_id)
 
         if not bank_name:
             await query.message.reply_text("Banco no disponible.")
