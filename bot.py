@@ -3869,6 +3869,8 @@ def build_main_application():
     app.add_handler(CommandHandler("panel", admin_panel))
     app.add_handler(CommandHandler("stats", admin_stats))
     app.add_handler(CommandHandler("buscarcliente", find_customer))
+    # Admin callbacks must be registered before the general customer callback handler.
+    app.add_handler(CallbackQueryHandler(admin_bot_callbacks))
     app.add_handler(CallbackQueryHandler(select_option))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_new_members))
     app.add_handler(TypeHandler(Update, channel_music_ingest), group=-1)
@@ -3887,6 +3889,8 @@ async def main():
         raise RuntimeError("Falta configurar ADMIN_CHAT_ID en Railway.")
 
     app = build_main_application()
+    # Permite que /buscarcliente envíe alertas aunque se ejecute desde el bot principal.
+    app.bot_data["main_bot"] = app.bot
     admin_app = None
     applications = [app]
     if ADMIN_BOT_TOKEN:
