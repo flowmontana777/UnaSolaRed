@@ -4035,7 +4035,7 @@ async def customer_contact_admin(update: Update, context: ContextTypes.DEFAULT_T
     await query.answer()
     admin_link = f'<a href="tg://user?id={int(BOT_OWNER_ID)}">Abrir chat con Flow Montana</a>'
     await query.message.reply_text(
-        "📩 Para contactar con nuestro administrador, pulsa este enlace:\\n" + admin_link,
+        "📩 Para contactar con nuestro administrador, pulsa este enlace:\n" + admin_link,
         parse_mode="HTML",
         disable_web_page_preview=True,
     )
