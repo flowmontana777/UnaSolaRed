@@ -1085,7 +1085,7 @@ async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await main_bot.send_message(
                 chat_id=int(tid),
                 text=(
-                    "💚 UNARED | NOTIFICACIÓN\\n\\n"
+                    "💚 UNARED | NOTIFICACIÓN\n\n"
                     "Tenemos una notificación importante para ti. "
                     "Pulsa el botón de abajo para contactar con nuestro administrador."
                 ),
@@ -1096,9 +1096,9 @@ async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.exception("No se pudo enviar la alerta al cliente %s.", tid)
 
     await update.effective_message.reply_text(
-        "👤 UNARED | FICHA DEL CLIENTE\\n\\n"
-        f"🆔 ID: {tid}\\n👤 Nombre: {name}\\n📛 Usuario: " + (("@" + username) if username else "Sin username") +
-        f"\\n📅 Registro: {first_seen}\\n🕒 Última actividad: {last_seen}\\n🧾 Facturas: {total}\\n\\n"
+        "👤 UNARED | FICHA DEL CLIENTE\n\n"
+        f"🆔 ID: {tid}\n👤 Nombre: {name}\n📛 Usuario: " + (("@" + username) if username else "Sin username") +
+        f"\n📅 Registro: {first_seen}\n🕒 Última actividad: {last_seen}\n🧾 Facturas: {total}\n\n"
         + ("✅ Alerta enviada al cliente." if customer_alert_sent else "⚠️ No se pudo enviar la alerta al cliente."),
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("👤 Ir al cliente", url=f"tg://user?id={int(tid)}")],
