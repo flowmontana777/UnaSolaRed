@@ -764,34 +764,64 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.effective_message
     if not is_admin(update.effective_user):
+        if update.callback_query:
+            await update.callback_query.answer("⛔ Acceso denegado.", show_alert=True)
         return
-    with sqlite3.connect(DATABASE_PATH) as db:
-        db.execute("""CREATE TABLE IF NOT EXISTS unared_customers (
-            telegram_id INTEGER PRIMARY KEY, username TEXT NOT NULL DEFAULT '',
-            full_name TEXT NOT NULL DEFAULT '', first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
-        rows = db.execute(
-            "SELECT telegram_id, username, full_name FROM unared_customers ORDER BY last_seen DESC LIMIT 12"
-        ).fetchall()
-        total = db.execute("SELECT COUNT(*) FROM unared_customers").fetchone()[0]
-    lines = [f"• {name or 'Cliente'} | @{username or 'sin_usuario'} | {tid}" for tid, username, name in rows]
-    buttons = []
-    for tid, username, name in rows:
-        buttons.append([
-            InlineKeyboardButton(
-                f"👤 Ir al cliente: {(name or username or str(tid))[:24]}",
-                url=f"tg://user?id={int(tid)}",
-            ),
-            InlineKeyboardButton("📋 ID", callback_data=f"copy_id:{int(tid)}"),
-        ])
-    buttons.append([InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")])
-    await update.effective_message.reply_text(
-        "👥 UNARED | CLIENTES\n━━━━━━━━━━━━━━━━━━\n\n"
-        f"Total registrados: {total}\nÚltimos 12 clientes:\n"
-        + ("\n".join(lines) if lines else "Todavía no hay clientes registrados."),
-        reply_markup=InlineKeyboardMarkup(buttons),
-    )
+
+    try:
+        with sqlite3.connect(DATABASE_PATH, timeout=15) as db:
+            db.execute("""CREATE TABLE IF NOT EXISTS unared_customers (
+                telegram_id INTEGER PRIMARY KEY,
+                username TEXT NOT NULL DEFAULT '',
+                full_name TEXT NOT NULL DEFAULT '',
+                first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )""")
+            columns = {column[1] for column in db.execute("PRAGMA table_info(unared_customers)")}
+            for column, definition in (
+                ("username", "TEXT NOT NULL DEFAULT ''"),
+                ("full_name", "TEXT NOT NULL DEFAULT ''"),
+                ("first_seen", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"),
+                ("last_seen", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"),
+            ):
+                if column not in columns:
+                    db.execute(f"ALTER TABLE unared_customers ADD COLUMN {column} {definition}")
+
+            rows = db.execute(
+                "SELECT telegram_id, username, full_name FROM unared_customers "
+                "ORDER BY last_seen DESC LIMIT 12"
+            ).fetchall()
+            total = db.execute("SELECT COUNT(*) FROM unared_customers").fetchone()[0]
+
+        lines = [
+            f"• {name or 'Cliente'} | @{username or 'sin_usuario'} | {tid}"
+            for tid, username, name in rows
+        ]
+        buttons = []
+        for tid, username, name in rows:
+            buttons.append([
+                InlineKeyboardButton(
+                    f"👤 Ir al cliente: {(name or username or str(tid))[:24]}",
+                    url=f"tg://user?id={int(tid)}",
+                ),
+                InlineKeyboardButton("📋 ID", callback_data=f"copy_id:{int(tid)}"),
+            ])
+        buttons.append([InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")])
+
+        await message.reply_text(
+            "👥 UNARED | CLIENTES\\n━━━━━━━━━━━━━━━━━━\\n\\n"
+            f"Total registrados: {total}\\nÚltimos 12 clientes:\\n"
+            + ("\\n".join(lines) if lines else "Todavía no hay clientes registrados."),
+            reply_markup=InlineKeyboardMarkup(buttons),
+        )
+    except Exception:
+        logger.exception("Error mostrando la lista de clientes en el panel administrativo.")
+        if update.callback_query:
+            await update.callback_query.answer("No se pudo cargar la lista de clientes.", show_alert=True)
+        elif message:
+            await message.reply_text("⚠️ No se pudo cargar la lista de clientes. Revisa los registros de Railway.")
 
 
 async def admin_billing(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1078,35 +1108,78 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.effective_message
     if not is_admin(update.effective_user):
-        await update.effective_message.reply_text("⛔ No autorizado.")
+        if message:
+            await message.reply_text("⛔ No autorizado.")
         return
     if not context.args or not context.args[0].isdigit():
-        await update.effective_message.reply_text("Uso: /buscarcliente TELEGRAM_ID")
+        await message.reply_text("Uso: /buscarcliente TELEGRAM_ID")
         return
+
     tid = int(context.args[0])
-    with sqlite3.connect(DATABASE_PATH) as db:
-        db.execute("""CREATE TABLE IF NOT EXISTS unared_customers (
-            telegram_id INTEGER PRIMARY KEY, username TEXT NOT NULL DEFAULT '',
-            full_name TEXT NOT NULL DEFAULT '', first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
-        row = db.execute("SELECT telegram_id,username,full_name,first_seen,last_seen FROM unared_customers WHERE telegram_id=?", (tid,)).fetchone()
-        total = 0
-        for table in INVOICE_TABLES:
-            if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
-                total += db.execute("SELECT COUNT(*) FROM " + table + " WHERE telegram_id=?", (tid,)).fetchone()[0]
-    if not row:
-        await update.effective_message.reply_text("No encontramos ese cliente. Debe haber iniciado o interactuado con UnaRed.")
+    try:
+        with sqlite3.connect(DATABASE_PATH, timeout=15) as db:
+            db.execute("""CREATE TABLE IF NOT EXISTS unared_customers (
+                telegram_id INTEGER PRIMARY KEY,
+                username TEXT NOT NULL DEFAULT '',
+                full_name TEXT NOT NULL DEFAULT '',
+                first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )""")
+            # Compatibilidad con bases de datos creadas por versiones anteriores.
+            customer_columns = {column[1] for column in db.execute("PRAGMA table_info(unared_customers)")}
+            for column, definition in (
+                ("username", "TEXT NOT NULL DEFAULT ''"),
+                ("full_name", "TEXT NOT NULL DEFAULT ''"),
+                ("first_seen", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"),
+                ("last_seen", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"),
+            ):
+                if column not in customer_columns:
+                    db.execute(f"ALTER TABLE unared_customers ADD COLUMN {column} {definition}")
+
+            row = db.execute(
+                "SELECT telegram_id, username, full_name, first_seen, last_seen "
+                "FROM unared_customers WHERE telegram_id=?",
+                (tid,),
+            ).fetchone()
+
+            total = 0
+            for table in INVOICE_TABLES:
+                exists = db.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+                    (table,),
+                ).fetchone()
+                if not exists:
+                    continue
+                columns = {column[1] for column in db.execute(f"PRAGMA table_info({table})")}
+                if "telegram_id" in columns:
+                    total += db.execute(
+                        f"SELECT COUNT(*) FROM {table} WHERE telegram_id=?",
+                        (tid,),
+                    ).fetchone()[0]
+    except sqlite3.Error:
+        logger.exception("Error buscando al cliente %s.", tid)
+        await message.reply_text("⚠️ No se pudo consultar el cliente por un error en la base de datos. Revisa los registros de Railway.")
         return
+
+    if not row:
+        await message.reply_text(
+            "No encontramos ese cliente. Debe haber iniciado o interactuado con UnaRed."
+        )
+        return
+
     tid, username, name, first_seen, last_seen = row
-    await update.effective_message.reply_text(
-        "👤 UNARED | FICHA DEL CLIENTE\n\n"
-        f"🆔 ID: {tid}\n👤 Nombre: {name}\n📛 Usuario: " + (("@" + username) if username else "Sin username") +
-        f"\n📅 Registro: {first_seen}\n🕒 Última actividad: {last_seen}\n🧾 Facturas: {total}",
+    await message.reply_text(
+        "👤 UNARED | FICHA DEL CLIENTE\\n\\n"
+        f"🆔 ID: {tid}\\n👤 Nombre: {name or 'Sin nombre'}\\n"
+        f"📛 Usuario: " + (("@" + username) if username else "Sin username") +
+        f"\\n📅 Registro: {first_seen}\\n🕒 Última actividad: {last_seen}\\n🧾 Facturas: {total}",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={int(tid)}")],
-            [InlineKeyboardButton("🔔 Notificación", callback_data=f"notify_customer:{int(tid)}")],
-        ]))
+            [InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={tid}")],
+            [InlineKeyboardButton("🔔 Notificación", callback_data=f"notify_customer:{tid}")],
+        ]),
+    )
 
 # =====================================
 # INICIO DEL BOT CON PORTADA
