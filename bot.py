@@ -874,12 +874,36 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.answer("⛔ Acceso denegado.", show_alert=True)
         return
     await query.answer()
+    if query.data.startswith("notify_customer:"):
+        try:
+            telegram_id = int(query.data.split(":", 1)[1])
+            main_bot = context.application.bot_data.get("main_bot")
+            if not main_bot:
+                await query.message.reply_text("⚠️ No está disponible la conexión con el bot principal.")
+                return
+            customer_keyboard = InlineKeyboardMarkup([[
+                InlineKeyboardButton("📩 Contactar a Flow Montana", url=f"tg://user?id={int(BOT_OWNER_ID)}")
+            ]])
+            await main_bot.send_message(
+                chat_id=telegram_id,
+                text=("💚 UNARED | NOTIFICACIÓN\n\n"
+                      "Tenemos una notificación importante para ti. "
+                      "Pulsa el botón de abajo para contactar con nuestro administrador."),
+                reply_markup=customer_keyboard,
+            )
+            await query.message.reply_text(f"✅ Notificación enviada al cliente {telegram_id}.")
+        except (ValueError, IndexError):
+            await query.message.reply_text("⚠️ ID de cliente no válido.")
+        except Exception:
+            logger.exception("No se pudo enviar la notificación desde el panel.")
+            await query.message.reply_text("⚠️ No se pudo enviar la notificación. Es posible que el cliente no haya iniciado el bot.")
+        return
     if query.data.startswith("copy_id:"):
         try:
             telegram_id = int(query.data.split(":", 1)[1])
             await reply_with_copyable_id(query, telegram_id)
         except (ValueError, IndexError):
-            await query.answer("ID no válido.", show_alert=True)
+            await query.message.reply_text("ID no válido.")
         return
     if query.data == "admin_home":
         await admin_panel(update, context)
@@ -903,6 +927,7 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
             ]]),
         )
+
 
 
 def build_admin_application():
@@ -1070,39 +1095,13 @@ async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.effective_message.reply_text("No encontramos ese cliente. Debe haber iniciado o interactuado con UnaRed.")
         return
     tid, username, name, first_seen, last_seen = row
-
-    # Envía la notificación al cliente usando el bot principal.
-    customer_alert_sent = False
-    main_bot = context.application.bot_data.get("main_bot")
-    if main_bot:
-        customer_keyboard = InlineKeyboardMarkup([[
-            InlineKeyboardButton(
-                "📩 Contactar a Flow Montana",
-                url=f"tg://user?id={int(BOT_OWNER_ID)}",
-            )
-        ]])
-        try:
-            await main_bot.send_message(
-                chat_id=int(tid),
-                text=(
-                    "💚 UNARED | NOTIFICACIÓN\n\n"
-                    "Tenemos una notificación importante para ti. "
-                    "Pulsa el botón de abajo para contactar con nuestro administrador."
-                ),
-                reply_markup=customer_keyboard,
-            )
-            customer_alert_sent = True
-        except Exception:
-            logger.exception("No se pudo enviar la alerta al cliente %s.", tid)
-
     await update.effective_message.reply_text(
         "👤 UNARED | FICHA DEL CLIENTE\n\n"
         f"🆔 ID: {tid}\n👤 Nombre: {name}\n📛 Usuario: " + (("@" + username) if username else "Sin username") +
-        f"\n📅 Registro: {first_seen}\n🕒 Última actividad: {last_seen}\n🧾 Facturas: {total}\n\n"
-        + ("✅ Alerta enviada al cliente." if customer_alert_sent else "⚠️ No se pudo enviar la alerta al cliente."),
+        f"\n📅 Registro: {first_seen}\n🕒 Última actividad: {last_seen}\n🧾 Facturas: {total}",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("👤 Ir al cliente", url=f"tg://user?id={int(tid)}")],
-            [InlineKeyboardButton("📋 Copiar ID", callback_data=f"copy_id:{int(tid)}")],
+            [InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={int(tid)}")],
+            [InlineKeyboardButton("🔔 Notificación", callback_data=f"notify_customer:{int(tid)}")],
         ]))
 
 # =====================================
@@ -3869,8 +3868,9 @@ def build_main_application():
     app.add_handler(CommandHandler("panel", admin_panel))
     app.add_handler(CommandHandler("stats", admin_stats))
     app.add_handler(CommandHandler("buscarcliente", find_customer))
-    # Admin callbacks must be registered before the general customer callback handler.
-    app.add_handler(CallbackQueryHandler(admin_bot_callbacks))
+    # Solo los callbacks administrativos pasan por el control de acceso del panel.
+    # Los botones de servicios y precios siguen llegando a select_option.
+    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|copy_id:|notify_customer:)"))
     app.add_handler(CallbackQueryHandler(select_option))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_new_members))
     app.add_handler(TypeHandler(Update, channel_music_ingest), group=-1)
