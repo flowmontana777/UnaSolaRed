@@ -819,9 +819,9 @@ async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         buttons.append([InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")])
 
         await message.reply_text(
-            "👥 UNARED | CLIENTES\\n━━━━━━━━━━━━━━━━━━\\n\\n"
-            f"Total registrados: {total}\\nÚltimos 12 clientes:\\n"
-            + ("\\n".join(lines) if lines else "Todavía no hay clientes registrados."),
+            "👥 UNARED | CLIENTES\n━━━━━━━━━━━━━━━━━━\n\n"
+            f"Total registrados: {total}\nÚltimos 12 clientes:\n"
+            + ("\n".join(lines) if lines else "Todavía no hay clientes registrados."),
             reply_markup=InlineKeyboardMarkup(buttons),
         )
     except Exception:
@@ -891,7 +891,7 @@ async def admin_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
             (int(BOT_OWNER_ID),),
         ).fetchall()
     lines = [
-        f"• {name or 'Cliente'} (@{username or 'sin_usuario'})\\n  Última acción: {label} | {when}"
+        f"• {name or 'Cliente'} (@{username or 'sin_usuario'})\n  Última acción: {label} | {when}"
         for name, username, tid, label, when in rows
     ]
     buttons = []
@@ -1188,10 +1188,10 @@ async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     tid, username, name, first_seen, last_seen = row
     await message.reply_text(
-        "👤 UNARED | FICHA DEL CLIENTE\\n\\n"
-        f"🆔 ID: {tid}\\n👤 Nombre: {name or 'Sin nombre'}\\n"
+        "👤 UNARED | FICHA DEL CLIENTE\n\n"
+        f"🆔 ID: {tid}\n👤 Nombre: {name or 'Sin nombre'}\n"
         f"📛 Usuario: " + (("@" + username) if username else "Sin username") +
-        f"\\n📅 Registro: {first_seen}\\n🕒 Última actividad: {last_seen}\\n🧾 Facturas: {total}",
+        f"\n📅 Registro: {first_seen}\n🕒 Última actividad: {last_seen}\n🧾 Facturas: {total}",
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={tid}")],
             [InlineKeyboardButton("🔔 Notificación", callback_data=f"notify_customer:{tid}")],
