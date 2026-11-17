@@ -935,8 +935,12 @@ def build_admin_application():
     admin_app.add_handler(CommandHandler("start", admin_bot_start))
     admin_app.add_handler(CommandHandler("panel", admin_panel))
     admin_app.add_handler(CommandHandler("stats", admin_stats))
+    # Los callbacks del panel se procesan aquí; los callbacks de otros flujos no se interceptan.
     admin_app.add_handler(CommandHandler("buscarcliente", find_customer))
-    admin_app.add_handler(CallbackQueryHandler(admin_bot_callbacks))
+    admin_app.add_handler(CallbackQueryHandler(
+        admin_bot_callbacks,
+        pattern=r"^(admin_|copy_id:|notify_customer:)",
+    ))
     return admin_app
 
 
@@ -3867,7 +3871,7 @@ def build_main_application():
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(CommandHandler("panel", admin_panel))
     app.add_handler(CommandHandler("stats", admin_stats))
-    app.add_handler(CommandHandler("buscarcliente", find_customer))
+    # /buscarcliente está disponible exclusivamente en el bot de administración.
     # Solo los callbacks administrativos pasan por el control de acceso del panel.
     # Los botones de servicios y precios siguen llegando a select_option.
     app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|copy_id:|notify_customer:)"))
