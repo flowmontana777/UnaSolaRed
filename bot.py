@@ -984,7 +984,7 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 await query.message.reply_text("⚠️ No está disponible la conexión con el bot principal.")
                 return
             customer_keyboard = InlineKeyboardMarkup([[
-                InlineKeyboardButton("📩 Contactar a Flow Montana", callback_data="contact_admin")
+                InlineKeyboardButton("📩 Contactar a Flow Montana", url="https://t.me/flowmontana777")
             ]])
             await main_bot.send_photo(
                 chat_id=telegram_id,
@@ -4029,18 +4029,6 @@ async def stop_webhook_server(application):
 # EJECUTAR BOT
 # =====================================
 
-async def customer_contact_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Responde al botón de contacto desde el bot principal del cliente."""
-    query = update.callback_query
-    await query.answer()
-    admin_link = f'<a href="tg://user?id={int(BOT_OWNER_ID)}">Abrir chat con Flow Montana</a>'
-    await query.message.reply_text(
-        "📩 Para contactar con nuestro administrador, pulsa este enlace:\n" + admin_link,
-        parse_mode="HTML",
-        disable_web_page_preview=True,
-    )
-
-
 def build_main_application():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
@@ -4052,7 +4040,6 @@ def build_main_application():
     # /buscarcliente está disponible exclusivamente en el bot de administración.
     # Solo los callbacks administrativos pasan por el control de acceso del panel.
     # Los botones de servicios y precios siguen llegando a select_option.
-    app.add_handler(CallbackQueryHandler(customer_contact_admin, pattern=r"^contact_admin$"))
     app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|copy_id:|notify_customer:)"))
     app.add_handler(CallbackQueryHandler(select_option))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_new_members))
