@@ -51,7 +51,7 @@ GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
 def copy_id_keyboard(telegram_id):
     """Acciones administrativas permitidas para un cliente."""
     return InlineKeyboardMarkup([[
-        InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={int(telegram_id)}"),
+        InlineKeyboardButton("👤 Ir al perfil", callback_data=f"view_customer:{int(telegram_id)}"),
         InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(telegram_id)}"),
     ]])
 
@@ -73,7 +73,7 @@ async def notify_new_customer(application, user):
         f"🕒 Registro: {now}"
     )
     keyboard = InlineKeyboardMarkup([[
-        InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={int(user.id)}"),
+        InlineKeyboardButton("👤 Ir al perfil", callback_data=f"view_customer:{int(user.id)}"),
         InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(user.id)}"),
     ]])
     try:
@@ -831,7 +831,7 @@ async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
             buttons.append([
                 InlineKeyboardButton(
                     f"👤 Ir al perfil: {(data['name'] or data['username'] or str(tid))[:20]}",
-                    url=f"tg://user?id={tid}",
+                    callback_data=f"view_customer:{int(tid)}",
                 ),
                 InlineKeyboardButton(
                     "🔔 Mandar alerta",
@@ -919,7 +919,7 @@ async def admin_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons = []
     for name, username, tid, label, when in rows:
         buttons.append([
-            InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={int(tid)}"),
+            InlineKeyboardButton("👤 Ir al perfil", callback_data=f"view_customer:{int(tid)}"),
             InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}"),
         ])
     buttons.append([InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")])
@@ -943,6 +943,39 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.answer("⛔ Acceso denegado.", show_alert=True)
         return
     await query.answer()
+    if query.data.startswith("view_customer:"):
+        try:
+            telegram_id = int(query.data.split(":", 1)[1])
+            customer_name = "este cliente"
+            username = ""
+            with sqlite3.connect(DATABASE_PATH, timeout=15) as db:
+                exists = db.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='unared_customers'"
+                ).fetchone()
+                if exists:
+                    cols = {c[1] for c in db.execute("PRAGMA table_info(unared_customers)")}
+                    if {"telegram_id", "full_name", "username"}.issubset(cols):
+                        row = db.execute(
+                            "SELECT full_name, username FROM unared_customers WHERE telegram_id=?",
+                            (telegram_id,),
+                        ).fetchone()
+                        if row:
+                            customer_name, username = row[0] or customer_name, row[1] or ""
+            profile_link = f'<a href="tg://user?id={telegram_id}">Abrir perfil de {customer_name}</a>'
+            if username:
+                profile_link = f'<a href="https://t.me/{username.lstrip("@")}">Abrir perfil de {customer_name}</a>'
+            await query.message.reply_text(profile_link, parse_mode="HTML", disable_web_page_preview=True)
+        except Exception:
+            logger.exception("No se pudo abrir el perfil del cliente.")
+            await query.message.reply_text("No se pudo abrir el perfil de ese cliente.")
+        return
+    if query.data == "contact_admin":
+        await query.message.reply_text(
+            f'<a href="tg://user?id={int(BOT_OWNER_ID)}">Contactar con el administrador</a>',
+            parse_mode="HTML",
+            disable_web_page_preview=True,
+        )
+        return
     if query.data.startswith("notify_customer:"):
         try:
             telegram_id = int(query.data.split(":", 1)[1])
@@ -951,7 +984,7 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 await query.message.reply_text("⚠️ No está disponible la conexión con el bot principal.")
                 return
             customer_keyboard = InlineKeyboardMarkup([[
-                InlineKeyboardButton("📩 Contactar a Flow Montana", url=f"tg://user?id={int(BOT_OWNER_ID)}")
+                InlineKeyboardButton("📩 Contactar a Flow Montana", callback_data="contact_admin")
             ]])
             await main_bot.send_message(
                 chat_id=telegram_id,
@@ -1008,7 +1041,7 @@ def build_admin_application():
     admin_app.add_handler(CommandHandler("buscarcliente", find_customer))
     admin_app.add_handler(CallbackQueryHandler(
         admin_bot_callbacks,
-        pattern=r"^(admin_|copy_id:|notify_customer:)",
+        pattern=r"^(admin_|copy_id:|notify_customer:|view_customer:|contact_admin$)",
     ))
     return admin_app
 
@@ -1088,7 +1121,7 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     keyboard_rows = [
         [
-            InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={int(tid)}"),
+            InlineKeyboardButton("👤 Ir al perfil", callback_data=f"view_customer:{int(tid)}"),
             InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}"),
         ]
         for _, _, tid, _, _ in recent
@@ -1138,7 +1171,7 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     keyboard_rows = [
         [
-            InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={int(tid)}"),
+            InlineKeyboardButton("👤 Ir al perfil", callback_data=f"view_customer:{int(tid)}"),
             InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}"),
         ]
         for _, _, tid, _, _ in all_activity
