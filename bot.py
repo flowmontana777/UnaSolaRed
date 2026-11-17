@@ -49,9 +49,10 @@ GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
 # =====================================
 
 def copy_id_keyboard(telegram_id):
-    """Muestra una acción para enviar el ID en un mensaje fácil de copiar."""
+    """Acciones administrativas permitidas para un cliente."""
     return InlineKeyboardMarkup([[
-        InlineKeyboardButton("📋 Copiar ID", callback_data=f"copy_id:{int(telegram_id)}")
+        InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={int(telegram_id)}"),
+        InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(telegram_id)}"),
     ]])
 
 
@@ -61,7 +62,7 @@ async def reply_with_copyable_id(query, telegram_id):
 
 
 async def notify_new_customer(application, user):
-    """Notifica al propietario el registro inicial y ofrece copiar el ID o abrir el perfil."""
+    """Notifica al propietario el registro inicial y ofrece perfil y alerta."""
     admin_bot = application.bot_data.get("admin_bot") or application.bot
     now = datetime.now(ZoneInfo("America/Santo_Domingo")).strftime("%d/%m/%Y %I:%M %p")
     caption = (
