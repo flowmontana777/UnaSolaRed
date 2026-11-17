@@ -771,6 +771,7 @@ async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
+        customers = {}
         with sqlite3.connect(DATABASE_PATH, timeout=15) as db:
             db.execute("""CREATE TABLE IF NOT EXISTS unared_customers (
                 telegram_id INTEGER PRIMARY KEY,
@@ -789,38 +790,61 @@ async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if column not in columns:
                     db.execute(f"ALTER TABLE unared_customers ADD COLUMN {column} {definition}")
 
-            rows = db.execute(
-                """SELECT telegram_id, username, full_name
-                   FROM unared_customers
-                   GROUP BY telegram_id
-                   ORDER BY MAX(last_seen) DESC
-                   LIMIT 12"""
-            ).fetchall()
-            total = db.execute(
-                "SELECT COUNT(DISTINCT telegram_id) FROM unared_customers"
-            ).fetchone()[0]
+            for tid, username, name, last_seen in db.execute(
+                "SELECT telegram_id, username, full_name, last_seen FROM unared_customers"
+            ).fetchall():
+                customers[int(tid)] = {
+                    "username": username or "", "name": name or "",
+                    "last_seen": last_seen or ""
+                }
 
+            interactions_exists = db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='unared_interactions'"
+            ).fetchone()
+            if interactions_exists:
+                interaction_rows = db.execute(
+                    """SELECT telegram_id, username, full_name, MAX(created_at)
+                       FROM unared_interactions
+                       WHERE telegram_id != ?
+                       GROUP BY telegram_id""",
+                    (int(BOT_OWNER_ID),),
+                ).fetchall()
+                for tid, username, name, last_seen in interaction_rows:
+                    tid = int(tid)
+                    current = customers.get(tid, {})
+                    customers[tid] = {
+                        "username": username or current.get("username", ""),
+                        "name": name or current.get("name", ""),
+                        "last_seen": max(str(last_seen or ""), str(current.get("last_seen", ""))),
+                    }
+
+        ordered = sorted(
+            customers.items(),
+            key=lambda item: item[1].get("last_seen", ""),
+            reverse=True,
+        )[:12]
+        total = len(customers)
         lines = [
-            f"• {name or 'Cliente'} | @{username or 'sin_usuario'}"
-            for tid, username, name in rows
+            f"• {data['name'] or 'Cliente'} | @{data['username'] or 'sin_usuario'}"
+            for tid, data in ordered
         ]
         buttons = []
-        for tid, username, name in rows:
+        for tid, data in ordered:
             buttons.append([
                 InlineKeyboardButton(
-                    f"👤 Ir al perfil: {(name or username or str(tid))[:20]}",
-                    url=f"tg://user?id={int(tid)}",
+                    f"👤 Ir al perfil: {(data['name'] or data['username'] or str(tid))[:20]}",
+                    url=f"tg://user?id={tid}",
                 ),
                 InlineKeyboardButton(
                     "🔔 Mandar alerta",
-                    callback_data=f"notify_customer:{int(tid)}",
+                    callback_data=f"notify_customer:{tid}",
                 ),
             ])
         buttons.append([InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")])
 
         await message.reply_text(
             "👥 UNARED | CLIENTES\n━━━━━━━━━━━━━━━━━━\n\n"
-            f"Total registrados: {total}\nÚltimos 12 clientes:\n"
+            f"Total de clientes únicos: {total}\nÚltimos 12 clientes:\n"
             + ("\n".join(lines) if lines else "Todavía no hay clientes registrados."),
             reply_markup=InlineKeyboardMarkup(buttons),
         )
@@ -1137,29 +1161,35 @@ async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tid = int(context.args[0])
     try:
         with sqlite3.connect(DATABASE_PATH, timeout=15) as db:
-            db.execute("""CREATE TABLE IF NOT EXISTS unared_customers (
-                telegram_id INTEGER PRIMARY KEY,
-                username TEXT NOT NULL DEFAULT '',
-                full_name TEXT NOT NULL DEFAULT '',
-                first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )""")
-            # Compatibilidad con bases de datos creadas por versiones anteriores.
-            customer_columns = {column[1] for column in db.execute("PRAGMA table_info(unared_customers)")}
-            for column, definition in (
-                ("username", "TEXT NOT NULL DEFAULT ''"),
-                ("full_name", "TEXT NOT NULL DEFAULT ''"),
-                ("first_seen", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"),
-                ("last_seen", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"),
-            ):
-                if column not in customer_columns:
-                    db.execute(f"ALTER TABLE unared_customers ADD COLUMN {column} {definition}")
-
-            row = db.execute(
-                "SELECT telegram_id, username, full_name, first_seen, last_seen "
-                "FROM unared_customers WHERE telegram_id=?",
-                (tid,),
+            row = None
+            customer_exists = db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='unared_customers'"
             ).fetchone()
+            if customer_exists:
+                columns = {column[1] for column in db.execute("PRAGMA table_info(unared_customers)")}
+                required = {"telegram_id", "username", "full_name"}
+                if required.issubset(columns):
+                    select_cols = ["telegram_id", "username", "full_name"]
+                    select_cols.append("first_seen" if "first_seen" in columns else "''")
+                    select_cols.append("last_seen" if "last_seen" in columns else "''")
+                    row = db.execute(
+                        f"SELECT {', '.join(select_cols)} FROM unared_customers WHERE telegram_id=?",
+                        (tid,),
+                    ).fetchone()
+
+            if not row:
+                interactions_exists = db.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='unared_interactions'"
+                ).fetchone()
+                if interactions_exists:
+                    interaction = db.execute(
+                        """SELECT telegram_id, username, full_name, MIN(created_at), MAX(created_at)
+                           FROM unared_interactions
+                           WHERE telegram_id=? GROUP BY telegram_id""",
+                        (tid,),
+                    ).fetchone()
+                    if interaction:
+                        row = interaction
 
             total = 0
             for table in INVOICE_TABLES:
@@ -1175,6 +1205,14 @@ async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         f"SELECT COUNT(*) FROM {table} WHERE telegram_id=?",
                         (tid,),
                     ).fetchone()[0]
+                    if not row:
+                        invoice_row = db.execute(
+                            f"SELECT telegram_id FROM {table} WHERE telegram_id=? LIMIT 1",
+                            (tid,),
+                        ).fetchone()
+                        if invoice_row:
+                            row = (tid, "", "Cliente con factura", "", "")
+
     except sqlite3.Error:
         logger.exception("Error buscando al cliente %s.", tid)
         await message.reply_text("⚠️ No se pudo consultar el cliente por un error en la base de datos. Revisa los registros de Railway.")
@@ -1182,7 +1220,7 @@ async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not row:
         await message.reply_text(
-            "No encontramos ese cliente. Debe haber iniciado o interactuado con UnaRed."
+            "No encontramos ese cliente en los registros de clientes, actividad ni facturación."
         )
         return
 
@@ -1191,10 +1229,10 @@ async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "👤 UNARED | FICHA DEL CLIENTE\n\n"
         f"🆔 ID: {tid}\n👤 Nombre: {name or 'Sin nombre'}\n"
         f"📛 Usuario: " + (("@" + username) if username else "Sin username") +
-        f"\n📅 Registro: {first_seen}\n🕒 Última actividad: {last_seen}\n🧾 Facturas: {total}",
+        f"\n📅 Registro: {first_seen or 'No disponible'}\n🕒 Última actividad: {last_seen or 'No disponible'}\n🧾 Facturas: {total}",
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={tid}")],
-            [InlineKeyboardButton("🔔 Notificación", callback_data=f"notify_customer:{tid}")],
+            [InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{tid}")],
         ]),
     )
 
