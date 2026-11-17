@@ -1517,7 +1517,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             app_id, action = parts[2], parts[3]
             app_name = REMITTANCE_APPS.get(app_id)
             if app_name and action in ("obtener", "historial"):
-                action_label = "Obtener" if action == "obtener" else "Tiene Historial"                await ask_for_details(
+                action_label = "Obtener" if action == "obtener" else "Tiene Historial"
+                await ask_for_details(
                     query,
                     context,
                     f"{app_name} - {action_label}",
