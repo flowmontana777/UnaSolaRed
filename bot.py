@@ -790,23 +790,31 @@ async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     db.execute(f"ALTER TABLE unared_customers ADD COLUMN {column} {definition}")
 
             rows = db.execute(
-                "SELECT telegram_id, username, full_name FROM unared_customers "
-                "ORDER BY last_seen DESC LIMIT 12"
+                """SELECT telegram_id, username, full_name
+                   FROM unared_customers
+                   GROUP BY telegram_id
+                   ORDER BY MAX(last_seen) DESC
+                   LIMIT 12"""
             ).fetchall()
-            total = db.execute("SELECT COUNT(*) FROM unared_customers").fetchone()[0]
+            total = db.execute(
+                "SELECT COUNT(DISTINCT telegram_id) FROM unared_customers"
+            ).fetchone()[0]
 
         lines = [
-            f"• {name or 'Cliente'} | @{username or 'sin_usuario'} | {tid}"
+            f"• {name or 'Cliente'} | @{username or 'sin_usuario'}"
             for tid, username, name in rows
         ]
         buttons = []
         for tid, username, name in rows:
             buttons.append([
                 InlineKeyboardButton(
-                    f"👤 Ir al cliente: {(name or username or str(tid))[:24]}",
+                    f"👤 Ir al perfil: {(name or username or str(tid))[:20]}",
                     url=f"tg://user?id={int(tid)}",
                 ),
-                InlineKeyboardButton("📋 ID", callback_data=f"copy_id:{int(tid)}"),
+                InlineKeyboardButton(
+                    "🔔 Mandar alerta",
+                    callback_data=f"notify_customer:{int(tid)}",
+                ),
             ])
         buttons.append([InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")])
 
@@ -871,18 +879,27 @@ async def admin_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
             button_key TEXT NOT NULL, button_label TEXT NOT NULL,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
         rows = db.execute(
-            """SELECT full_name, username, telegram_id, button_label, created_at
-               FROM unared_interactions WHERE telegram_id != ? ORDER BY id DESC LIMIT 15""",
+            """SELECT i.full_name, i.username, i.telegram_id, i.button_label, i.created_at
+               FROM unared_interactions AS i
+               INNER JOIN (
+                   SELECT telegram_id, MAX(id) AS latest_id
+                   FROM unared_interactions
+                   WHERE telegram_id != ?
+                   GROUP BY telegram_id
+               ) AS latest ON latest.latest_id = i.id
+               ORDER BY i.id DESC LIMIT 15""",
             (int(BOT_OWNER_ID),),
         ).fetchall()
     lines = [
-        f"• {name or 'Cliente'} (@{username or 'sin_usuario'})\n  {label} | ID {tid} | {when}"
+        f"• {name or 'Cliente'} (@{username or 'sin_usuario'})\\n  Última acción: {label} | {when}"
         for name, username, tid, label, when in rows
     ]
-    buttons = [
-        [InlineKeyboardButton(f"📋 Copiar ID {tid}", callback_data=f"copy_id:{tid}")]
-        for _, _, tid, _, _ in rows
-    ]
+    buttons = []
+    for name, username, tid, label, when in rows:
+        buttons.append([
+            InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={int(tid)}"),
+            InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}"),
+        ])
     buttons.append([InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")])
     await update.effective_message.reply_text(
         "🕘 UNARED | ACTIVIDAD RECIENTE\n━━━━━━━━━━━━━━━━━━\n\n"
