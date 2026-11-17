@@ -986,11 +986,12 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
             customer_keyboard = InlineKeyboardMarkup([[
                 InlineKeyboardButton("📩 Contactar a Flow Montana", callback_data="contact_admin")
             ]])
-            await main_bot.send_message(
+            await main_bot.send_photo(
                 chat_id=telegram_id,
-                text=("💚 UNARED | NOTIFICACIÓN\n\n"
-                      "Tenemos una notificación importante para ti. "
-                      "Pulsa el botón de abajo para contactar con nuestro administrador."),
+                photo="https://i.ibb.co/sJqnfCPG/50-FDEC59-BC9-A-40-EC-9-AF8-E19-B16-C4931-C.png",
+                caption=("💚 UNARED | NOTIFICACIÓN\n\n"
+                         "Tenemos una notificación importante para ti. "
+                         "Pulsa el botón de abajo para contactar con nuestro administrador."),
                 reply_markup=customer_keyboard,
             )
             await query.message.reply_text(f"✅ Notificación enviada al cliente {telegram_id}.")
