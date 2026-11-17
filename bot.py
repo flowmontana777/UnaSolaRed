@@ -56,11 +56,8 @@ def copy_id_keyboard(telegram_id):
 
 
 async def reply_with_copyable_id(query, telegram_id):
-    """Telegram Bot API 21.6 no ofrece botón nativo de portapapeles; envía el ID como texto."""
-    await query.message.reply_text(
-        f"📋 ID de Telegram:\n<code>{int(telegram_id)}</code>",
-        parse_mode="HTML",
-    )
+    """Compatibilidad con callbacks antiguos: no muestra ni copia IDs."""
+    await query.answer("Usa los botones Ir al perfil y Mandar alerta.", show_alert=True)
 
 
 async def notify_new_customer(application, user):
@@ -75,8 +72,8 @@ async def notify_new_customer(application, user):
         f"🕒 Registro: {now}"
     )
     keyboard = InlineKeyboardMarkup([[
-        InlineKeyboardButton("📋 Copiar ID", callback_data=f"copy_id:{int(user.id)}"),
         InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={int(user.id)}"),
+        InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(user.id)}"),
     ]])
     try:
         await admin_bot.send_message(
