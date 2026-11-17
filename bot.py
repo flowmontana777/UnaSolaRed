@@ -776,10 +776,15 @@ async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ).fetchall()
         total = db.execute("SELECT COUNT(*) FROM unared_customers").fetchone()[0]
     lines = [f"• {name or 'Cliente'} | @{username or 'sin_usuario'} | {tid}" for tid, username, name in rows]
-    buttons = [
-        [InlineKeyboardButton(f"📋 Copiar ID {tid}", callback_data=f"copy_id:{tid}")]
-        for tid, _, _ in rows
-    ]
+    buttons = []
+    for tid, username, name in rows:
+        buttons.append([
+            InlineKeyboardButton(
+                f"👤 Ir al cliente: {(name or username or str(tid))[:24]}",
+                url=f"tg://user?id={int(tid)}",
+            ),
+            InlineKeyboardButton("📋 ID", callback_data=f"copy_id:{int(tid)}"),
+        ])
     buttons.append([InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")])
     await update.effective_message.reply_text(
         "👥 UNARED | CLIENTES\n━━━━━━━━━━━━━━━━━━\n\n"
@@ -1065,13 +1070,39 @@ async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.effective_message.reply_text("No encontramos ese cliente. Debe haber iniciado o interactuado con UnaRed.")
         return
     tid, username, name, first_seen, last_seen = row
+
+    # Envía la notificación al cliente usando el bot principal.
+    customer_alert_sent = False
+    main_bot = context.application.bot_data.get("main_bot")
+    if main_bot:
+        customer_keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton(
+                "📩 Contactar a Flow Montana",
+                url=f"tg://user?id={int(BOT_OWNER_ID)}",
+            )
+        ]])
+        try:
+            await main_bot.send_message(
+                chat_id=int(tid),
+                text=(
+                    "💚 UNARED | NOTIFICACIÓN\\n\\n"
+                    "Tenemos una notificación importante para ti. "
+                    "Pulsa el botón de abajo para contactar con nuestro administrador."
+                ),
+                reply_markup=customer_keyboard,
+            )
+            customer_alert_sent = True
+        except Exception:
+            logger.exception("No se pudo enviar la alerta al cliente %s.", tid)
+
     await update.effective_message.reply_text(
-        "👤 UNARED | FICHA DEL CLIENTE\n\n"
-        f"🆔 ID: {tid}\n👤 Nombre: {name}\n📛 Usuario: " + (("@" + username) if username else "Sin username") +
-        f"\n📅 Registro: {first_seen}\n🕒 Última actividad: {last_seen}\n🧾 Facturas: {total}",
+        "👤 UNARED | FICHA DEL CLIENTE\\n\\n"
+        f"🆔 ID: {tid}\\n👤 Nombre: {name}\\n📛 Usuario: " + (("@" + username) if username else "Sin username") +
+        f"\\n📅 Registro: {first_seen}\\n🕒 Última actividad: {last_seen}\\n🧾 Facturas: {total}\\n\\n"
+        + ("✅ Alerta enviada al cliente." if customer_alert_sent else "⚠️ No se pudo enviar la alerta al cliente."),
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("📋 Copiar ID", callback_data=f"copy_id:{tid}")],
-            [InlineKeyboardButton("📩 Abrir perfil", url="tg://user?id=" + str(tid))],
+            [InlineKeyboardButton("👤 Ir al cliente", url=f"tg://user?id={int(tid)}")],
+            [InlineKeyboardButton("📋 Copiar ID", callback_data=f"copy_id:{int(tid)}")],
         ]))
 
 # =====================================
@@ -3861,6 +3892,7 @@ async def main():
     if ADMIN_BOT_TOKEN:
         admin_app = build_admin_application()
         app.bot_data["admin_bot"] = admin_app.bot
+        admin_app.bot_data["main_bot"] = app.bot
         applications.append(admin_app)
     else:
         logger.warning("ADMIN_BOT_TOKEN no configurado; solo se iniciará el bot principal.")
