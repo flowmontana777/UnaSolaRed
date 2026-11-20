@@ -3671,7 +3671,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "1️⃣ ¿Para qué sirve este servicio?\n"
             "Para buscar SSN del Cliente.\n\n"
             "2️⃣ ¿Qué información debo enviar?\n"
-            "Nombre y apellido, dirección, ciudad, estado y ZIP, siguiendo el ejemplo del bot.\n\n"
+            "Nombre y apellido, dirección, ciudad, estado y ZIP, siguiendo el ejemplo del bot⬇️.\n\n"
             "👤Full Address:\n"
 "Antonio Wagner\n"
 "3112 Baldwin Brook Dr\n"
