@@ -3669,14 +3669,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text(
             "❗️❓ UNARED | PREGUNTAS FRECUENTES (FAQ)\n\n"
             "1️⃣ ¿Para qué sirve este servicio?\n"
-            "Para enviar una solicitud de actualización de dirección en tu propio perfil.\n\n"
+            "Para buscar SSN del Cliente.\n\n"
             "2️⃣ ¿Qué información debo enviar?\n"
             "Nombre y apellido, dirección, ciudad, estado y ZIP, siguiendo el ejemplo del bot.\n\n"
             "3️⃣ ¿Qué sucede después de enviar el formulario?\n"
             "El equipo de UnaRed recibe la solicitud y te responde por este mismo chat.\n\n"
-            "4️⃣ ¿Puedo enviar datos de otra persona?\n"
-            "Envía únicamente información de tu propio perfil o para la que tengas autorización.\n\n"
-            "5️⃣ ¿Cómo recibo el resultado?\n"
+            "4️⃣ ¿Cómo recibo el resultado?\n"
             "Cuando el administrador complete la solicitud, recibirás su respuesta aquí en Telegram.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔎 Buscar", callback_data="ssn_search")],
