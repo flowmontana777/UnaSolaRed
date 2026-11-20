@@ -1068,6 +1068,54 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.answer("⛔ Acceso denegado.", show_alert=True)
         return
     await query.answer()
+    if query.data.startswith("ssn_process:") or query.data.startswith("ssn_complete:"):
+        action, invoice_id = query.data.split(":", 1)
+        with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+            row = db.execute(
+                "SELECT telegram_id, status, request_status FROM ssn_assistance_invoices WHERE invoice_id=?",
+                (invoice_id,),
+            ).fetchone()
+            if not row or str(row[1]).upper() != "PAID":
+                await query.message.reply_text("⚠️ La solicitud no existe o WolvPay aún no confirma el pago.")
+                return
+            telegram_id, _, current_request_status = row
+            if action == "ssn_process":
+                db.execute(
+                    "UPDATE ssn_assistance_invoices SET request_status='PROCESSING' WHERE invoice_id=? AND request_status IN ('PAID','PROCESSING')",
+                    (invoice_id,),
+                )
+                customer_text = (
+                    "⌛️ UNARED | SOLICITUD EN PROCESO\n\n"
+                    "Tu pago fue confirmado. Estamos preparando la orientación para que recuperes tu propio SSN mediante la SSA. "
+                    "No envíes números ni documentos sensibles por Telegram."
+                )
+                keyboard = InlineKeyboardMarkup([[
+                    InlineKeyboardButton("✅ Marcar como completada", callback_data=f"ssn_complete:{invoice_id}")
+                ]])
+            else:
+                db.execute(
+                    "UPDATE ssn_assistance_invoices SET request_status='COMPLETED' WHERE invoice_id=? AND request_status IN ('PAID','PROCESSING')",
+                    (invoice_id,),
+                )
+                customer_text = (
+                    "✅ UNARED | SOLICITUD COMPLETADA\n\n"
+                    "Tu solicitud de orientación fue completada. Para recuperar tu SSN, utiliza los canales oficiales de la SSA: "
+                    "https://www.ssa.gov/number-card/\n\n"
+                    "Nunca compartas tu SSN completo ni documentos sensibles por Telegram."
+                )
+                keyboard = None
+        try:
+            main_bot = context.application.bot_data.get("main_bot") or context.application.bot
+            await main_bot.send_message(chat_id=int(telegram_id), text=customer_text, disable_web_page_preview=True)
+            await query.message.reply_text(
+                "✅ Estado actualizado: " + ("EN PROCESO" if action == "ssn_process" else "COMPLETADA") + f"\nFactura: {invoice_id}"
+            )
+            await query.message.edit_reply_markup(reply_markup=keyboard)
+        except Exception:
+            logger.exception("No se pudo notificar el cambio de estado SSN %s.", invoice_id)
+            await query.message.reply_text("⚠️ El estado se guardó, pero no se pudo notificar al cliente.")
+        return
+
     if query.data.startswith("av:") or query.data.startswith("ap:"):
         action, invoice_id = query.data.split(":", 1)
         try:
@@ -1449,7 +1497,7 @@ def build_admin_application():
     admin_app.add_handler(CommandHandler("buscarcliente", find_customer))
     admin_app.add_handler(CallbackQueryHandler(
         admin_bot_callbacks,
-        pattern=r"^(admin_|av:|ap:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
+        pattern=r"^(admin_|av:|ap:|ssn_process:|ssn_complete:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
     ))
     return admin_app
 
@@ -4713,6 +4761,12 @@ async def wolvpay_webhook(request):
                     (invoice_id,),
                 ).fetchone()
                 invoice_type = "edit_upload"
+            if not row:
+                row = db.execute(
+                    "SELECT telegram_id, amount, status FROM ssn_assistance_invoices WHERE invoice_id = ?",
+                    (invoice_id,),
+                ).fetchone()
+                invoice_type = "ssn_assistance"
     except sqlite3.Error:
         logger.exception("Could not read WolvPay invoice record.")
         return web.Response(status=500, text="Database error.")
@@ -4721,7 +4775,12 @@ async def wolvpay_webhook(request):
         logger.warning("Received WolvPay event for unknown invoice %s", invoice_id)
         return web.Response(status=200, text="Unknown invoice ignored.")
 
-    if invoice_type == "dayler":
+    if invoice_type == "ssn_assistance":
+        telegram_id, expected_amount, current_status = row
+        customer_description = "Tu pago de US$3.20 para orientación de recuperación de tu propio SSN fue confirmado automáticamente."
+        order_detail = "Servicio: orientación para utilizar los canales oficiales de la SSA."
+        admin_detail = "Servicio: asistencia SSN propia\nImporte confirmado: US$3.20"
+    elif invoice_type == "dayler":
         telegram_id, expected_amount, username, current_status = row
         customer_description = "Tu pago de US$150 para la solicitud Dayler fue confirmado automáticamente."
         order_detail = f"Usuario SIP solicitado: {username}"
@@ -4785,11 +4844,16 @@ async def wolvpay_webhook(request):
 
     try:
         with sqlite3.connect(DATABASE_PATH) as db:
-            table_name = {"dayler": "dayler_invoices", "pyp": "pyp_invoices", "pages": "pages_invoices", "icloud": "icloud_invoices", "demo": "demo_bot_invoices", "bill": "bill_invoices", "edit_upload": "edit_upload_invoices"}[invoice_type]
+            table_name = {"dayler": "dayler_invoices", "pyp": "pyp_invoices", "pages": "pages_invoices", "icloud": "icloud_invoices", "demo": "demo_bot_invoices", "bill": "bill_invoices", "edit_upload": "edit_upload_invoices", "ssn_assistance": "ssn_assistance_invoices"}[invoice_type]
             db.execute(
                 f"UPDATE {table_name} SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'",
                 (invoice_id,),
             )
+            if invoice_type == "ssn_assistance":
+                db.execute(
+                    "UPDATE ssn_assistance_invoices SET request_status='PAID' WHERE invoice_id=? AND request_status='WAITING_PAYMENT'",
+                    (invoice_id,),
+                )
             confirmed = db.execute(
                 f"SELECT status FROM {table_name} WHERE invoice_id = ?",
                 (invoice_id,),
@@ -4843,10 +4907,10 @@ async def wolvpay_webhook(request):
         "✅ PAGO REALIZADO | UNARED\n\n"
         f"{customer_description}\n{order_detail}\n"
         f"Factura: {invoice_id}\n\n"
-        "El equipo de UnaRed continuará con la preparación de tu servicio."
+        ("Tu solicitud está en cola. Puedes consultar el estado desde el botón «Ver estado»." if invoice_type == "ssn_assistance" else "El equipo de UnaRed continuará con la preparación de tu servicio.")
     )
     admin_text = (
-        "💚 PAGO " + ({"dayler": "DAYLER", "pyp": "MÉTODO PyP", "pages": "PÁGINAS WEB", "icloud": "ICLOUD", "demo": "DEMO SANDBOX", "bill": "PAGO DE SERVICIOS", "edit_upload": "EDITAR Y SUBIR PAPEL"}[invoice_type]) + " CONFIRMADO | UNARED\n\n"
+        "💚 PAGO " + ({"dayler": "DAYLER", "pyp": "MÉTODO PyP", "pages": "PÁGINAS WEB", "icloud": "ICLOUD", "demo": "DEMO SANDBOX", "bill": "PAGO DE SERVICIOS", "edit_upload": "EDITAR Y SUBIR PAPEL", "ssn_assistance": "ASISTENCIA SSN"}[invoice_type]) + " CONFIRMADO | UNARED\n\n"
         f"Cliente: {customer_username}\n"
         f"Cliente Telegram ID: {telegram_id}\n{admin_detail}\n"
         f"Factura WolvPay: {invoice_id}\n"
@@ -4864,10 +4928,16 @@ async def wolvpay_webhook(request):
 
         if not notification_state[1]:
             admin_bot = application.bot_data["admin_bot"]
-            review_keyboard = InlineKeyboardMarkup([[
-                InlineKeyboardButton("✅ Aceptar", callback_data=f"admin_wolvpay_accept:{invoice_id}"),
-                InlineKeyboardButton("❌ Rechazar", callback_data=f"admin_wolvpay_reject:{invoice_id}"),
-            ]])
+            if invoice_type == "ssn_assistance":
+                review_keyboard = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⌛️ Marcar en proceso", callback_data=f"ssn_process:{invoice_id}")],
+                    [InlineKeyboardButton("✅ Completar solicitud", callback_data=f"ssn_complete:{invoice_id}")],
+                ])
+            else:
+                review_keyboard = InlineKeyboardMarkup([[
+                    InlineKeyboardButton("✅ Aceptar", callback_data=f"admin_wolvpay_accept:{invoice_id}"),
+                    InlineKeyboardButton("❌ Rechazar", callback_data=f"admin_wolvpay_reject:{invoice_id}"),
+                ]])
             await admin_bot.send_photo(
                 chat_id=int(BOT_OWNER_ID),
                 photo=payment_image_url,
@@ -4923,7 +4993,7 @@ def build_main_application():
     # /buscarcliente está disponible exclusivamente en el bot de administración.
     # Solo los callbacks administrativos pasan por el control de acceso del panel.
     # Los botones de servicios y precios siguen llegando a select_option.
-    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|av:|ap:|copy_id:|notify_customer:)"))
+    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|av:|ap:|ssn_process:|ssn_complete:|copy_id:|notify_customer:)"))
     app.add_handler(CallbackQueryHandler(select_option))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_new_members))
     app.add_handler(TypeHandler(Update, channel_music_ingest), group=-1)
