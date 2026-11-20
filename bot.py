@@ -2150,8 +2150,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "tool_pyp":
         await query.message.reply_text(
-            "💚 UNARED | MÉTODO PyP\\n\\n"
-            "Importe fijo: US$100\\n"
+            "💚 UNARED | MÉTODO PyP\n\n"
+            "Importe fijo: US$100\n"
             "Genera una factura individual mediante WolvPay. "
             "La confirmación del pago se enviará automáticamente.",
             reply_markup=InlineKeyboardMarkup([
@@ -2163,8 +2163,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "pyp_pay":
         await query.message.reply_text(
-            "💚 UNARED | FACTURA MÉTODO PyP\\n\\n"
-            "Total: US$100\\n"
+            "💚 UNARED | FACTURA MÉTODO PyP\n\n"
+            "Total: US$100\n"
             "Selecciona la criptomoneda para generar tu factura individual:",
             reply_markup=pyp_coin_menu(),
         )
@@ -2229,10 +2229,10 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "100", "Método PyP", invoice_url
             ))
             await query.message.reply_text(
-                "💚 UNARED | FACTURA MÉTODO PyP\\n\\n"
-                "Importe: US$100\\n"
-                f"Moneda: {'Bitcoin (BTC)' if coin == 'btc' else 'USDT (TRC20)'}\\n"
-                f"Factura: {invoice_id}\\n\\n"
+                "💚 UNARED | FACTURA MÉTODO PyP\n\n"
+                "Importe: US$100\n"
+                f"Moneda: {'Bitcoin (BTC)' if coin == 'btc' else 'USDT (TRC20)'}\n"
+                f"Factura: {invoice_id}\n\n"
                 "Pulsa «Abrir factura y pagar» para completar el pago. "
                 "WolvPay confirmará el pago automáticamente.",
                 reply_markup=InlineKeyboardMarkup([
@@ -3977,7 +3977,7 @@ async def wolvpay_webhook(request):
         telegram_id, expected_amount, username, current_status = row
         customer_description = "Tu pago de US$100 mediante Método PyP fue confirmado automáticamente."
         order_detail = "Servicio: Método PyP"
-        admin_detail = "Servicio: Método PyP\\nImporte confirmado: US$100\\nCliente: @" + (username or "sin_username")
+        admin_detail = "Servicio: Método PyP\nImporte confirmado: US$100\nCliente: @" + (username or "sin_username")
     elif invoice_type == "pages":
         telegram_id, expected_amount, quantity, current_status = row
         customer_description = "Tu pago de US$" + str(expected_amount) + f" por {quantity} página(s) web fue confirmado automáticamente."
