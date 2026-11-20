@@ -3613,6 +3613,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔎 Buscar", callback_data="ssn_search")],
                 [InlineKeyboardButton("❓ FAQ", callback_data="ssn_faq")],
+                [InlineKeyboardButton("👤 Perfil", callback_data="ssn_status")],
                 [InlineKeyboardButton("⬅️ Volver al Centro de Herramientas", callback_data="menu_tools")],
             ]),
         )
@@ -3754,7 +3755,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "La solicitud es únicamente para orientarte a recuperar tu propio SSN mediante la SSA.\n\n"
                 "Puedes consultar el estado desde Mi perfil.",
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("📋 Ver estado de mi solicitud", callback_data="ssn_status")],
+                    [InlineKeyboardButton("👤 Perfil", callback_data="ssn_status")],
                     [InlineKeyboardButton("👤 Mi perfil", callback_data="ssn_status")],
                     [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
                 ]),
