@@ -947,7 +947,7 @@ async def admin_billing(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         income += float(amount)
                     except (ValueError, TypeError):
                         pass
-    pending = sum(count for state, count in status_counts.items() if state in {"PENDING", "UNPAID", "PROCESSING"})
+    pending = sum(count for state, count in status_counts.items() if state in {"PENDING", "UNPAID", "PROCESSING", "AWAITING_SELECTION"})
     lines = [
         f"• {state}: {count}"
         for state, count in sorted(status_counts.items())
