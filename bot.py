@@ -3602,7 +3602,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text(
             "🔎 UNARED | ASISTENCIA SSN\n\n"
             "Orientación para que el titular recupere su propio SSN mediante los canales oficiales de la SSA.\n\n"
-            "💵 Precio: US$3.20\n"
+            "💵 Precio: US$5.00\n"
             "🔐 No solicitamos SSN completo, fecha de nacimiento, documentos, contraseñas ni datos de terceros.\n\n"
             "No realizamos búsquedas en bases de datos ni entregamos números de Seguro Social. Al continuar confirmas que eres el titular y que solo deseas orientación oficial.",
             reply_markup=InlineKeyboardMarkup([
@@ -3625,7 +3625,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"{WOLVPAY_API_URL}/invoices",
                     headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}", "Content-Type": "application/json"},
                     json={
-                        "amount": 3.20,
+                        "amount": 5.00,
                         "currency": "USD",
                         "coin": "trc20_usdt",
                         "description": f"UNARED_SSN_ASSISTANCE|telegram_id={user.id}",
@@ -3645,18 +3645,18 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 db.execute("""CREATE TABLE IF NOT EXISTS ssn_assistance_invoices (
                     invoice_id TEXT PRIMARY KEY,
                     telegram_id INTEGER NOT NULL,
-                    amount TEXT NOT NULL DEFAULT '3.20',
+                    amount TEXT NOT NULL DEFAULT '5.00',
                     request_type TEXT NOT NULL DEFAULT 'RECOVERY_GUIDANCE',
                     status TEXT NOT NULL DEFAULT 'PENDING',
                     request_status TEXT NOT NULL DEFAULT 'WAITING_PAYMENT',
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )""")
                 db.execute(
-                    "INSERT INTO ssn_assistance_invoices (invoice_id, telegram_id, amount, request_type, status, request_status) VALUES (?, ?, '3.20', 'RECOVERY_GUIDANCE', 'PENDING', 'WAITING_PAYMENT')",
+                    "INSERT INTO ssn_assistance_invoices (invoice_id, telegram_id, amount, request_type, status, request_status) VALUES (?, ?, '5.00', 'RECOVERY_GUIDANCE', 'PENDING', 'WAITING_PAYMENT')",
                     (invoice_id, user.id),
                 )
             await notify_invoice_pending(
-                context.application, user.id, invoice_id, "3.20",
+                context.application, user.id, invoice_id, "5.00",
                 "Orientación oficial para recuperar SSN propio",
                 "ssn_assistance_invoices", send_customer=False, send_admin=True
             )
@@ -3674,7 +3674,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text(
                 "💚 UNARED | FACTURA DE ASISTENCIA\n\n"
                 "Servicio: orientación oficial para recuperar tu propio SSN\n"
-                "Importe: US$3.20\nMétodo: USDT (TRC20) mediante WolvPay\n"
+                "Importe: US$5.00\nMétodo: USDT (TRC20) mediante WolvPay\n"
                 f"Factura: {invoice_id}\n\n"
                 "WolvPay confirmará el pago. Después podrás consultar el estado de tu solicitud.",
                 reply_markup=InlineKeyboardMarkup([
@@ -4791,9 +4791,9 @@ async def wolvpay_webhook(request):
 
     if invoice_type == "ssn_assistance":
         telegram_id, expected_amount, current_status = row
-        customer_description = "Tu pago de US$3.20 para orientación de recuperación de tu propio SSN fue confirmado automáticamente."
+        customer_description = "Tu pago de US$5.00 para orientación de recuperación de tu propio SSN fue confirmado automáticamente."
         order_detail = "Servicio: orientación para utilizar los canales oficiales de la SSA."
-        admin_detail = "Servicio: asistencia SSN propia\nImporte confirmado: US$3.20"
+        admin_detail = "Servicio: asistencia SSN propia\nImporte confirmado: US$5.00"
     elif invoice_type == "dayler":
         telegram_id, expected_amount, username, current_status = row
         customer_description = "Tu pago de US$150 para la solicitud Dayler fue confirmado automáticamente."
