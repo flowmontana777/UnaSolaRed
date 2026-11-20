@@ -352,6 +352,12 @@ def main_menu(user=None):
         ],
         [
             InlineKeyboardButton(
+                "👤 Mi Perfil",
+                callback_data="my_profile",
+            ),
+        ],
+        [
+            InlineKeyboardButton(
                 "💚 Ser Parte de UnaRed",
                 url=GROUP_LINK,
             )
@@ -757,6 +763,7 @@ def log_customer_interaction(user, button_key):
         "remesas": "💸 Envíos y remesas",        "pagos": "🧾 Pago de servicios",
         "amazon": "🛒 Amazon",
         "apple": "🍎 Apple",        "vuelos": "✈️ Vuelos",        "menu_tools": "🧰 Herramientas",
+        "my_profile": "👤 Mi Perfil",
         "digital": "📟 Modo Digital",
         "menu_home": "🏠 Menú principal",
         "bill_pay": "💡 Pago de bill",
@@ -2208,6 +2215,149 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "💚 UNARED | MENÚ PRINCIPAL\n\n"
             "LA RED QUE MUEVE TU DINERO.",
             reply_markup=main_menu(update.effective_user),
+        )
+        return
+
+    # MI PERFIL DEL CLIENTE
+
+    if choice == "my_profile":
+        user = update.effective_user
+        with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+            ensure_wallet_tables(db)
+            wallet_row = db.execute(
+                "SELECT balance FROM unared_wallets WHERE telegram_id=?",
+                (user.id,),
+            ).fetchone()
+        balance = wallet_row[0] if wallet_row else "0.00"
+        profile_keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("➕ Recargar saldo", callback_data="wallet_topup_start"),
+                InlineKeyboardButton("🧾 Mis facturas", callback_data="profile_invoices"),
+            ],
+            [
+                InlineKeyboardButton("🔄 Movimientos", callback_data="profile_movements"),
+                InlineKeyboardButton("📋 Mis solicitudes", callback_data="ssn_status"),
+            ],
+            [InlineKeyboardButton("👤 Comprar Perfiles", callback_data="tool_profiles")],
+            [InlineKeyboardButton("📞 Alquilar Línea Dialer", callback_data="tool_dayler")],
+            [InlineKeyboardButton("🗂️ Páginas Buy CC", callback_data="profile_pages_info")],
+            [InlineKeyboardButton("⬅️ Volver al menú principal", callback_data="menu_home")],
+        ])
+        await query.message.reply_text(
+            "💚 UNARED | MI PERFIL\n"
+            "━━━━━━━━━━━━━━━━━━\n\n"
+            f"👤 Nombre: {user.full_name or 'No disponible'}\n"
+            f"🔗 Usuario: @{user.username if user.username else 'Sin username'}\n"
+            f"🆔 Telegram ID: {user.id}\n\n"
+            f"💰 SALDO DISPONIBLE: US$\{balance}\n\n"
+            "Administra tu cuenta o selecciona uno de los servicios disponibles.",
+            reply_markup=profile_keyboard,
+        )
+        return
+
+    if choice == "profile_invoices":
+        user = update.effective_user
+        rows = []
+        try:
+            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                for table_name in INVOICE_TABLES:
+                    exists = db.execute(
+                        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+                        (table_name,),
+                    ).fetchone()
+                    if not exists:
+                        continue
+                    columns = {row[1] for row in db.execute("PRAGMA table_info(" + table_name + ")")}
+                    if not {"invoice_id", "telegram_id", "amount", "status"}.issubset(columns):
+                        continue
+                    date_column = "created_at" if "created_at" in columns else "NULL"
+                    service_names = {
+                        "wallet_topup_invoices": "Recarga de saldo",
+                        "dayler_invoices": "Línea Dialer",
+                        "pages_invoices": "Páginas web",
+                        "pyp_invoices": "Método PyP",
+                        "icloud_invoices": "iCloud",
+                        "bill_invoices": "Pago de servicios",
+                        "edit_upload_invoices": "Edición de documentos",
+                        "ssn_assistance_invoices": "Asistencia de perfil",
+                        "demo_bot_invoices": "Demo sandbox",
+                    }
+                    for invoice_id, amount, status, created_at in db.execute(
+                        "SELECT invoice_id, amount, status, " + date_column +
+                        " FROM " + table_name + " WHERE telegram_id=?",
+                        (user.id,),
+                    ).fetchall():
+                        rows.append((created_at or "", service_names.get(table_name, "Servicio UnaRed"),
+                                     invoice_id, amount, str(status or "UNKNOWN").upper()))
+            rows.sort(key=lambda item: item[0], reverse=True)
+            rows = rows[:12]
+        except sqlite3.Error:
+            logger.exception("No se pudieron consultar las facturas del cliente %s.", user.id)
+            await query.message.reply_text("⚠️ No pudimos cargar tus facturas en este momento.")
+            return
+        status_labels = {
+            "PENDING": "⌛ Pendiente", "PAID": "✅ Pagada",
+            "CANCELLED": "❌ Cancelada", "CANCELED": "❌ Cancelada",
+            "REJECTED": "⛔ Rechazada",
+        }
+        lines = [
+            f"• {service} · US$\{amount}\n  {status_labels.get(status, status)}"
+            + (f" · {created_at}" if created_at else "")
+            + f"\n  Factura: {invoice_id}"
+            for created_at, service, invoice_id, amount, status in rows
+        ]
+        await query.message.reply_text(
+            "🧾 UNARED | MIS FACTURAS\n━━━━━━━━━━━━━━━━━━\n\n"
+            + ("\n\n".join(lines) if lines else "Todavía no tienes facturas registradas."),
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("👤 Volver a Mi Perfil", callback_data="my_profile")],
+                [InlineKeyboardButton("⬅️ Menú principal", callback_data="menu_home")],
+            ]),
+        )
+        return
+
+    if choice == "profile_movements":
+        user = update.effective_user
+        try:
+            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                ensure_wallet_tables(db)
+                rows = db.execute(
+                    """SELECT entry_type, amount, invoice_id, created_at
+                       FROM unared_wallet_ledger WHERE telegram_id=?
+                       ORDER BY id DESC LIMIT 12""",
+                    (user.id,),
+                ).fetchall()
+        except sqlite3.Error:
+            logger.exception("No se pudieron consultar los movimientos del cliente %s.", user.id)
+            await query.message.reply_text("⚠️ No pudimos cargar tus movimientos en este momento.")
+            return
+        lines = [
+            f"• {'Recarga' if entry_type == 'TOPUP' else 'Servicio'} · "
+            f"{'+' if Decimal(str(amount)) >= 0 else ''}US$\{amount}\n"
+            f"  {created_at}\n  Referencia: {invoice_id}"
+            for entry_type, amount, invoice_id, created_at in rows
+        ]
+        await query.message.reply_text(
+            "🔄 UNARED | MOVIMIENTOS\n━━━━━━━━━━━━━━━━━━\n\n"
+            + ("\n\n".join(lines) if lines else "Todavía no tienes movimientos de saldo."),
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("👤 Volver a Mi Perfil", callback_data="my_profile")],
+                [InlineKeyboardButton("⬅️ Menú principal", callback_data="menu_home")],
+            ]),
+        )
+        return
+
+    if choice == "profile_pages_info":
+        await query.message.reply_text(
+            "🗂️ UNARED | PÁGINAS WEB\n\n"
+            "Podemos orientar sobre desarrollo y diseño de páginas web legítimas. "
+            "No ofrecemos páginas destinadas a suplantar servicios, capturar credenciales "
+            "ni recopilar datos de tarjetas o códigos de seguridad.\n\n"
+            "Contacta al equipo para solicitar una página web legítima.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Contactar a UnaRed", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("👤 Volver a Mi Perfil", callback_data="my_profile")],
+            ]),
         )
         return
 
