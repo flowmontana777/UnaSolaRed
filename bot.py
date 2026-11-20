@@ -594,6 +594,7 @@ def bot_catalog_menu():
         [InlineKeyboardButton("BOT OTP", callback_data="botproduct_otp")],
         [InlineKeyboardButton("BOT SSN", callback_data="botproduct_ssn")],
         [InlineKeyboardButton("BOT CHECK", callback_data="botproduct_check")],
+        [InlineKeyboardButton("📄 Plantilla", callback_data="bot_template")],
         back_button("menu_tools"),
     ])
 
@@ -2972,6 +2973,18 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Selecciona el tipo de automatización que necesitas:\n\n"
             ),
             reply_markup=bot_catalog_menu(),
+        )
+        return
+
+    if choice == "bot_template":
+        await query.answer()
+        await query.message.reply_text(
+            "📄 PLANTILLA | UNARED\\n\\n"
+            "Name: Nombre del cliente\\n"
+            "DOB: 06/04/1990\\n"
+            "Plantilla: S78491614\\n"
+            "Estado: [Estado]\\n\\n"
+            "🧪 Ejemplo ficticio para demostración. No envíes datos personales reales."
         )
         return
 
