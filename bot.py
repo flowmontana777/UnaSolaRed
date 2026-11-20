@@ -3738,21 +3738,56 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ensure_wallet_tables(db)
             wallet_row = db.execute("SELECT balance FROM unared_wallets WHERE telegram_id=?", (user.id,)).fetchone()
             balance = wallet_row[0] if wallet_row else "0.00"
-            exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ssn_assistance_invoices'").fetchone()
-            requests = db.execute(
-                """SELECT invoice_id, status, request_status, created_at FROM ssn_assistance_invoices
-                   WHERE telegram_id=? ORDER BY created_at DESC LIMIT 10""", (user.id,)
-            ).fetchall() if exists else []
+            requests = []
+            service_labels = {
+                "ssn_assistance_invoices": "Asistencia SSN propia",
+                "dayler_invoices": "Dayler",
+                "pyp_invoices": "Método PyP",
+                "pages_invoices": "Páginas web",
+                "icloud_invoices": "iCloud",
+                "demo_bot_invoices": "Demo sandbox",
+                "bill_invoices": "Pago de servicios",
+                "edit_upload_invoices": "Editar y subir papel",
+            }
+            for table_name in INVOICE_TABLES:
+                if table_name == "wallet_topup_invoices":
+                    continue
+                exists = db.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table_name,)
+                ).fetchone()
+                if not exists:
+                    continue
+                columns = {column[1] for column in db.execute("PRAGMA table_info(" + table_name + ")")}
+                if not {"invoice_id", "telegram_id", "amount", "status"}.issubset(columns):
+                    continue
+                date_column = "created_at" if "created_at" in columns else "NULL"
+                request_column = "request_status" if "request_status" in columns else "NULL"
+                rows = db.execute(
+                    "SELECT invoice_id, amount, status, " + date_column + ", " + request_column +
+                    " FROM " + table_name + " WHERE telegram_id=?",
+                    (user.id,),
+                ).fetchall()
+                for invoice_id, amount, payment_status, created_at, request_status in rows:
+                    requests.append((created_at or "", service_labels.get(table_name, "Servicio UnaRed"),
+                                     invoice_id, amount, payment_status, request_status))
+            requests.sort(key=lambda item: item[0], reverse=True)
+            requests = requests[:15]
             topups = db.execute(
                 """SELECT invoice_id, amount, created_at FROM unared_wallet_ledger
                    WHERE telegram_id=? AND entry_type='TOPUP' ORDER BY created_at DESC LIMIT 5""", (user.id,)
             ).fetchall()
-        labels = {"WAITING_PAYMENT": "💳 Esperando pago", "PAID": "⌛️ Pago confirmado · En cola",
-                  "PROCESSING": "🔄 En revisión", "COMPLETED": "✅ Completada"}
+        labels = {"PENDING": "💳 Pendiente de pago", "WAITING_PAYMENT": "💳 Esperando pago",
+                  "PAID": "✅ Pago confirmado", "PROCESSING": "🔄 En revisión",
+                  "COMPLETED": "🏁 Completada", "CANCELLED": "Cancelada",
+                  "CANCELED": "Cancelada", "REJECTED": "Rechazada"}
         request_lines = []
-        for invoice_id, payment_status, request_status, created_at in requests:
-            state = request_status if str(payment_status).upper() == "PAID" else "WAITING_PAYMENT"
-            request_lines.append(f"• {labels.get(state, state)}\n  Factura: {invoice_id}\n  Fecha: {created_at}")
+        for created_at, service_label, invoice_id, amount, payment_status, request_status in requests:
+            state = request_status if str(payment_status).upper() == "PAID" and request_status else payment_status
+            request_lines.append(
+                f"• {service_label} · US${amount}\n  {labels.get(str(state).upper(), state)}"
+                + (f"\n  Factura: {invoice_id}" if invoice_id else "")
+                + (f"\n  Fecha: {created_at}" if created_at else "")
+            )
         topup_lines = [f"• +US${amount} · {created_at}" for _, amount, created_at in topups]
         profile_text = (
             "👤 UNARED | MI PERFIL\n\n"
