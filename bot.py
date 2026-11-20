@@ -3042,7 +3042,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "• 🌍 Multi country routes\n"
                 "• 📊 Live status logs\n\n"
                 "⚠️ Uso exclusivo para obtener código\n\n"
-                "Status: ✅ Online\n"
+                "Status: ✅ Online\n\n"
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_otp")],
