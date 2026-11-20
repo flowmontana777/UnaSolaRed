@@ -5126,7 +5126,7 @@ async def wolvpay_webhook(request):
     customer_text = (
         "✅ PAGO REALIZADO | UNARED\n\n"
         f"{customer_description}\n{order_detail}\n"
-        f"Factura: {invoice_id}\n\n"
+        f"Factura: {invoice_id}\n\n" +
         ("Tu solicitud está en cola. Puedes consultar el estado desde el botón «Ver estado»." if invoice_type == "ssn_assistance" else "Tu saldo ya está disponible en Mi perfil." if invoice_type == "wallet_topup" else "El equipo de UnaRed continuará con la preparación de tu servicio.")
     )
     admin_text = (
