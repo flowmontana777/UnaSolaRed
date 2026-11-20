@@ -1412,7 +1412,7 @@ def build_admin_application():
     admin_app.add_handler(CommandHandler("buscarcliente", find_customer))
     admin_app.add_handler(CallbackQueryHandler(
         admin_bot_callbacks,
-        pattern=r"^(admin_|copy_id:|notify_customer:|view_customer:|contact_admin$)",
+        pattern=r"^(admin_|av:|ap:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
     ))
     return admin_app
 
@@ -4524,7 +4524,7 @@ def build_main_application():
     # /buscarcliente está disponible exclusivamente en el bot de administración.
     # Solo los callbacks administrativos pasan por el control de acceso del panel.
     # Los botones de servicios y precios siguen llegando a select_option.
-    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|copy_id:|notify_customer:)"))
+    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|av:|ap:|copy_id:|notify_customer:)"))
     app.add_handler(CallbackQueryHandler(select_option))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_new_members))
     app.add_handler(TypeHandler(Update, channel_music_ingest), group=-1)
