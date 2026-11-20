@@ -1786,6 +1786,129 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     choice = query.data
 
+    # Acciones vinculadas a la factura exacta del mensaje del cliente.
+    if choice.startswith(("iv:", "ip:")):
+        action, invoice_id = choice.split(":", 1)
+        await query.answer()
+        try:
+            invoice_record = None
+            table_name = None
+            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                for candidate in INVOICE_TABLES:
+                    exists = db.execute(
+                        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (candidate,)
+                    ).fetchone()
+                    if not exists:
+                        continue
+                    row = db.execute(
+                        "SELECT telegram_id, amount, status FROM " + candidate + " WHERE invoice_id=?",
+                        (invoice_id,),
+                    ).fetchone()
+                    if row:
+                        table_name, invoice_record = candidate, row
+                        break
+            if not invoice_record:
+                await query.message.reply_text("⚠️ No encontramos esta factura. Genera una nueva o contacta a UnaRed.")
+                return
+            telegram_id, expected_amount, current_status = invoice_record
+            if int(telegram_id) != int(update.effective_user.id):
+                await query.message.reply_text("⛔ Esta factura no pertenece a tu cuenta.")
+                return
+            status_now = str(current_status or "").upper()
+            service_names = {
+                "bill_invoices": "Pago de servicios",
+                "dayler_invoices": "Dayler",
+                "pyp_invoices": "Método PyP",
+                "demo_bot_invoices": "Bot de demostración",
+                "pages_invoices": "Páginas Web / Buy CC",
+                "icloud_invoices": "iCloud",
+                "edit_upload_invoices": "Editar y subir papel",
+            }
+            service_name = service_names.get(table_name, "Servicio UnaRed")
+            if status_now == "PAID":
+                await query.message.reply_text("✅ Esta factura ya figura como PAGADA. El equipo de UnaRed continuará con tu solicitud.")
+                return
+            if status_now in ("CANCELLED", "CANCELED", "REJECTED"):
+                await query.message.reply_text("⛔ Esta factura está cancelada o rechazada. Genera una nueva si deseas continuar.")
+                return
+
+            admin_bot = context.application.bot_data.get("admin_bot")
+            if action == "ip":
+                if not admin_bot:
+                    raise RuntimeError("El bot administrativo no está disponible.")
+                username = "@" + update.effective_user.username if update.effective_user.username else "Sin username público"
+                await admin_bot.send_message(
+                    chat_id=int(BOT_OWNER_ID),
+                    text=(
+                        "🔔 CLIENTE INDICA QUE YA PAGÓ | UNARED\n\n"
+                        f"👤 Cliente: {update.effective_user.full_name} ({username})\n"
+                        f"🆔 Telegram ID: {update.effective_user.id}\n"
+                        f"🛠️ Servicio: {service_name}\n"
+                        f"💵 Importe: USD {expected_amount}\n"
+                        f"🧾 Factura WolvPay: {invoice_id}\n"
+                        "⌛ Estado: pendiente de verificación. Este aviso no confirma el pago."
+                    ),
+                )
+                await query.message.reply_text("📩 Avisamos al equipo de UnaRed. Tu factura sigue pendiente hasta que WolvPay confirme el pago.")
+                return
+
+            if not WOLVPAY_API_KEY:
+                await query.message.reply_text("⚠️ La verificación con WolvPay no está configurada. Contacta al equipo de UnaRed.")
+                return
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{WOLVPAY_API_URL}/invoices/{invoice_id}",
+                    headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}"},
+                    timeout=aiohttp.ClientTimeout(total=20),
+                ) as response:
+                    payload = await response.json(content_type=None)
+                    if response.status != 200:
+                        logger.error("WolvPay customer verification HTTP %s for invoice %s", response.status, invoice_id)
+                        await query.message.reply_text("⚠️ No pudimos consultar WolvPay ahora mismo. Inténtalo de nuevo en unos minutos.")
+                        return
+            invoice = payload.get("data") or payload
+            provider_status = str(invoice.get("status", "")).upper()
+            provider_id = str(invoice.get("invoice_id", invoice_id))
+            provider_amount = Decimal(str(invoice.get("amount", "0")))
+            provider_currency = str(invoice.get("currency") or "USD").upper()
+            if provider_id != str(invoice_id):
+                await query.message.reply_text("⚠️ WolvPay devolvió una factura diferente. No se modificó tu registro.")
+                return
+            if provider_status != "PAID":
+                await query.message.reply_text("⌛ WolvPay todavía no confirma el pago. Espera unos minutos y vuelve a verificar.")
+                return
+            if provider_amount != Decimal(str(expected_amount)) or provider_currency != "USD":
+                logger.warning("WolvPay customer verification mismatch for invoice %s", invoice_id)
+                await query.message.reply_text("⛔ El importe o la moneda no coinciden con el registro. No se confirmó el pago; contacta a UnaRed.")
+                return
+            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                db.execute(
+                    "UPDATE " + table_name + " SET status='PAID' WHERE invoice_id=? AND telegram_id=? AND status='PENDING'",
+                    (invoice_id, update.effective_user.id),
+                )
+            if admin_bot:
+                username = "@" + update.effective_user.username if update.effective_user.username else "Sin username público"
+                await admin_bot.send_message(
+                    chat_id=int(BOT_OWNER_ID),
+                    text=(
+                        "💚 PAGO VERIFICADO CON WOLVPAY | UNARED\n\n"
+                        f"👤 Cliente: {username}\n"
+                        f"🆔 Telegram ID: {update.effective_user.id}\n"
+                        f"🛠️ Servicio: {service_name}\n"
+                        f"💵 Importe: USD {expected_amount}\n"
+                        f"🧾 Factura: {invoice_id}\n"
+                        "✅ Estado: PAID, confirmado consultando WolvPay."
+                    ),
+                )
+            await query.message.reply_text("✅ WolvPay confirma el pago. Tu factura quedó marcada como PAGADA y el equipo de UnaRed fue notificado.")
+        except (aiohttp.ClientError, asyncio.TimeoutError, sqlite3.Error, InvalidOperation, ValueError, TypeError):
+            logger.exception("Error processing customer invoice action %s for %s", choice, update.effective_user.id)
+            await query.message.reply_text("⚠️ No pudimos procesar la solicitud ahora mismo. Inténtalo más tarde o contacta a UnaRed.")
+        except Exception:
+            logger.exception("Unexpected error processing customer invoice action %s", choice)
+            await query.message.reply_text("⚠️ No pudimos completar la acción. El equipo de UnaRed puede revisarlo.")
+        return
+
     # Responder de inmediato al botón Pago Bill para quitar el indicador de carga.
     callback_answered = False
     if choice == "pagos":
@@ -2327,6 +2450,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "⚡️ WolvPay confirmará el pago automáticamente.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
+                    [InlineKeyboardButton("🔎 Verificar pago", callback_data=f"iv:{invoice_id}")],
+                    [InlineKeyboardButton("✅ Ya pagué", callback_data=f"ip:{invoice_id}")],
                     [InlineKeyboardButton("⬅️ Volver a Pago de servicios", callback_data="pagos")],
                 ]),
             )
@@ -2590,6 +2715,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "WolvPay confirmará el pago automáticamente.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
+                    [InlineKeyboardButton("🔎 Verificar pago", callback_data=f"iv:{invoice_id}")],
+                    [InlineKeyboardButton("✅ Ya pagué", callback_data=f"ip:{invoice_id}")],
                     [InlineKeyboardButton("⬅️ Volver a Método PyP", callback_data="tool_pyp")],
                 ]),
             )
@@ -2724,8 +2851,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "La orden se confirmará automáticamente cuando WolvPay valide el pago.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
-                    [InlineKeyboardButton("🔎 Verificar pago", callback_data="dayler_verify")],
-                    [InlineKeyboardButton("✅ ¡Ya pagué!", callback_data="dayler_paid")]
+                    [InlineKeyboardButton("🔎 Verificar pago", callback_data=f"iv:{invoice_id}")],
+                    [InlineKeyboardButton("✅ Ya pagué", callback_data=f"ip:{invoice_id}")]
                 ]),
             )
 
@@ -2892,8 +3019,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Uso de demostración con datos ficticios únicamente.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
-                    [InlineKeyboardButton("🔎 Verificar pago", callback_data=f"botdemo_verify_{product}")],
-                    [InlineKeyboardButton("✅ ¡Ya pagué!", callback_data=f"botdemo_paid_{product}")],
+                    [InlineKeyboardButton("🔎 Verificar pago", callback_data=f"iv:{invoice_id}")],
+                    [InlineKeyboardButton("✅ Ya pagué", callback_data=f"ip:{invoice_id}")],
                     [InlineKeyboardButton("⬅️ Volver", callback_data="tool_bots")],
                 ]),
             )
@@ -3135,8 +3262,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Completa el pago desde WolvPay.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
-                    [InlineKeyboardButton("🔎 Verificar pago", callback_data="pages_verify")],
-                    [InlineKeyboardButton("✅ ¡Ya pagué!", callback_data="pages_paid")],
+                    [InlineKeyboardButton("🔎 Verificar pago", callback_data=f"iv:{invoice_id}")],
+                    [InlineKeyboardButton("✅ Ya pagué", callback_data=f"ip:{invoice_id}")],
                     [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
                 ]),
             )
@@ -3398,8 +3525,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Factura: {invoice_id}\n\nCompleta el pago desde WolvPay.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
-                    [InlineKeyboardButton("🔎 Verificar pago", callback_data="icloud_verify")],
-                    [InlineKeyboardButton("✅ ¡Ya pagué!", callback_data="icloud_paid")],
+                    [InlineKeyboardButton("🔎 Verificar pago", callback_data=f"iv:{invoice_id}")],
+                    [InlineKeyboardButton("✅ Ya pagué", callback_data=f"ip:{invoice_id}")],
                     [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
                 ]),
             )
@@ -3566,7 +3693,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Completa el pago desde WolvPay. La confirmación se enviará automáticamente cuando el proveedor verifique el pago.\n",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
-                    [InlineKeyboardButton("✅ Ya Pagué", callback_data="edit_upload_invoice_paid")],
+                    [InlineKeyboardButton("🔎 Verificar pago", callback_data=f"iv:{invoice_id}")],
+                    [InlineKeyboardButton("✅ Ya pagué", callback_data=f"ip:{invoice_id}")],
                     [InlineKeyboardButton("💬 Contactar a UnaRed", url="https://t.me/flowmontana777")],
                     [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
                 ]),
