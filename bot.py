@@ -986,6 +986,22 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 return
 
             telegram_id, expected_amount, stored_status = invoice_record
+            # No reenviar si el webhook ya registró que Telegram aceptó el envío.
+            with sqlite3.connect(DATABASE_PATH, timeout=15) as db:
+                notification_table = db.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='wolvpay_notifications'"
+                ).fetchone()
+                if notification_table:
+                    notification_state = db.execute(
+                        "SELECT customer_sent FROM wolvpay_notifications WHERE invoice_id = ?",
+                        (invoice_id,),
+                    ).fetchone()
+                    if notification_state and notification_state[0]:
+                        await query.message.reply_text(
+                            "ℹ️ La confirmación automática ya fue enviada por Telegram. No se reenviará para evitar duplicados."
+                        )
+                        await query.message.edit_reply_markup(reply_markup=None)
+                        return
             if not WOLVPAY_API_KEY:
                 await query.message.reply_text("⚠️ No se pudo verificar: falta la conexión segura con WolvPay.")
                 return
