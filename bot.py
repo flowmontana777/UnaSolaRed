@@ -2981,13 +2981,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_photo(
             photo="https://i.ibb.co/5qz3HNw/115569821-1795196307147570.jpg",
             caption=(
-                "🤖 PLANTILLA | UNARED\n\n"
+                "🤖 LICENCIA | UNARED\n\n"
+                "🧪 Ejemplo demostración.\n"
                 "Name: Nombre del cliente\n"
                 "DOB: 06/04/1990\n"
-                "Plantilla: S78491614\n"
-                "Estado: [Estado]\n\n"
+                "DI: S78491614 MA\n\n"
                 "💵 Precio: US$35\n"
-                "🧪 Ejemplo ficticio para demostración. No envíes datos personales reales."
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar US$35", callback_data="botdemo_buy_template")],
@@ -3000,7 +2999,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice.startswith("bothelp_"):
         product = choice.rsplit("_", 1)[-1]
-        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK", "template": "PLANTILLA"}
+        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK", "template": "LICENCIA"}
         label = labels.get(product)
         if not label:
             await query.answer("Ayuda no disponible.", show_alert=True)
