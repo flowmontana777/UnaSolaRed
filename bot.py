@@ -3641,6 +3641,25 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             disable_web_page_preview=True,
         )
         if choice == "ssn_search":
+        user = update.effective_user
+        with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+            ensure_wallet_tables(db)
+            wallet_row = db.execute(
+                "SELECT balance FROM unared_wallets WHERE telegram_id=?",
+                (user.id,),
+            ).fetchone()
+        current_balance = Decimal(wallet_row[0]) if wallet_row else Decimal("0.00")
+        if current_balance < Decimal("3.00"):
+            await query.message.reply_text(
+                "❌ Fondo insuficiente\\n\\n"
+                "Tu saldo no alcanza para solicitar este servicio (US$3.00). Debes recargar primero para poder Buscar 🔎.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("➕ Recargar saldo", callback_data="wallet_topup_start")],
+                    [InlineKeyboardButton("👤 Ver mi perfil", callback_data="ssn_status")],
+                    [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
+                ]),
+            )
+            return
         await query.message.reply_text(
             "🔎 UNARED | ASISTENCIA SSN\\n\\n"
             "Servicio limitado a orientar al titular para recuperar su propio SSN mediante los canales oficiales de la SSA.\\n\\n"
