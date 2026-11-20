@@ -2976,7 +2976,28 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_photo(
             photo="https://i.ibb.co/21033K6c/Creating-promotional-image-design-310bdb13.jpg",
             caption=(
-                "🔐 OTP Verification System v3.2\n\n"
+                "🔐 OTP Verification System v3.2\n\nn
+
+Automated call & SMS verification tool💵 Precio: US$35
+
+💳 MÉTODO DE PAGO
+Moneda: USDT
+Red: TRON (TRC20)
+Dirección: TKn18e7RCxhzt9xPZ15JnDhs9kxvf7gsWm
+
+Después de realizar el pago, conserva el comprobante y contacta al equipo para verificarlo.
+
+🔎 Si quieres un bot que esté funcionando, aquí lo buscamos y lo probamos.
+
+✨ Features:
+• Real time call panel de demostración
+• Human voice AI para pruebas controladas
+• Caller ID de verificado y configurable
+• Multi country routes en entornos sandbox autorizados
+• Live status logs
+
+⚠️ se utiliza para obtener códigos de terceros.
+
                 "💵 Precio: US$35"
             ),
             reply_markup=InlineKeyboardMarkup([
