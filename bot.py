@@ -2977,14 +2977,20 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/21033K6c/Creating-promotional-image-design-310bdb13.jpg",
             caption=(
                 "🔐 OTP Verification System v3.2\n\n"
-                "Automated Call & SMS Verification System.\n\n"
-                "Features:\n\n"
-                "* Real-time call panel\n"
-                "* Human voice AI\n"
-                "* Verified caller ID (authorized numbers)\n"
-                "* Multi-country routes\n"
-                "* Live status logs\n\n"
-                "Price: $35"
+                "📲 Automated Call & SMS Verification Tool\n"
+                "💵 Precio: US$35\n\n"
+                "🧾 Después de realizar el pago, conserva el comprobante "
+                "y contacta al equipo para verificarlo.\n\n"
+                "🔎 ¿Buscas un bot que esté funcionando? Aquí lo revisamos "
+                "y probamos en un entorno autorizado.\n\n"
+                "✨ Features:\n"
+                "• 📞 Real-time call panel de demostración\n"
+                "• 🗣️ Human voice AI para pruebas controladas\n"
+                "• 🛡️ Caller ID verificado y configurable para números autorizados\n"
+                "• 🌍 Multi-country routes en entornos sandbox autorizados\n"
+                "• 📊 Live status logs\n\n"
+                "⚠️ Uso exclusivo para obtener códigos de demostración "
+                "en sistemas y cuentas bajo tu control."
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_otp")],
