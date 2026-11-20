@@ -2976,22 +2976,16 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_photo(
             photo="https://i.ibb.co/21033K6c/Creating-promotional-image-design-310bdb13.jpg",
             caption=(
-                "🔐 OTP Verification System v3.2
-
-Automated call & SMS verification tool💵 Precio: US$35
-
-Después de realizar el pago, conserva el comprobante y contacta al equipo para verificarlo.
-
-🔎 Si quieres un bot que esté funcionando, aquí lo buscamos y lo probamos.
-
-✨ Features:
-• Real time call panel de demostración
-• Human voice AI para pruebas controladas
-• Caller ID de verificado y configurable
-• Multi country routes en entornos sandbox autorizados
-• Live status logs
-
-⚠️ se utiliza para obtener códigos de terceros.
+                "🔐 OTP Verification System v3.2\\n\\n"
+                "Herramienta de demostración para pruebas de llamadas y SMS en entornos sandbox autorizados.\\n\\n"
+                "💵 Precio: US$35\\n\\n"
+                "Después de realizar el pago, conserva el comprobante y contacta al equipo para verificarlo.\\n\\n"
+                "✨ Funciones de demostración:\\n"
+                "• Panel de pruebas en tiempo real\\n"
+                "• Simulación de flujos de voz y SMS\\n"
+                "• Uso exclusivo con números propios o autorizados\\n"
+                "• Registros de estado para pruebas controladas\\n\\n"
+                "⚠️ No se permite solicitar, interceptar ni obtener códigos de terceros."
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_otp")],
