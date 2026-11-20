@@ -3652,6 +3652,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if choice == "tool_ssn_info":
+        context.user_data.pop("waiting_profile_update", None)
         await query.message.reply_text(
             "🪪 UNARED | SSN\n\n"
             "Selecciona una opción:",
