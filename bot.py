@@ -3034,7 +3034,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "📲3D security\n"
                 "🔢Verizon pin\n"
                 " Icloud\n"
-                "👻And more...\n"
+                "👻And more...\n\n"
                 "Features:\n"
                 "• 📞 Real-time call panel\n"
                 "• 🗣️ Human voice AI\n"
