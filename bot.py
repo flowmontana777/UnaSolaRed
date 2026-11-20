@@ -3641,7 +3641,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]),
             disable_web_page_preview=True,
         )
-        if choice == "ssn_search":
+        return
+
+    if choice == "ssn_search":
         user = update.effective_user
         with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
             ensure_wallet_tables(db)
