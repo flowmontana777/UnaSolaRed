@@ -3501,15 +3501,28 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if choice == "tool_ssn_info":
-        await query.message.reply_photo(
-            photo="https://i.ibb.co/xqSWw0jN/Creating-promotional-image-for-U-bc5b392a.jpg",
-            caption=(
-                "🪪 UNARED | INFORMACIÓN SSN\n\n"
-                "Quiero Búsqueda de Seguro Social de Estados Unidos."
-            ),
+        await query.message.reply_text(
+            "🪪 UNARED | SSN\n\n"
+            "Selecciona una opción:",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💬 Consultar servicio", url="https://t.me/flowmontana777")],
-                [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
+                [InlineKeyboardButton("🔎 Buscar", callback_data="ssn_search")],
+                [InlineKeyboardButton("⬅️ Volver al Centro de Herramientas", callback_data="menu_tools")],
+            ]),
+        )
+        return
+
+    if choice == "ssn_search":
+        await query.message.reply_text(
+            "🔎 UNARED | BÚSQUEDA SSN\n\n"
+            "Podemos orientarte para localizar o recuperar tu propio número de Seguro Social "
+            "por los canales oficiales de Estados Unidos.\n\n"
+            "Por seguridad, no envíes aquí tu SSN completo, documentos ni datos de otra persona. "
+            "No realizamos búsquedas de SSN de terceros.\n\n"
+            "Contacta al equipo para recibir orientación:",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Contactar equipo", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
+                [InlineKeyboardButton("⬅️ Centro de Herramientas", callback_data="menu_tools")],
             ]),
         )
         return
