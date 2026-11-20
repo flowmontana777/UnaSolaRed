@@ -3043,7 +3043,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "botproduct_otp":
         await query.message.reply_photo(
-            photo="https://i.ibb.co/21033K6c/Creating-promotional-image-design-310bdb13.jpg",
+            photo="https://i.ibb.co/cSK5YPpW/871464408-1795197001675973.jpg",
             caption=(
                 "🔐 OTP Verification System v3.2\n\n"
                 "📲 Automated Call & SMS Verification Tool\n\n"
