@@ -3670,7 +3670,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🔐 No solicitamos SSN completo, fecha de nacimiento, documentos, contraseñas ni datos de terceros.\n\n"
             "No buscamos SSN en bases de datos ni entregamos números de Seguro Social. Al continuar confirmas que eres el titular y que solo deseas orientación oficial.",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("✅ Soy el titular — Continuar", callback_data="ssn_assist_confirm")],
+                [InlineKeyboardButton("✅ Continuar", callback_data="ssn_assist_confirm")],
                 [InlineKeyboardButton("👤 Mi perfil / Recargar saldo", callback_data="ssn_status")],
                 [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
             ]),
@@ -3755,6 +3755,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Se debitó US$3.00 de tu saldo.\n"
                 f"Referencia: {invoice_id}\n"
                 "La solicitud es únicamente para orientarte a recuperar tu propio SSN mediante la SSA.\n\n"
+                "Siguiente paso: consulta los requisitos y el proceso oficial en https://www.ssa.gov/number-card/.\n\n"
+                "No envíes por Telegram tu fecha de nacimiento, dirección, documentos ni SSN completo.\n\n"
                 "Puedes consultar el estado desde Mi perfil.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("👤 Perfil", callback_data="ssn_status")],
