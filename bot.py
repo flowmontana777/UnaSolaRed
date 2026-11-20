@@ -951,6 +951,138 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.answer("⛔ Acceso denegado.", show_alert=True)
         return
     await query.answer()
+    if query.data.startswith("confirm_paid:"):
+        try:
+            action_token = query.data.split(":", 1)[1]
+            with sqlite3.connect(DATABASE_PATH, timeout=15) as db:
+                action = db.execute(
+                    "SELECT invoice_id FROM wolvpay_admin_actions WHERE token = ?",
+                    (action_token,),
+                ).fetchone()
+                if not action:
+                    await query.message.reply_text("⚠️ Esta acción de pago ya no está disponible.")
+                    return
+                invoice_id = str(action[0])
+                invoice_record = None
+                for candidate_table in INVOICE_TABLES:
+                    exists = db.execute(
+                        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+                        (candidate_table,),
+                    ).fetchone()
+                    if not exists:
+                        continue
+                    columns = {row[1] for row in db.execute("PRAGMA table_info(" + candidate_table + ")")}
+                    if {"invoice_id", "telegram_id", "amount", "status"}.issubset(columns):
+                        invoice_record = db.execute(
+                            "SELECT telegram_id, amount, status FROM " + candidate_table + " WHERE invoice_id = ?",
+                            (invoice_id,),
+                        ).fetchone()
+                        if invoice_record:
+                            invoice_table = candidate_table
+                            break
+
+            if not invoice_record:
+                await query.message.reply_text("⚠️ No encontré la factura en el registro de UnaRed.")
+                return
+
+            telegram_id, expected_amount, stored_status = invoice_record
+            # No reenviar si el webhook ya registró que Telegram aceptó el envío.
+            with sqlite3.connect(DATABASE_PATH, timeout=15) as db:
+                notification_table = db.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='wolvpay_notifications'"
+                ).fetchone()
+                if notification_table:
+                    notification_state = db.execute(
+                        "SELECT customer_sent FROM wolvpay_notifications WHERE invoice_id = ?",
+                        (invoice_id,),
+                    ).fetchone()
+                    if notification_state and notification_state[0]:
+                        await query.message.reply_text(
+                            "ℹ️ La confirmación automática ya fue enviada por Telegram. No se reenviará para evitar duplicados."
+                        )
+                        await query.message.edit_reply_markup(reply_markup=None)
+                        return
+            if not WOLVPAY_API_KEY:
+                await query.message.reply_text("⚠️ No se pudo verificar: falta la conexión segura con WolvPay.")
+                return
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{WOLVPAY_API_URL}/invoices/{invoice_id}",
+                    headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}"},
+                    timeout=aiohttp.ClientTimeout(total=20),
+                ) as response:
+                    invoice_payload = await response.json(content_type=None)
+                    if response.status != 200:
+                        await query.message.reply_text("⚠️ WolvPay no permitió verificar esta factura. No se envió nada al cliente.")
+                        return
+
+            verified_invoice = invoice_payload.get("data") or invoice_payload
+            verified_amount = Decimal(str(verified_invoice.get("amount", "0")))
+            if (
+                str(verified_invoice.get("invoice_id", invoice_id)) != invoice_id
+                or str(verified_invoice.get("status", "")).upper() != "PAID"
+                or verified_amount != Decimal(str(expected_amount))
+            ):
+                await query.message.reply_text("⛔ WolvPay todavía no confirma esta factura como pagada. No se envió la imagen.")
+                return
+
+            with sqlite3.connect(DATABASE_PATH, timeout=15) as db:
+                db.execute(
+                    "UPDATE " + invoice_table + " SET status = 'PAID' WHERE invoice_id = ?",
+                    (invoice_id,),
+                )
+                db.execute(
+                    """CREATE TABLE IF NOT EXISTS wolvpay_manual_confirmations (
+                        invoice_id TEXT PRIMARY KEY,
+                        sent_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    )"""
+                )
+                claimed = db.execute(
+                    "INSERT OR IGNORE INTO wolvpay_manual_confirmations (invoice_id) VALUES (?)",
+                    (invoice_id,),
+                ).rowcount
+
+            if not claimed:
+                await query.message.reply_text("ℹ️ Ya se envió una confirmación manual para esta factura. No se duplicó.")
+                await query.message.edit_reply_markup(reply_markup=None)
+                return
+
+            main_bot = context.application.bot_data.get("main_bot")
+            if not main_bot:
+                with sqlite3.connect(DATABASE_PATH) as db:
+                    db.execute("DELETE FROM wolvpay_manual_confirmations WHERE invoice_id = ?", (invoice_id,))
+                await query.message.reply_text("⚠️ No está disponible la conexión con UnaRed Bot. Puedes intentarlo nuevamente.")
+                return
+
+            try:
+                await main_bot.send_photo(
+                    chat_id=int(telegram_id),
+                    photo="https://i.ibb.co/ccmC4XsG/86-DE6634-72-C2-4544-9-DB5-351541-A91286.png",
+                    caption=(
+                        "✅ PAGO REALIZADO | UNARED\n\n"
+                        "Tu pago fue verificado directamente con WolvPay.\n"
+                        f"Factura: {invoice_id}\n\n"
+                        "El equipo de UnaRed continuará con la preparación de tu servicio."
+                    ),
+                )
+            except Exception:
+                with sqlite3.connect(DATABASE_PATH) as db:
+                    db.execute("DELETE FROM wolvpay_manual_confirmations WHERE invoice_id = ?", (invoice_id,))
+                raise
+
+            await query.message.edit_reply_markup(reply_markup=None)
+            await query.message.reply_text(
+                f"✅ Confirmación enviada al cliente {telegram_id}. WolvPay verificó el pago de la factura {invoice_id}."
+            )
+        except (aiohttp.ClientError, asyncio.TimeoutError, InvalidOperation, ValueError, TypeError):
+            logger.exception("No se pudo verificar o enviar la confirmación manual de la factura.")
+            await query.message.reply_text("⚠️ No se pudo completar la verificación o el envío. La factura no se confirmó manualmente.")
+        except Exception:
+            logger.exception("Error en el botón de confirmación manual de pago.")
+            await query.message.reply_text("⚠️ No se pudo enviar la confirmación al cliente. Puedes revisar e intentarlo de nuevo.")
+        return
+
     if query.data.startswith("view_customer:"):
         try:
             telegram_id = int(query.data.split(":", 1)[1])
@@ -1050,7 +1182,7 @@ def build_admin_application():
     admin_app.add_handler(CommandHandler("buscarcliente", find_customer))
     admin_app.add_handler(CallbackQueryHandler(
         admin_bot_callbacks,
-        pattern=r"^(admin_|copy_id:|notify_customer:|view_customer:|contact_admin$)",
+        pattern=r"^(admin_|copy_id:|notify_customer:|view_customer:|confirm_paid:|contact_admin$)",
     ))
     return admin_app
 
@@ -4090,13 +4222,30 @@ async def wolvpay_webhook(request):
 
         if not notification_state[1]:
             admin_bot = application.bot_data["admin_bot"]
+            action_token = hashlib.sha256(invoice_id.encode("utf-8")).hexdigest()[:16]
+            with sqlite3.connect(DATABASE_PATH) as db:
+                db.execute(
+                    """CREATE TABLE IF NOT EXISTS wolvpay_admin_actions (
+                        token TEXT PRIMARY KEY,
+                        invoice_id TEXT NOT NULL UNIQUE
+                    )"""
+                )
+                db.execute(
+                    "INSERT OR IGNORE INTO wolvpay_admin_actions (token, invoice_id) VALUES (?, ?)",
+                    (action_token, invoice_id),
+                )
+            paid_keyboard = InlineKeyboardMarkup([[
+                InlineKeyboardButton("✅ Pagado", callback_data=f"confirm_paid:{action_token}")
+            ]])
             await admin_bot.send_photo(
                 chat_id=int(BOT_OWNER_ID),
                 photo=payment_image_url,
                 caption=(
                     "💚 PAGO REALIZADO | UNARED\n"
-                    "Pago verificado correctamente con WolvPay."
+                    "Pago verificado correctamente con WolvPay.\n"
+                    "Si el cliente no recibió la imagen, pulsa «Pagado» para reenviarla."
                 ),
+                reply_markup=paid_keyboard,
             )
             await admin_bot.send_message(chat_id=int(BOT_OWNER_ID), text=admin_text)
             with sqlite3.connect(DATABASE_PATH) as db:
@@ -4148,7 +4297,7 @@ def build_main_application():
     # /buscarcliente está disponible exclusivamente en el bot de administración.
     # Solo los callbacks administrativos pasan por el control de acceso del panel.
     # Los botones de servicios y precios siguen llegando a select_option.
-    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|copy_id:|notify_customer:)"))
+    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|copy_id:|notify_customer:|confirm_paid:)"))
     app.add_handler(CallbackQueryHandler(select_option))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_new_members))
     app.add_handler(TypeHandler(Update, channel_music_ingest), group=-1)
