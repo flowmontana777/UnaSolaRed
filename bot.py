@@ -3506,8 +3506,33 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Selecciona una opción:",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔎 Buscar", callback_data="ssn_search")],
+                [InlineKeyboardButton("❗️❓ FAQ", callback_data="ssn_faq")],
                 [InlineKeyboardButton("⬅️ Volver al Centro de Herramientas", callback_data="menu_tools")],
             ]),
+        )
+        return
+
+    if choice == "ssn_faq":
+        await query.message.reply_text(
+            "❗️❓ UNARED | PREGUNTAS FRECUENTES (FAQ)\n\n"
+            "1️⃣ ¿Qué es el SSN?\n"
+            "Es el número de Seguro Social que la Administración del Seguro Social de EE. UU. "
+            "utiliza para identificar y llevar registros de las personas.\n\n"
+            "2️⃣ ¿Qué hago si olvidé mi SSN?\n"
+            "Puedes solicitar orientación para recuperarlo mediante los canales oficiales de "
+            "la Administración del Seguro Social (SSA).\n\n"
+            "3️⃣ ¿Puedo buscar el SSN de otra persona?\n"
+            "No. Solo podemos orientar al titular para recuperar su propio número.\n\n"
+            "4️⃣ ¿Debo enviar mi SSN por este chat?\n"
+            "No. Nunca compartas aquí tu SSN completo, contraseñas ni documentos sensibles.\n\n"
+            "5️⃣ ¿Dónde puedo obtener ayuda oficial?\n"
+            "Visita https://www.ssa.gov/number-card/ para información y asistencia.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔎 Buscar", callback_data="ssn_search")],
+                [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
+                [InlineKeyboardButton("⬅️ Centro de Herramientas", callback_data="menu_tools")],
+            ]),
+            disable_web_page_preview=True,
         )
         return
 
