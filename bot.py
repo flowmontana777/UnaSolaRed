@@ -3735,6 +3735,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "ZIP:\n\n"
             "✍️ Envía todos los campos en un solo mensaje.\n"
             "Envía únicamente la información.\n\n"
+            "Escribe /cancel si deseas cancelar.",
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("⬅️ Cancelar", callback_data="tool_ssn_info")
             ]]),
