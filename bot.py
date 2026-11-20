@@ -2985,7 +2985,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text(
                 "❓ PREGUNTAS FRECUENTES | BOT OTP\n\n"
                 "❶ ¿Qué es Bot OTP?\n"
-                "Plataforma para realizar llamadas IVR automatizadas de verificación de fraude con el nombre dinámico del cliente.n\n"
+                "Plataforma para realizar llamadas IVR automatizadas de verificación de fraude con el nombre dinámico del cliente.\n"
                 "❷ ¿Cómo funciona?\n"
                 "① Ingresas datos ficticios o de prueba autorizados.\n"
                 "② Eliges una categoría de demostración.\n"
