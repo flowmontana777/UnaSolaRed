@@ -134,10 +134,10 @@ async def notify_invoice_pending(
                 raise RuntimeError("El bot administrativo no está inicializado.")
             invoice_keyboard = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("🔎 Verificar pago WolvPay", callback_data=f"admin_invoice_verify_pending:{table_name}:{invoice_id}"),
+                    InlineKeyboardButton("🔎 Verificar pago WolvPay", callback_data=f"av:{invoice_id}"),
                 ],
                 [
-                    InlineKeyboardButton("✅ Pagado", callback_data=f"admin_invoice_paid_pending:{table_name}:{invoice_id}"),
+                    InlineKeyboardButton("✅ Pagado", callback_data=f"ap:{invoice_id}"),
                 ],
                 [
                     InlineKeyboardButton("👤 Ir al perfil", callback_data=f"view_customer:{int(telegram_id)}"),
@@ -1031,18 +1031,25 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.answer("⛔ Acceso denegado.", show_alert=True)
         return
     await query.answer()
-    if query.data.startswith("admin_invoice_verify_pending:") or query.data.startswith("admin_invoice_paid_pending:"):
-        action, table_name, invoice_id = query.data.split(":", 2)
-        allowed_tables = set(INVOICE_TABLES)
-        if table_name not in allowed_tables:
-            await query.message.reply_text("⚠️ Tabla de factura no válida.")
-            return
+    if query.data.startswith("av:") or query.data.startswith("ap:"):
+        action, invoice_id = query.data.split(":", 1)
         try:
+            table_name = None
+            row = None
             with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
-                row = db.execute(
-                    "SELECT telegram_id, amount, status FROM " + table_name + " WHERE invoice_id=?",
-                    (invoice_id,),
-                ).fetchone()
+                for candidate in INVOICE_TABLES:
+                    exists = db.execute(
+                        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (candidate,)
+                    ).fetchone()
+                    if not exists:
+                        continue
+                    found = db.execute(
+                        "SELECT telegram_id, amount, status FROM " + candidate + " WHERE invoice_id=?",
+                        (invoice_id,),
+                    ).fetchone()
+                    if found:
+                        table_name, row = candidate, found
+                        break
             if not row:
                 await query.message.reply_text("⚠️ No encontramos esa factura en el registro de UnaRed.")
                 return
@@ -1051,7 +1058,7 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 await query.message.reply_text("⛔ Esta factura está cancelada o rechazada; no se puede confirmar.")
                 return
 
-            verified_by_wolvpay = action == "admin_invoice_verify_pending"
+            verified_by_wolvpay = action == "av"
             if verified_by_wolvpay:
                 if not WOLVPAY_API_KEY:
                     await query.message.reply_text("⚠️ La conexión con WolvPay no está configurada.")
