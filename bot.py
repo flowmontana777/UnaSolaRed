@@ -2991,7 +2991,7 @@ Después de realizar el pago, conserva el comprobante y contacta al equipo para 
 • Multi country routes en entornos sandbox autorizados
 • Live status logs
 
-⚠️ se utiliza para obtener códigos de terceros."
+⚠️ se utiliza para obtener códigos de terceros.
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_otp")],
