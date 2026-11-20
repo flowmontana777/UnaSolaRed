@@ -3708,9 +3708,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         await query.message.reply_text(
-            "🪪 UNARED | ACTUALIZAR DIRECCIÓN DE PERFIL\n\n"
+            "🪪 UNARED | SSN Lookup\n\n"
             "💵 Precio del servicio: US$3.00\n"
-            "Envía una solicitud para actualizar la dirección de tu propio perfil. "
+            "Envía una solicitud para solicitar SSN. "
             "El equipo revisará los datos y te enviará el resultado por este mismo chat.\n\n"
             "Pulsa Continuar para recibir el formulario.",
             reply_markup=InlineKeyboardMarkup([
@@ -3725,17 +3725,16 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer()
         context.user_data["waiting_profile_update"] = True
         await query.message.reply_text(
-            "📋 UNARED | FORMULARIO DE ACTUALIZACIÓN\n"
+            "📋 UNARED | SSN Lookup\n"
             "━━━━━━━━━━━━━━━━━━\n\n"
-            "Copia el ejemplo y reemplázalo con la información de tu propio perfil:\n\n"
+            "Copia el ejemplo:\n\n"
             "Nombre y apellido\n"
-            "Dirección: 5225 W Vernal Pike\n"
-            "City: Bloomington\n"
-            "Estado: IN\n"
-            "ZIP: 47404\n\n"
+            "Dirección:\n"
+            "City:\n"
+            "Estado:\n"
+            "ZIP:\n\n"
             "✍️ Envía todos los campos en un solo mensaje.\n"
-            "Envía únicamente información tuya o que tengas autorización para actualizar.\n\n"
-            "Escribe /cancel si deseas cancelar.",
+            "Envía únicamente la información.\n\n"
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("⬅️ Cancelar", callback_data="tool_ssn_info")
             ]]),
