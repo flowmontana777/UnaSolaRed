@@ -938,42 +938,78 @@ async def refresh_wolvpay_statuses():
 async def admin_billing(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
         return
+
+    # Cada vez que se abre Facturación, consulta WolvPay y actualiza los estados locales.
     await refresh_wolvpay_statuses()
+
     status_counts = {}
-    income = 0.0
+    total_invoiced = Decimal("0")
+    confirmed_income = Decimal("0")
     invoices = 0
-    with sqlite3.connect(DATABASE_PATH) as db:
+    invalid_amounts = 0
+
+    with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
         for table in INVOICE_TABLES:
-            if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
+            if not db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
+            ).fetchone():
                 continue
             cols = {row[1] for row in db.execute("PRAGMA table_info(" + table + ")")}
             if not {"amount", "status"}.issubset(cols):
                 continue
-            rows = db.execute("SELECT amount, status FROM " + table).fetchall()
-            invoices += len(rows)
-            for amount, status in rows:
-                state = str(status or "UNKNOWN").upper()
+
+            for amount, status in db.execute(
+                "SELECT amount, status FROM " + table
+            ).fetchall():
+                invoices += 1
+                state = str(status or "UNKNOWN").strip().upper()
+                # Unifica variantes habituales que puede devolver el proveedor.
+                if state in {"CANCELED", "CANCEL", "VOID", "VOIDED"}:
+                    state = "CANCELLED"
+                elif state in {"UNPAID", "PROCESSING", "AWAITING_SELECTION", "CREATED", "NEW"}:
+                    state = "PENDING"
+
                 status_counts[state] = status_counts.get(state, 0) + 1
-                if state == "PAID":
-                    try:
-                        income += float(amount)
-                    except (ValueError, TypeError):
-                        pass
-    pending = sum(count for state, count in status_counts.items() if state in {"PENDING", "UNPAID", "PROCESSING", "AWAITING_SELECTION"})
-    lines = [
-        f"• {state}: {count}"
-        for state, count in sorted(status_counts.items())
-        if state not in {"PAID", "PENDING", "UNPAID", "PROCESSING", "CANCELLED"}
-    ]
-    status_detail = ("\n" + "\n".join(lines)) if lines else ""
+                try:
+                    value = Decimal(str(amount or "0"))
+                    if value.is_finite() and value >= 0:
+                        total_invoiced += value
+                        if state == "PAID":
+                            confirmed_income += value
+                    else:
+                        invalid_amounts += 1
+                except (InvalidOperation, ValueError, TypeError):
+                    invalid_amounts += 1
+
+    pending = status_counts.get("PENDING", 0)
+    paid = status_counts.get("PAID", 0)
+    cancelled = status_counts.get("CANCELLED", 0)
+    other_states = {
+        state: count for state, count in status_counts.items()
+        if state not in {"PAID", "PENDING", "CANCELLED"}
+    }
+    status_detail = "\\n".join(
+        f"• {state}: {count}" for state, count in sorted(other_states.items())
+    ) or "• Ninguno"
+
+    report = (
+        "💳 UNARED | FACTURACIÓN WOLVPAY\\n"
+        "━━━━━━━━━━━━━━━━━━\\n\\n"
+        f"🧾 Facturas creadas: {invoices}\\n"
+        f"⌛ Pendientes: {pending}\\n"
+        f"✅ Pagadas: {paid}\\n"
+        f"❌ Canceladas: {cancelled}\\n\\n"
+        f"💰 Total facturado: USD {total_invoiced:,.2f}\\n"
+        f"💵 Ingresos confirmados: USD {confirmed_income:,.2f}\\n\\n"
+        f"📌 Otros estados:\\n{status_detail}"
+    )
+    if invalid_amounts:
+        report += f"\\n⚠️ Facturas con importe no válido: {invalid_amounts}"
+
     await update.effective_message.reply_text(
-        "💳 UNARED | FACTURACIÓN WOLVPAY\n━━━━━━━━━━━━━━━━━━\n\n"
-        f"🧾 Facturas: {invoices}\n⌛ Pendientes: {pending}\n"
-        f"✅ Pagadas: {status_counts.get('PAID', 0)}\n"
-        f"❌ Canceladas: {status_counts.get('CANCELLED', 0)}\n"
-        f"💵 Ingresos confirmados: USD {income:,.2f}\n"
-        f"📌 Otros estados:{status_detail or ' ninguno'}",
+        report,
         reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔄 Actualizar estadísticas", callback_data="admin_billing"),
             InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
         ]]),
     )
@@ -1446,7 +1482,7 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             paid += 1
                             try: income += float(amount)
                             except (ValueError, TypeError): pass
-                        elif status_value in {"PENDING", "UNPAID", "PROCESSING"}:
+                        elif status_value in {"PENDING", "UNPAID", "PROCESSING", "AWAITING_SELECTION", "CREATED", "NEW"}:
                             pending += 1
         music = db.execute("SELECT COUNT(*) FROM digital_music_subscribers").fetchone()[0] if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='digital_music_subscribers'").fetchone() else 0
         db.execute("""CREATE TABLE IF NOT EXISTS unared_interactions (
