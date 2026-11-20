@@ -3506,7 +3506,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Selecciona una opción:",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔎 Buscar", callback_data="ssn_search")],
-                [InlineKeyboardButton("❗️❓ FAQ", callback_data="ssn_faq")],
+                [InlineKeyboardButton("❓ FAQ", callback_data="ssn_faq")],
                 [InlineKeyboardButton("⬅️ Volver al Centro de Herramientas", callback_data="menu_tools")],
             ]),
         )
