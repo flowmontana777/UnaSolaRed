@@ -132,9 +132,21 @@ async def notify_invoice_pending(
             admin_bot = application.bot_data.get("admin_bot")
             if not admin_bot:
                 raise RuntimeError("El bot administrativo no está inicializado.")
+            invoice_keyboard = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("🔎 Verificar pago WolvPay", callback_data=f"admin_invoice_verify_pending:{table_name}:{invoice_id}"),
+                ],
+                [
+                    InlineKeyboardButton("✅ Pagado", callback_data=f"admin_invoice_paid_pending:{table_name}:{invoice_id}"),
+                ],
+                [
+                    InlineKeyboardButton("👤 Ir al perfil", callback_data=f"view_customer:{int(telegram_id)}"),
+                    InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(telegram_id)}"),
+                ],
+            ])
             await admin_bot.send_photo(
                 chat_id=int(BOT_OWNER_ID), photo=image_url, caption=admin_caption,
-                reply_markup=copy_id_keyboard(telegram_id),
+                reply_markup=invoice_keyboard,
             )
         except Exception:
             logger.exception("No se pudo enviar la notificación de factura pendiente al administrador %s.", invoice_id)
@@ -1019,6 +1031,173 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.answer("⛔ Acceso denegado.", show_alert=True)
         return
     await query.answer()
+    if query.data.startswith("admin_invoice_verify_pending:") or query.data.startswith("admin_invoice_paid_pending:"):
+        action, table_name, invoice_id = query.data.split(":", 2)
+        allowed_tables = set(INVOICE_TABLES)
+        if table_name not in allowed_tables:
+            await query.message.reply_text("⚠️ Tabla de factura no válida.")
+            return
+        try:
+            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                row = db.execute(
+                    "SELECT telegram_id, amount, status FROM " + table_name + " WHERE invoice_id=?",
+                    (invoice_id,),
+                ).fetchone()
+            if not row:
+                await query.message.reply_text("⚠️ No encontramos esa factura en el registro de UnaRed.")
+                return
+            telegram_id, expected_amount, current_status = row
+            if str(current_status).upper() in ("CANCELLED", "CANCELED", "REJECTED"):
+                await query.message.reply_text("⛔ Esta factura está cancelada o rechazada; no se puede confirmar.")
+                return
+
+            verified_by_wolvpay = action == "admin_invoice_verify_pending"
+            if verified_by_wolvpay:
+                if not WOLVPAY_API_KEY:
+                    await query.message.reply_text("⚠️ La conexión con WolvPay no está configurada.")
+                    return
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(
+                            f"{WOLVPAY_API_URL}/invoices/{invoice_id}",
+                            headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}"},
+                            timeout=aiohttp.ClientTimeout(total=20),
+                        ) as response:
+                            payload = await response.json(content_type=None)
+                            if response.status != 200:
+                                logger.error("WolvPay admin verification HTTP %s: %s", response.status, payload)
+                                await query.message.reply_text("⚠️ WolvPay no pudo consultar la factura. Sigue pendiente; inténtalo más tarde.")
+                                return
+                    invoice = payload.get("data") or payload
+                    provider_amount = Decimal(str(invoice.get("amount", "0")))
+                    expected_decimal = Decimal(str(expected_amount))
+                    provider_currency = str(invoice.get("currency") or "USD").upper()
+                    if str(invoice.get("invoice_id", invoice_id)) != str(invoice_id):
+                        await query.message.reply_text("⚠️ WolvPay devolvió un ID de factura diferente. No se modificó el pago.")
+                        return
+                    if str(invoice.get("status", "")).upper() != "PAID":
+                        await query.message.reply_text("⌛ WolvPay todavía muestra esta factura como no pagada. Sigue pendiente.")
+                        return
+                    if provider_amount != expected_decimal or provider_currency != "USD":
+                        logger.warning("WolvPay amount/currency mismatch for invoice %s", invoice_id)
+                        await query.message.reply_text("⛔ El importe o la moneda de WolvPay no coincide con el registro (USD). No se confirmó el pago.")
+                        return
+                except (aiohttp.ClientError, asyncio.TimeoutError, InvalidOperation, ValueError, TypeError):
+                    logger.exception("No se pudo verificar la factura %s con WolvPay.", invoice_id)
+                    await query.message.reply_text("⚠️ Error consultando WolvPay. La factura permanece sin cambios.")
+                    return
+
+            admin_user = update.effective_user
+            admin_label = (admin_user.username and "@" + admin_user.username) or str(admin_user.id)
+            confirmed_at = datetime.now(ZoneInfo("America/Santo_Domingo")).isoformat(timespec="seconds")
+            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                db.execute("BEGIN IMMEDIATE")
+                db.execute("""CREATE TABLE IF NOT EXISTS wolvpay_notifications (
+                    invoice_id TEXT PRIMARY KEY,
+                    customer_sent INTEGER NOT NULL DEFAULT 0,
+                    admin_sent INTEGER NOT NULL DEFAULT 0,
+                    approval_status TEXT NOT NULL DEFAULT 'PENDING',
+                    image_status TEXT NOT NULL DEFAULT 'PENDING'
+                )""")
+                cols = {item[1] for item in db.execute("PRAGMA table_info(wolvpay_notifications)")}
+                for col, definition in (
+                    ("admin_id", "INTEGER"),
+                    ("admin_username", "TEXT"),
+                    ("confirmed_at", "TEXT"),
+                    ("confirmation_method", "TEXT"),
+                ):
+                    if col not in cols:
+                        db.execute("ALTER TABLE wolvpay_notifications ADD COLUMN " + col + " " + definition)
+                db.execute("INSERT OR IGNORE INTO wolvpay_notifications (invoice_id) VALUES (?)", (invoice_id,))
+                state = db.execute(
+                    "SELECT image_status FROM wolvpay_notifications WHERE invoice_id=?",
+                    (invoice_id,),
+                ).fetchone()
+                if state and str(state[0]).upper() in ("SENT", "SENDING", "FAILED"):
+                    db.rollback()
+                    message = (
+                        "ℹ️ Esta factura ya fue confirmada y la imagen fue enviada."
+                        if str(state[0]).upper() == "SENT"
+                        else "⚠️ Esta factura ya tiene un envío en curso o un intento fallido. No la reenvío para evitar duplicados."
+                    )
+                    await query.message.reply_text(message)
+                    return
+                if verified_by_wolvpay:
+                    db.execute(
+                        "UPDATE " + table_name + " SET status='PAID' WHERE invoice_id=? AND status IN ('PENDING','PAID')",
+                        (invoice_id,),
+                    )
+                else:
+                    db.execute(
+                        "UPDATE " + table_name + " SET status='PAID' WHERE invoice_id=? AND status IN ('PENDING','PAID')",
+                        (invoice_id,),
+                    )
+                saved = db.execute(
+                    "SELECT status FROM " + table_name + " WHERE invoice_id=?",
+                    (invoice_id,),
+                ).fetchone()
+                if not saved or str(saved[0]).upper() != "PAID":
+                    db.rollback()
+                    await query.message.reply_text("⛔ La factura no está en un estado que permita confirmarla.")
+                    return
+                claimed = db.execute(
+                    """UPDATE wolvpay_notifications
+                       SET approval_status='APPROVED', image_status='SENDING',
+                           admin_id=?, admin_username=?, confirmed_at=?, confirmation_method=?
+                       WHERE invoice_id=? AND image_status='PENDING'""",
+                    (
+                        int(admin_user.id), admin_label, confirmed_at,
+                        "WOLVPAY_VERIFIED" if verified_by_wolvpay else "MANUAL_ADMIN",
+                        invoice_id,
+                    ),
+                )
+                if claimed.rowcount != 1:
+                    db.rollback()
+                    await query.message.reply_text("ℹ️ Otro proceso ya está confirmando esta factura. No se enviará otra imagen.")
+                    return
+                db.commit()
+
+            main_bot = context.application.bot_data.get("main_bot")
+            if not main_bot:
+                raise RuntimeError("No está disponible el bot principal para enviar la confirmación.")
+            confirmation_image = "https://i.ibb.co/ccmC4XsG/86-DE6634-72-C2-4544-9-DB5-351541-A91286.png"
+            await main_bot.send_photo(
+                chat_id=int(telegram_id),
+                photo=confirmation_image,
+                caption=(
+                    "✅ PAGO CONFIRMADO | UNARED\n\n"
+                    + ("WolvPay confirmó automáticamente el pago." if verified_by_wolvpay else "El administrador confirmó manualmente tu pago.")
+                    + f"\nFactura: {invoice_id}\nImporte: USD {expected_amount}"
+                ),
+            )
+            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                db.execute(
+                    "UPDATE wolvpay_notifications SET image_status='SENT' WHERE invoice_id=? AND image_status='SENDING'",
+                    (invoice_id,),
+                )
+            await query.message.reply_text(
+                f"✅ Factura {invoice_id} confirmada "
+                + ("por WolvPay" if verified_by_wolvpay else "manualmente")
+                + ". La imagen se envió al cliente."
+            )
+            try:
+                await query.message.edit_reply_markup(reply_markup=None)
+            except Exception:
+                pass
+        except Exception:
+            logger.exception("Error procesando la acción administrativa de la factura %s.", invoice_id)
+            try:
+                with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                    db.execute(
+                        "UPDATE wolvpay_notifications SET image_status='FAILED' WHERE invoice_id=? AND image_status='SENDING'",
+                        (invoice_id,),
+                    )
+            except sqlite3.Error:
+                logger.exception("No se pudo registrar el fallo del envío.")
+            await query.message.reply_text(
+                f"⚠️ No se pudo completar la confirmación de {invoice_id}. Se bloqueó el reenvío automático para evitar duplicados."
+            )
+        return
     if query.data.startswith("admin_wolvpay_accept:") or query.data.startswith("admin_wolvpay_reject:"):
         action, invoice_id = query.data.split(":", 1)
         table_name = None
