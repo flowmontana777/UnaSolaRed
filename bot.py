@@ -3093,7 +3093,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "botproduct_check":
         await query.message.reply_photo(
-            photo="https://i.ibb.co/HDb1BtDq/Create-Bot-Check-promotional-image-2a47bb9b.jpg",
+            photo="https://i.ibb.co/RkZRgV38/516870573-1795201394511117.jpg",
             caption="💚 UNARED | BOT CHECK\n\nConsulta información y disponibilidad con nuestro equipo.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_check")],
