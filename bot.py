@@ -3651,7 +3651,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         current_balance = Decimal(wallet_row[0]) if wallet_row else Decimal("0.00")
         if current_balance < Decimal("3.00"):
             await query.message.reply_text(
-                "❌ Fondo insuficiente\\n\\n"
+                "❌ Fondo insuficiente\n\n"
                 "Tu saldo no alcanza para solicitar este servicio (US$3.00). Debes recargar primero para poder Buscar 🔎.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("➕ Recargar saldo", callback_data="wallet_topup_start")],
@@ -3661,10 +3661,10 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         await query.message.reply_text(
-            "🔎 UNARED | ASISTENCIA SSN\\n\\n"
-            "Servicio limitado a orientar al titular para recuperar su propio SSN mediante los canales oficiales de la SSA.\\n\\n"
-            "💵 Precio del servicio: US$3.00\\n"
-            "🔐 No solicitamos SSN completo, fecha de nacimiento, documentos, contraseñas ni datos de terceros.\\n\\n"
+            "🔎 UNARED | ASISTENCIA SSN\n\n"
+            "Servicio limitado a orientar al titular para recuperar su propio SSN mediante los canales oficiales de la SSA.\n\n"
+            "💵 Precio del servicio: US$3.00\n"
+            "🔐 No solicitamos SSN completo, fecha de nacimiento, documentos, contraseñas ni datos de terceros.\n\n"
             "No buscamos SSN en bases de datos ni entregamos números de Seguro Social. Al continuar confirmas que eres el titular y que solo deseas orientación oficial.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("✅ Soy el titular — Continuar", callback_data="ssn_assist_confirm")],
@@ -3720,7 +3720,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
             if insufficient:
                 await query.message.reply_text(
-                    "❌ Fondo insuficiente\\n\\n"
+                    "❌ Fondo insuficiente\n\n"
                     "Necesitas US$3.00 para solicitar la orientación. Recarga tu saldo primero y luego vuelve a pulsar Buscar 🔎.",
                     reply_markup=InlineKeyboardMarkup([
                         [InlineKeyboardButton("➕ Recargar saldo", callback_data="wallet_topup_start")],
@@ -3734,10 +3734,10 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await admin_bot.send_message(
                     chat_id=int(BOT_OWNER_ID),
                     text=(
-                        "🪪 NUEVA SOLICITUD PAGADA | UNARED\\n\\n"
-                        f"Cliente: {user.full_name or 'Sin nombre'}\\nTelegram ID: {user.id}\\n"
-                        f"Referencia interna: {invoice_id}\\nImporte debitado del saldo: US$3.00\\n"
-                        "Alcance: orientación al titular mediante canales oficiales SSA.\\n"
+                        "🪪 NUEVA SOLICITUD PAGADA | UNARED\n\n"
+                        f"Cliente: {user.full_name or 'Sin nombre'}\nTelegram ID: {user.id}\n"
+                        f"Referencia interna: {invoice_id}\nImporte debitado del saldo: US$3.00\n"
+                        "Alcance: orientación al titular mediante canales oficiales SSA.\n"
                         "No se recopilaron datos de identidad sensibles."
                     ),
                     reply_markup=InlineKeyboardMarkup([
@@ -3748,10 +3748,10 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception:
                 logger.exception("No se pudo notificar al administrador de la solicitud SSN %s.", invoice_id)
             await query.message.reply_text(
-                "✅ SOLICITUD REGISTRADA | UNARED\\n\\n"
-                "Se debitó US$3.00 de tu saldo.\\n"
-                f"Referencia: {invoice_id}\\n"
-                "La solicitud es únicamente para orientarte a recuperar tu propio SSN mediante la SSA.\\n\\n"
+                "✅ SOLICITUD REGISTRADA | UNARED\n\n"
+                "Se debitó US$3.00 de tu saldo.\n"
+                f"Referencia: {invoice_id}\n"
+                "La solicitud es únicamente para orientarte a recuperar tu propio SSN mediante la SSA.\n\n"
                 "Puedes consultar el estado desde Mi perfil.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("📋 Ver estado de mi solicitud", callback_data="ssn_status")],
