@@ -2240,7 +2240,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ],
             [InlineKeyboardButton("👤 Comprar Perfiles", callback_data="tool_profiles")],
             [InlineKeyboardButton("📞 Alquilar Línea Dialer", callback_data="tool_dayler")],
-            [InlineKeyboardButton("🗂️ Páginas Buy CC", callback_data="profile_pages_info")],
+            [InlineKeyboardButton("🗂️ Páginas Buy CC", callback_data="tool_pages")],
             [InlineKeyboardButton("⬅️ Volver al menú principal", callback_data="menu_home")],
         ])
         await query.message.reply_text(
