@@ -1106,6 +1106,50 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.answer("⛔ Acceso denegado.", show_alert=True)
         return
     await query.answer()
+    if query.data.startswith("profile_req_process:") or query.data.startswith("profile_req_reply:"):
+        action, raw_request_id = query.data.split(":", 1)
+        try:
+            request_id = int(raw_request_id)
+        except ValueError:
+            await query.message.reply_text("⚠️ Número de solicitud no válido.")
+            return
+        with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+            row = db.execute(
+                "SELECT telegram_id, status FROM ssn_profile_requests WHERE request_id=?",
+                (request_id,),
+            ).fetchone()
+            if not row:
+                await query.message.reply_text("⚠️ No encontramos esa solicitud.")
+                return
+            telegram_id, current_status = int(row[0]), str(row[1]).upper()
+            if current_status == "COMPLETED":
+                await query.message.reply_text("ℹ️ Esta solicitud ya fue completada.")
+                return
+            if action == "profile_req_process":
+                db.execute(
+                    "UPDATE ssn_profile_requests SET status='PROCESSING', updated_at=CURRENT_TIMESTAMP WHERE request_id=?",
+                    (request_id,),
+                )
+                db.execute(
+                    "UPDATE ssn_assistance_invoices SET request_status='PROCESSING' WHERE invoice_id=(SELECT invoice_id FROM ssn_profile_requests WHERE request_id=?)",
+                    (request_id,),
+                )
+        if action == "profile_req_process":
+            main_bot = context.application.bot_data.get("main_bot") or context.application.bot
+            await main_bot.send_message(
+                chat_id=telegram_id,
+                text="⌛️ UNARED | SOLICITUD EN PROCESO\n\nTu solicitud de actualización de dirección está siendo revisada.",
+            )
+            await query.message.reply_text(f"⌛️ Solicitud #{request_id} marcada EN PROCESO.")
+        else:
+            context.user_data["profile_request_reply_id"] = request_id
+            await query.message.reply_text(
+                f"📨 RESPUESTA | SOLICITUD #{request_id}\n\n"
+                "Escribe ahora el mensaje o las instrucciones que deseas enviar al cliente. "
+                "Tu próximo mensaje de texto se entregará directamente en su chat."
+            )
+        return
+
     if query.data.startswith("ssn_process:") or query.data.startswith("ssn_complete:"):
         action, invoice_id = query.data.split(":", 1)
         with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
@@ -1537,8 +1581,9 @@ def build_admin_application():
     admin_app.add_handler(CommandHandler("buscarcliente", find_customer))
     admin_app.add_handler(CallbackQueryHandler(
         admin_bot_callbacks,
-        pattern=r"^(admin_|av:|ap:|ssn_process:|ssn_complete:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
+        pattern=r"^(admin_|av:|ap:|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
     ))
+    admin_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, receive_admin_profile_reply))
     return admin_app
 
 
@@ -3622,18 +3667,16 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice == "ssn_faq":
         await query.message.reply_text(
             "❗️❓ UNARED | PREGUNTAS FRECUENTES (FAQ)\n\n"
-            "1️⃣ ¿Qué es el SSN?\n"
-            "Es el número de Seguro Social que la Administración del Seguro Social de EE. UU. "
-            "utiliza para identificar y llevar registros de las personas.\n\n"
-            "2️⃣ ¿Qué hago si olvidé mi SSN?\n"
-            "Puedes solicitar orientación para recuperarlo mediante los canales oficiales de "
-            "la Administración del Seguro Social (SSA).\n\n"
-            "3️⃣ ¿Puedo buscar el SSN de otra persona?\n"
-            "No. Solo podemos orientar al titular para recuperar su propio número.\n\n"
-            "4️⃣ ¿Debo enviar mi SSN por este chat?\n"
-            "No. Nunca compartas aquí tu SSN completo, contraseñas ni documentos sensibles.\n\n"
-            "5️⃣ ¿Dónde puedo obtener ayuda oficial?\n"
-            "Visita https://www.ssa.gov/number-card/ para información y asistencia.",
+            "1️⃣ ¿Para qué sirve este servicio?\n"
+            "Para enviar una solicitud de actualización de dirección en tu propio perfil.\n\n"
+            "2️⃣ ¿Qué información debo enviar?\n"
+            "Nombre y apellido, dirección, ciudad, estado y ZIP, siguiendo el ejemplo del bot.\n\n"
+            "3️⃣ ¿Qué sucede después de enviar el formulario?\n"
+            "El equipo de UnaRed recibe la solicitud y te responde por este mismo chat.\n\n"
+            "4️⃣ ¿Puedo enviar datos de otra persona?\n"
+            "Envía únicamente información de tu propio perfil o para la que tengas autorización.\n\n"
+            "5️⃣ ¿Cómo recibo el resultado?\n"
+            "Cuando el administrador complete la solicitud, recibirás su respuesta aquí en Telegram.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔎 Buscar", callback_data="ssn_search")],
                 [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
@@ -3664,11 +3707,11 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         await query.message.reply_text(
-            "🔎 UNARED | ASISTENCIA SSN\n\n"
-            "Servicio limitado a orientar al titular para recuperar su propio SSN mediante los canales oficiales de la SSA.\n\n"
+            "🪪 UNARED | ACTUALIZAR DIRECCIÓN DE PERFIL\n\n"
             "💵 Precio del servicio: US$3.00\n"
-            "🔐 No solicitamos SSN completo, fecha de nacimiento, documentos, contraseñas ni datos de terceros.\n\n"
-            "No buscamos SSN en bases de datos ni entregamos números de Seguro Social. Al continuar confirmas que eres el titular y que solo deseas orientación oficial.",
+            "Envía una solicitud para actualizar la dirección de tu propio perfil. "
+            "El equipo revisará los datos y te enviará el resultado por este mismo chat.\n\n"
+            "Pulsa Continuar para recibir el formulario.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("✅ Continuar", callback_data="ssn_assist_confirm")],
                 [InlineKeyboardButton("👤 Mi perfil / Recargar saldo", callback_data="ssn_status")],
@@ -3679,94 +3722,23 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "ssn_assist_confirm":
         await query.answer()
-        user = update.effective_user
-        service_price = Decimal("3.00")
-        invoice_id = "WALLET-SSN-" + uuid.uuid4().hex[:16].upper()
-        try:
-            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
-                ensure_wallet_tables(db)
-                db.execute("BEGIN IMMEDIATE")
-                db.execute("""CREATE TABLE IF NOT EXISTS ssn_assistance_invoices (
-                    invoice_id TEXT PRIMARY KEY,
-                    telegram_id INTEGER NOT NULL,
-                    amount TEXT NOT NULL DEFAULT '3.00',
-                    request_type TEXT NOT NULL DEFAULT 'RECOVERY_GUIDANCE',
-                    status TEXT NOT NULL DEFAULT 'PAID',
-                    request_status TEXT NOT NULL DEFAULT 'PAID',
-                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-                )""")
-                wallet_row = db.execute(
-                    "SELECT balance FROM unared_wallets WHERE telegram_id=?",
-                    (user.id,),
-                ).fetchone()
-                current_balance = Decimal(wallet_row[0]) if wallet_row else Decimal("0.00")
-                if current_balance < service_price:
-                    insufficient = True
-                else:
-                    insufficient = False
-                    new_balance = current_balance - service_price
-                    db.execute(
-                        """INSERT INTO unared_wallet_ledger
-                           (telegram_id, invoice_id, entry_type, amount)
-                           VALUES (?, ?, 'SERVICE', ?)""",
-                        (user.id, invoice_id, format(-service_price, ".2f")),
-                    )
-                    db.execute(
-                        "UPDATE unared_wallets SET balance=?, updated_at=CURRENT_TIMESTAMP WHERE telegram_id=?",
-                        (format(new_balance, ".2f"), user.id),
-                    )
-                    db.execute(
-                        """INSERT INTO ssn_assistance_invoices
-                           (invoice_id, telegram_id, amount, request_type, status, request_status)
-                           VALUES (?, ?, '3.00', 'RECOVERY_GUIDANCE', 'PAID', 'PAID')""",
-                        (invoice_id, user.id),
-                    )
-            if insufficient:
-                await query.message.reply_text(
-                    "❌ Fondo insuficiente\n\n"
-                    "Necesitas US$3.00 para solicitar la orientación. Recarga tu saldo primero y luego vuelve a pulsar Buscar 🔎.",
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("➕ Recargar saldo", callback_data="wallet_topup_start")],
-                        [InlineKeyboardButton("👤 Ver mi perfil", callback_data="ssn_status")],
-                        [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
-                    ]),
-                )
-                return
-            admin_bot = context.application.bot_data.get("admin_bot") or context.application.bot
-            try:
-                await admin_bot.send_message(
-                    chat_id=int(BOT_OWNER_ID),
-                    text=(
-                        "🪪 NUEVA SOLICITUD PAGADA | UNARED\n\n"
-                        f"Cliente: {user.full_name or 'Sin nombre'}\nTelegram ID: {user.id}\n"
-                        f"Referencia interna: {invoice_id}\nImporte debitado del saldo: US$3.00\n"
-                        "Alcance: orientación al titular mediante canales oficiales SSA.\n"
-                        "No se recopilaron datos de identidad sensibles."
-                    ),
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("⌛️ Marcar en proceso", callback_data=f"ssn_process:{invoice_id}")],
-                        [InlineKeyboardButton("✅ Completar solicitud", callback_data=f"ssn_complete:{invoice_id}")],
-                    ]),
-                )
-            except Exception:
-                logger.exception("No se pudo notificar al administrador de la solicitud SSN %s.", invoice_id)
-            await query.message.reply_text(
-                "✅ SOLICITUD REGISTRADA | UNARED\n\n"
-                "Se debitó US$3.00 de tu saldo.\n"
-                f"Referencia: {invoice_id}\n"
-                "La solicitud es únicamente para orientarte a recuperar tu propio SSN mediante la SSA.\n\n"
-                "Siguiente paso: consulta los requisitos y el proceso oficial en https://www.ssa.gov/number-card/.\n\n"
-                "No envíes por Telegram tu fecha de nacimiento, dirección, documentos ni SSN completo.\n\n"
-                "Puedes consultar el estado desde Mi perfil.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("👤 Perfil", callback_data="ssn_status")],
-                    [InlineKeyboardButton("👤 Mi perfil", callback_data="ssn_status")],
-                    [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
-                ]),
-            )
-        except (sqlite3.Error, InvalidOperation, ValueError):
-            logger.exception("No se pudo registrar la solicitud de asistencia SSN con saldo.")
-            await query.message.reply_text("❌ No pudimos registrar tu solicitud. No intentes pagar nuevamente; contacta al equipo para revisar tu saldo.")
+        context.user_data["waiting_profile_update"] = True
+        await query.message.reply_text(
+            "📋 UNARED | FORMULARIO DE ACTUALIZACIÓN\n"
+            "━━━━━━━━━━━━━━━━━━\n\n"
+            "Copia el ejemplo y reemplázalo con la información de tu propio perfil:\n\n"
+            "Nombre y apellido\n"
+            "Dirección: 5225 W Vernal Pike\n"
+            "City: Bloomington\n"
+            "Estado: IN\n"
+            "ZIP: 47404\n\n"
+            "✍️ Envía todos los campos en un solo mensaje.\n"
+            "Envía únicamente información tuya o que tengas autorización para actualizar.\n\n"
+            "Escribe /cancel si deseas cancelar.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("⬅️ Cancelar", callback_data="tool_ssn_info")
+            ]]),
+        )
         return
 
     if choice == "ssn_status":
@@ -4460,11 +4432,201 @@ async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYP
 # RECIBIR SOLICITUDES
 # =====================================
 
+async def receive_admin_profile_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user):
+        return
+    request_id = context.user_data.get("profile_request_reply_id")
+    if not request_id:
+        return
+    response_text = (update.message.text or "").strip()
+    if not response_text:
+        await update.message.reply_text("Escribe el mensaje que deseas enviar al cliente.")
+        return
+    if len(response_text) > 3500:
+        await update.message.reply_text("La respuesta es demasiado larga. Envíala en menos de 3500 caracteres.")
+        return
+
+    with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+        row = db.execute(
+            "SELECT telegram_id, status FROM ssn_profile_requests WHERE request_id=?",
+            (request_id,),
+        ).fetchone()
+        if not row or str(row[1]).upper() == "COMPLETED":
+            context.user_data.pop("profile_request_reply_id", None)
+            await update.message.reply_text("⚠️ La solicitud no existe o ya fue completada.")
+            return
+        telegram_id = int(row[0])
+        db.execute(
+            """UPDATE ssn_profile_requests
+               SET status='COMPLETED', admin_response=?, updated_at=CURRENT_TIMESTAMP
+               WHERE request_id=?""",
+            (response_text, request_id),
+        )
+        db.execute(
+            "UPDATE ssn_assistance_invoices SET request_status='COMPLETED' WHERE invoice_id=(SELECT invoice_id FROM ssn_profile_requests WHERE request_id=?)",
+            (request_id,),
+        )
+
+    context.user_data.pop("profile_request_reply_id", None)
+    main_bot = context.application.bot_data.get("main_bot") or context.application.bot
+    try:
+        await main_bot.send_message(
+            chat_id=telegram_id,
+            text=(
+                "✅ UNARED | RESPUESTA A TU SOLICITUD\n"
+                "━━━━━━━━━━━━━━━━━━\n\n"
+                f"{response_text}\n\n"
+                f"📋 Solicitud: #{request_id}\nEstado: COMPLETADA"
+            ),
+        )
+        await update.message.reply_text(
+            f"✅ Respuesta enviada al cliente. Solicitud #{request_id} marcada como completada."
+        )
+    except Exception:
+        logger.exception("No se pudo enviar la respuesta de la solicitud %s al cliente.", request_id)
+        await update.message.reply_text(
+            "⚠️ La respuesta quedó guardada, pero no se pudo entregar al cliente. Revisa que haya iniciado el bot."
+        )
+
+
 async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_customer(update.effective_user)
     # Los mensajes de grupos/canales no son solicitudes de clientes.
     # La música de @Una1Red se procesa únicamente en channel_music_ingest.
     if not update.effective_chat or update.effective_chat.type != "private":
+        return
+
+    if context.user_data.get("waiting_profile_update"):
+        detail = (update.message.text or "").strip()
+        if not detail or len(detail) < 20 or len(detail) > 1500:
+            await update.message.reply_text(
+                "⚠️ El formulario está incompleto o es demasiado largo. "
+                "Envía nombre, dirección, ciudad, estado y ZIP en un solo mensaje."
+            )
+            return
+
+        user = update.effective_user
+        loading = await update.message.reply_text("⌛️ Cargando solicitud")
+        try:
+            invoice_id = "WALLET-SSN-" + uuid.uuid4().hex[:16].upper()
+            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                ensure_wallet_tables(db)
+                db.execute("BEGIN IMMEDIATE")
+                db.execute("""CREATE TABLE IF NOT EXISTS ssn_assistance_invoices (
+                    invoice_id TEXT PRIMARY KEY,
+                    telegram_id INTEGER NOT NULL,
+                    amount TEXT NOT NULL DEFAULT '3.00',
+                    request_type TEXT NOT NULL DEFAULT 'PROFILE_ADDRESS_UPDATE',
+                    status TEXT NOT NULL DEFAULT 'PAID',
+                    request_status TEXT NOT NULL DEFAULT 'PENDING',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )""")
+                db.execute("""CREATE TABLE IF NOT EXISTS ssn_profile_requests (
+                    request_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    invoice_id TEXT NOT NULL UNIQUE,
+                    telegram_id INTEGER NOT NULL,
+                    customer_name TEXT NOT NULL DEFAULT '',
+                    request_text TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'PENDING',
+                    admin_response TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )""")
+                wallet_row = db.execute(
+                    "SELECT balance FROM unared_wallets WHERE telegram_id=?", (user.id,)
+                ).fetchone()
+                current_balance = Decimal(wallet_row[0]) if wallet_row else Decimal("0.00")
+                service_price = Decimal("3.00")
+                if current_balance < service_price:
+                    db.rollback()
+                    context.user_data.pop("waiting_profile_update", None)
+                    await loading.edit_text(
+                        "❌ Fondo insuficiente. Necesitas US$3.00 para enviar esta solicitud.",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("➕ Recargar saldo", callback_data="wallet_topup_start")],
+                            [InlineKeyboardButton("👤 Mi perfil", callback_data="ssn_status")],
+                        ]),
+                    )
+                    return
+
+                new_balance = current_balance - service_price
+                db.execute(
+                    """INSERT INTO unared_wallet_ledger
+                       (telegram_id, invoice_id, entry_type, amount)
+                       VALUES (?, ?, 'SERVICE', ?)""",
+                    (user.id, invoice_id, format(-service_price, ".2f")),
+                )
+                db.execute(
+                    "UPDATE unared_wallets SET balance=?, updated_at=CURRENT_TIMESTAMP WHERE telegram_id=?",
+                    (format(new_balance, ".2f"), user.id),
+                )
+                db.execute(
+                    """INSERT INTO ssn_assistance_invoices
+                       (invoice_id, telegram_id, amount, request_type, status, request_status)
+                       VALUES (?, ?, '3.00', 'PROFILE_ADDRESS_UPDATE', 'PAID', 'PENDING')""",
+                    (invoice_id, user.id),
+                )
+                cursor = db.execute(
+                    """INSERT INTO ssn_profile_requests
+                       (invoice_id, telegram_id, customer_name, request_text, status)
+                       VALUES (?, ?, ?, ?, 'PENDING')""",
+                    (invoice_id, user.id, user.full_name or "", detail),
+                )
+                request_id = cursor.lastrowid
+                db.commit()
+
+            context.user_data.pop("waiting_profile_update", None)
+            for loading_text in ("⌛️ Cargando solicitud.", "⌛️ Cargando solicitud..", "⌛️ Cargando solicitud..."):
+                await asyncio.sleep(0.55)
+                try:
+                    await loading.edit_text(loading_text)
+                except Exception:
+                    pass
+            await loading.edit_text(
+                "⌛️ UNARED | SOLICITUD CARGADA\n\n"
+                "Tu formulario fue recibido y está pendiente de revisión. "
+                "Cuando el equipo complete la actualización, recibirás aquí la respuesta.\n\n"
+                f"Referencia: {invoice_id}\nEstado: EN ESPERA"
+            )
+
+            admin_bot = context.application.bot_data.get("admin_bot") or context.application.bot
+            admin_text = (
+                "🪪 NUEVA SOLICITUD | ACTUALIZACIÓN DE PERFIL\n"
+                "━━━━━━━━━━━━━━━━━━\n\n"
+                f"📌 Solicitud: #{request_id}\n"
+                f"👤 Cliente: {user.full_name or 'Sin nombre'}\n"
+                f"🔗 Usuario: @{user.username or 'Sin usuario'}\n"
+                f"🆔 Telegram ID: {user.id}\n"
+                f"🧾 Referencia: {invoice_id}\n"
+                "💵 Cargo: US$3.00\n"
+                "⌛️ Estado: PENDIENTE\n\n"
+                "📋 DATOS ENVIADOS:\n"
+                f"{detail}"
+            )
+            admin_keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("⌛️ Marcar en proceso", callback_data=f"profile_req_process:{request_id}")],
+                [InlineKeyboardButton("📨 Responder al cliente", callback_data=f"profile_req_reply:{request_id}")],
+            ])
+            try:
+                await admin_bot.send_message(
+                    chat_id=int(BOT_OWNER_ID), text=admin_text, reply_markup=admin_keyboard
+                )
+            except Exception:
+                logger.exception("No se pudo notificar al administrador la solicitud %s.", request_id)
+                await loading.edit_text(
+                    "⌛️ Tu solicitud quedó registrada, pero el aviso al administrador falló. "
+                    "No vuelvas a enviarla; el equipo revisará el registro."
+                )
+        except (sqlite3.Error, InvalidOperation, ValueError):
+            logger.exception("No se pudo registrar la solicitud de actualización de perfil.")
+            context.user_data.pop("waiting_profile_update", None)
+            await loading.edit_text(
+                "❌ No pudimos registrar tu solicitud. Si se debitó saldo, contacta al equipo antes de volver a intentarlo."
+            )
+        return
+
+    if is_admin(update.effective_user) and context.user_data.get("profile_request_reply_id"):
+        await receive_admin_profile_reply(update, context)
         return
 
     if context.user_data.get("wallet_topup_step") == "amount":
@@ -5223,7 +5385,7 @@ def build_main_application():
     # /buscarcliente está disponible exclusivamente en el bot de administración.
     # Solo los callbacks administrativos pasan por el control de acceso del panel.
     # Los botones de servicios y precios siguen llegando a select_option.
-    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|av:|ap:|ssn_process:|ssn_complete:|copy_id:|notify_customer:)"))
+    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|av:|ap:|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|copy_id:|notify_customer:)"))
     app.add_handler(CallbackQueryHandler(select_option))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_new_members))
     app.add_handler(TypeHandler(Update, channel_music_ingest), group=-1)
