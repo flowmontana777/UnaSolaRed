@@ -2998,7 +2998,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "💳 CVV — código de tarjeta\n"
                 "🪪 SSN — seguro social\n"
                 "💳Tarjeta — últimos dígitos\n"
-                "🚘 Licencia — licencia de conducir
+                "🚘 Licencia — licencia de conducir\n"
                 "❹ ¿Qué categorías hay?\n"
                 "💳 Pagos · 🏦 Banco · 🛒 E-commerce · 📱 Telecom\n"
                 "🍎 Apple · 🔵 Google · 🪟 Microsoft · ⚙️ Genérica\n"
