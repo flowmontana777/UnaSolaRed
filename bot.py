@@ -2966,8 +2966,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/9Ct8LfQ/Create-promotional-image-for-tel-740dbeb8.jpg",
             caption=(
                 "🤖 UNARED | CATÁLOGO DE BOTS\n\n"
-                "🔎 ¿Buscas un bot que esté funcionando?\n"
-                "💚🤖En UnaRed Bot tenemos todos los Bot que está funcionando\n\n"
+                "🔎 ¿Buscas un bot que esté funcionando?\n\n"
+                "🤖En UnaRed Bot tenemos todos los Bot que está funcionando\n\n"
+                  "Status: ✅ Online\n\n"
                 "Selecciona el tipo de automatización que necesitas:\n\n"
             ),
             reply_markup=bot_catalog_menu(),
