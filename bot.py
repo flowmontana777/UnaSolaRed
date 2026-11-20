@@ -132,9 +132,21 @@ async def notify_invoice_pending(
             admin_bot = application.bot_data.get("admin_bot")
             if not admin_bot:
                 raise RuntimeError("El bot administrativo no está inicializado.")
+            invoice_keyboard = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("🔎 Verificar pago WolvPay", callback_data=f"admin_invoice_verify_pending:{table_name}:{invoice_id}"),
+                ],
+                [
+                    InlineKeyboardButton("✅ Pagado", callback_data=f"admin_invoice_paid_pending:{table_name}:{invoice_id}"),
+                ],
+                [
+                    InlineKeyboardButton("👤 Ir al perfil", callback_data=f"view_customer:{int(telegram_id)}"),
+                    InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(telegram_id)}"),
+                ],
+            ])
             await admin_bot.send_photo(
                 chat_id=int(BOT_OWNER_ID), photo=image_url, caption=admin_caption,
-                reply_markup=copy_id_keyboard(telegram_id),
+                reply_markup=invoice_keyboard,
             )
         except Exception:
             logger.exception("No se pudo enviar la notificación de factura pendiente al administrador %s.", invoice_id)
