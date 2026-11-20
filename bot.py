@@ -3672,11 +3672,11 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Para buscar SSN del Cliente.\n\n"
             "2️⃣ ¿Qué información debo enviar?\n"
             "Nombre y apellido, dirección, ciudad, estado y ZIP, siguiendo el ejemplo del bot.\n\n"
-            👤Full Address:
-Antonio Wagner
-3112 Baldwin Brook Dr
-Montgomery
-AL
+            👤Full Address:\n"
+Antonio Wagner\n"
+3112 Baldwin Brook Dr\n"
+Montgomery\n"
+AL\n"
 36116\n\n"
             "3️⃣ ¿Qué sucede después de enviar el formulario?\n"
             "El equipo de UnaRed recibe la solicitud y te responde por este mismo chat.\n\n"
