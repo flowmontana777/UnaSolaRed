@@ -2979,11 +2979,11 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice == "bot_template":
         await query.answer()
         await query.message.reply_text(
-            "📄 PLANTILLA | UNARED\\n\\n"
-            "Name: Nombre del cliente\\n"
-            "DOB: 06/04/1990\\n"
-            "Plantilla: S78491614\\n"
-            "Estado: [Estado]\\n\\n"
+            "📄 PLANTILLA | UNARED\n\n"
+            "Name: Nombre del cliente\n"
+            "DOB: 06/04/1990\n"
+            "Plantilla: S78491614\n"
+            "Estado: [Estado]\n\n"
             "🧪 Ejemplo ficticio para demostración. No envíes datos personales reales."
         )
         return
