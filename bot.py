@@ -2249,7 +2249,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"👤 Nombre: {user.full_name or 'No disponible'}\n"
             f"🔗 Usuario: @{user.username if user.username else 'Sin username'}\n"
             f"🆔 Telegram ID: {user.id}\n\n"
-            f"💰 SALDO DISPONIBLE: US$\{balance}\n\n"
+            f"💰 SALDO DISPONIBLE: US${balance}\n\n"
             "Administra tu cuenta o selecciona uno de los servicios disponibles.",
             reply_markup=profile_keyboard,
         )
@@ -2301,7 +2301,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "REJECTED": "⛔ Rechazada",
         }
         lines = [
-            f"• {service} · US$\{amount}\n  {status_labels.get(status, status)}"
+            f"• {service} · US${amount}\n  {status_labels.get(status, status)}"
             + (f" · {created_at}" if created_at else "")
             + f"\n  Factura: {invoice_id}"
             for created_at, service, invoice_id, amount, status in rows
@@ -2333,7 +2333,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         lines = [
             f"• {'Recarga' if entry_type == 'TOPUP' else 'Servicio'} · "
-            f"{'+' if Decimal(str(amount)) >= 0 else ''}US$\{amount}\n"
+            f"{'+' if Decimal(str(amount)) >= 0 else ''}US${amount}\n"
             f"  {created_at}\n  Referencia: {invoice_id}"
             for entry_type, amount, invoice_id, created_at in rows
         ]
