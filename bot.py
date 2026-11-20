@@ -2148,19 +2148,6 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    if choice == "tool_pyp":
-        await query.message.reply_text(
-            "💚 UNARED | MÉTODO PyP\n\n"
-            "Importe fijo: US$100\n"
-            "Genera una factura individual mediante WolvPay. "
-            "La confirmación del pago se enviará automáticamente.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💳 Pagar US$100", callback_data="pyp_pay")],
-                [InlineKeyboardButton("⬅️ Volver", callback_data="menu_tools")],
-            ]),
-        )
-        return
-
     if choice == "pyp_pay":
         await query.message.reply_text(
             "💚 UNARED | FACTURA MÉTODO PyP\n\n"
@@ -2643,6 +2630,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "con quienes desean conocer estas oportunidades."
             ),
             reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💳 Pagar US$100", callback_data="pyp_pay")],
                 [InlineKeyboardButton("💬 Consultar y solicitar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
             ]),
