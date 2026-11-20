@@ -6,6 +6,7 @@ import hmac
 import hashlib
 import json
 import sqlite3
+import uuid
 from io import BytesIO
 from decimal import Decimal, InvalidOperation
 from datetime import datetime
@@ -3639,18 +3640,16 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]),
             disable_web_page_preview=True,
         )
-        return
-
-    if choice == "ssn_search":
+        if choice == "ssn_search":
         await query.message.reply_text(
-            "🔎 UNARED | ASISTENCIA SSN\n\n"
-            "Orientación para que el titular recupere su propio SSN mediante los canales oficiales de la SSA.\n\n"
-            "💵 Precio: US$5.00\n"
-            "🔐 No solicitamos SSN completo, fecha de nacimiento, documentos, contraseñas ni datos de terceros.\n\n"
-            "No realizamos búsquedas en bases de datos ni entregamos números de Seguro Social. Al continuar confirmas que eres el titular y que solo deseas orientación oficial.",
+            "🔎 UNARED | ASISTENCIA SSN\\n\\n"
+            "Servicio limitado a orientar al titular para recuperar su propio SSN mediante los canales oficiales de la SSA.\\n\\n"
+            "💵 Precio del servicio: US$3.00\\n"
+            "🔐 No solicitamos SSN completo, fecha de nacimiento, documentos, contraseñas ni datos de terceros.\\n\\n"
+            "No buscamos SSN en bases de datos ni entregamos números de Seguro Social. Al continuar confirmas que eres el titular y que solo deseas orientación oficial.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("✅ Soy el titular — Continuar", callback_data="ssn_assist_confirm")],
-                [InlineKeyboardButton("📋 Ver estado de mi solicitud", callback_data="ssn_status")],
+                [InlineKeyboardButton("👤 Mi perfil / Recargar saldo", callback_data="ssn_status")],
                 [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
             ]),
         )
@@ -3659,78 +3658,94 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice == "ssn_assist_confirm":
         await query.answer()
         user = update.effective_user
-        if not WOLVPAY_API_KEY:
-            await query.message.reply_text("⚠️ WolvPay no está configurado. Contacta al equipo de UnaRed.")
-            return
+        service_price = Decimal("3.00")
+        invoice_id = "WALLET-SSN-" + uuid.uuid4().hex[:16].upper()
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{WOLVPAY_API_URL}/invoices",
-                    headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}", "Content-Type": "application/json"},
-                    json={
-                        "amount": 5.00,
-                        "currency": "USD",
-                        "coin": "trc20_usdt",
-                        "description": f"UNARED_SSN_ASSISTANCE|telegram_id={user.id}",
-                        "white_label": False,
-                    },
-                    timeout=aiohttp.ClientTimeout(total=25),
-                ) as response:
-                    payload = await response.json(content_type=None)
-                    if response.status not in (200, 201) or payload.get("success") is False:
-                        raise RuntimeError("WolvPay invoice creation failed")
-            data = payload.get("data") or payload
-            invoice_id = data.get("invoice_id")
-            invoice_url = data.get("url") or data.get("payment_url")
-            if not invoice_id or not invoice_url:
-                raise RuntimeError("Incomplete WolvPay invoice response")
             with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                ensure_wallet_tables(db)
+                db.execute("BEGIN IMMEDIATE")
                 db.execute("""CREATE TABLE IF NOT EXISTS ssn_assistance_invoices (
                     invoice_id TEXT PRIMARY KEY,
                     telegram_id INTEGER NOT NULL,
-                    amount TEXT NOT NULL DEFAULT '5.00',
+                    amount TEXT NOT NULL DEFAULT '3.00',
                     request_type TEXT NOT NULL DEFAULT 'RECOVERY_GUIDANCE',
-                    status TEXT NOT NULL DEFAULT 'PENDING',
-                    request_status TEXT NOT NULL DEFAULT 'WAITING_PAYMENT',
+                    status TEXT NOT NULL DEFAULT 'PAID',
+                    request_status TEXT NOT NULL DEFAULT 'PAID',
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )""")
-                db.execute(
-                    "INSERT INTO ssn_assistance_invoices (invoice_id, telegram_id, amount, request_type, status, request_status) VALUES (?, ?, '5.00', 'RECOVERY_GUIDANCE', 'PENDING', 'WAITING_PAYMENT')",
-                    (invoice_id, user.id),
+                wallet_row = db.execute(
+                    "SELECT balance FROM unared_wallets WHERE telegram_id=?",
+                    (user.id,),
+                ).fetchone()
+                current_balance = Decimal(wallet_row[0]) if wallet_row else Decimal("0.00")
+                if current_balance < service_price:
+                    insufficient = True
+                else:
+                    insufficient = False
+                    new_balance = current_balance - service_price
+                    db.execute(
+                        """INSERT INTO unared_wallet_ledger
+                           (telegram_id, invoice_id, entry_type, amount)
+                           VALUES (?, ?, 'SERVICE', ?)""",
+                        (user.id, invoice_id, format(-service_price, ".2f")),
+                    )
+                    db.execute(
+                        "UPDATE unared_wallets SET balance=?, updated_at=CURRENT_TIMESTAMP WHERE telegram_id=?",
+                        (format(new_balance, ".2f"), user.id),
+                    )
+                    db.execute(
+                        """INSERT INTO ssn_assistance_invoices
+                           (invoice_id, telegram_id, amount, request_type, status, request_status)
+                           VALUES (?, ?, '3.00', 'RECOVERY_GUIDANCE', 'PAID', 'PAID')""",
+                        (invoice_id, user.id),
+                    )
+            if insufficient:
+                await query.message.reply_text(
+                    "❌ Fondo insuficiente\\n\\n"
+                    "Necesitas US$3.00 para solicitar la orientación. Recarga tu saldo primero y luego vuelve a pulsar Buscar 🔎.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("➕ Recargar saldo", callback_data="wallet_topup_start")],
+                        [InlineKeyboardButton("👤 Ver mi perfil", callback_data="ssn_status")],
+                        [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
+                    ]),
                 )
-            await notify_invoice_pending(
-                context.application, user.id, invoice_id, "5.00",
-                "Orientación oficial para recuperar SSN propio",
-                "ssn_assistance_invoices", send_customer=False, send_admin=True
-            )
-            admin_bot = context.application.bot_data.get("admin_bot")
-            if admin_bot:
+                return
+            admin_bot = context.application.bot_data.get("admin_bot") or context.application.bot
+            try:
                 await admin_bot.send_message(
                     chat_id=int(BOT_OWNER_ID),
                     text=(
-                        "🪪 NUEVA SOLICITUD | ASISTENCIA SSN\n\n"
-                        f"Cliente: {user.full_name}\nTelegram ID: {user.id}\nFactura: {invoice_id}\n"
-                        "Alcance: orientación al titular mediante canales oficiales SSA.\n"
-                        "No se recopilaron datos de identidad sensibles.\nEstado: esperando pago."
+                        "🪪 NUEVA SOLICITUD PAGADA | UNARED\\n\\n"
+                        f"Cliente: {user.full_name or 'Sin nombre'}\\nTelegram ID: {user.id}\\n"
+                        f"Referencia interna: {invoice_id}\\nImporte debitado del saldo: US$3.00\\n"
+                        "Alcance: orientación al titular mediante canales oficiales SSA.\\n"
+                        "No se recopilaron datos de identidad sensibles."
                     ),
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("⌛️ Marcar en proceso", callback_data=f"ssn_process:{invoice_id}")],
+                        [InlineKeyboardButton("✅ Completar solicitud", callback_data=f"ssn_complete:{invoice_id}")],
+                    ]),
                 )
+            except Exception:
+                logger.exception("No se pudo notificar al administrador de la solicitud SSN %s.", invoice_id)
             await query.message.reply_text(
-                "💚 UNARED | FACTURA DE ASISTENCIA\n\n"
-                "Servicio: orientación oficial para recuperar tu propio SSN\n"
-                "Importe: US$5.00\nMétodo: USDT (TRC20) mediante WolvPay\n"
-                f"Factura: {invoice_id}\n\n"
-                "WolvPay confirmará el pago. Después podrás consultar el estado de tu solicitud.",
+                "✅ SOLICITUD REGISTRADA | UNARED\\n\\n"
+                "Se debitó US$3.00 de tu saldo.\\n"
+                f"Referencia: {invoice_id}\\n"
+                "La solicitud es únicamente para orientarte a recuperar tu propio SSN mediante la SSA.\\n\\n"
+                "Puedes consultar el estado desde Mi perfil.",
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("💳 Abrir factura y pagar", url=invoice_url)],
-                    [InlineKeyboardButton("🔎 Verificar pago", callback_data=f"iv:{invoice_id}")],
-                    [InlineKeyboardButton("📋 Ver estado", callback_data="ssn_status")],
+                    [InlineKeyboardButton("📋 Ver estado de mi solicitud", callback_data="ssn_status")],
+                    [InlineKeyboardButton("👤 Mi perfil", callback_data="ssn_status")],
                     [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
                 ]),
             )
-        except Exception:
-            logger.exception("No se pudo crear la factura de asistencia SSN.")
-            await query.message.reply_text("❌ No pudimos generar la factura. Inténtalo más tarde o contacta al equipo.")
+        except (sqlite3.Error, InvalidOperation, ValueError):
+            logger.exception("No se pudo registrar la solicitud de asistencia SSN con saldo.")
+            await query.message.reply_text("❌ No pudimos registrar tu solicitud. No intentes pagar nuevamente; contacta al equipo para revisar tu saldo.")
         return
+
+    return
 
     if choice == "ssn_status":
         user = update.effective_user
@@ -3810,7 +3825,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["wallet_topup_step"] = "amount"
         await query.message.reply_text(
             "💚 UNARED | RECARGAR SALDO\n\nEscribe el monto que deseas recargar en USD.\n"
-            "Mínimo: US$1.00 · Máximo: US$5,000.00\n\n"
+            "Mínimo: US$5.00 · Máximo: US$5,000.00\n\n"
             "La factura WolvPay se generará por el importe exacto. El saldo solo se acreditará "
             "después de que WolvPay confirme el pago.\n\nEscribe /cancel para cancelar."
         )
@@ -4436,10 +4451,10 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             entered_amount = Decimal(raw_amount)
             amount = entered_amount.quantize(Decimal("0.01"))
             if (not amount.is_finite() or entered_amount != amount
-                    or amount < Decimal("1.00") or amount > Decimal("5000.00")):
+                    or amount < Decimal("5.00") or amount > Decimal("5000.00")):
                 raise InvalidOperation
         except (InvalidOperation, ValueError):
-            await update.message.reply_text("⚠️ Monto no válido. Escribe una cantidad entre US$1.00 y US$5,000.00, por ejemplo: 25.00.")
+            await update.message.reply_text("⚠️ Monto no válido. Escribe una cantidad entre US$5.00 y US$5,000.00, por ejemplo: 25.00.")
             return
         if not WOLVPAY_API_KEY:
             context.user_data.pop("wallet_topup_step", None)
