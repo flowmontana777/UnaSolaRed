@@ -154,7 +154,7 @@ async def notify_invoice_pending(
 
 async def schedule_payment_reminder(application, table_name, invoice_id, telegram_id, amount, service, invoice_url=None):
     """Send up to three reminders every three minutes while the invoice remains pending."""
-    allowed_tables = {"dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "bill_invoices", "edit_upload_invoices", "ssn_assistance_invoices"}
+    allowed_tables = {"dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "bill_invoices", "edit_upload_invoices", "ssn_assistance_invoices", "wallet_topup_invoices"}
     if table_name not in allowed_tables:
         return
     for attempt in range(1, 4):
@@ -685,7 +685,44 @@ async def ask_for_details(query, context, service):
 # =====================================
 # PANEL PRIVADO UNARED
 # =====================================
-INVOICE_TABLES = ("bill_invoices", "dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "edit_upload_invoices", "ssn_assistance_invoices")
+INVOICE_TABLES = ("bill_invoices", "dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "edit_upload_invoices", "ssn_assistance_invoices", "wallet_topup_invoices")
+
+def ensure_wallet_tables(db):
+    db.execute("""CREATE TABLE IF NOT EXISTS unared_wallets (
+        telegram_id INTEGER PRIMARY KEY, balance TEXT NOT NULL DEFAULT '0.00',
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )""")
+    db.execute("""CREATE TABLE IF NOT EXISTS unared_wallet_ledger (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id INTEGER NOT NULL,
+        invoice_id TEXT NOT NULL UNIQUE, entry_type TEXT NOT NULL,
+        amount TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )""")
+    db.execute("""CREATE TABLE IF NOT EXISTS wallet_topup_invoices (
+        invoice_id TEXT PRIMARY KEY, telegram_id INTEGER NOT NULL,
+        amount TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'PENDING',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )""")
+
+def credit_wallet_topup(db, invoice_id, telegram_id, amount):
+    """Acredita una sola vez por factura, dentro de la transacción SQLite activa."""
+    ensure_wallet_tables(db)
+    amount_decimal = Decimal(str(amount)).quantize(Decimal("0.01"))
+    inserted = db.execute(
+        """INSERT OR IGNORE INTO unared_wallet_ledger
+           (telegram_id, invoice_id, entry_type, amount)
+           VALUES (?, ?, 'TOPUP', ?)""",
+        (int(telegram_id), str(invoice_id), format(amount_decimal, ".2f")),
+    )
+    if inserted.rowcount != 1:
+        return False
+    current = db.execute("SELECT balance FROM unared_wallets WHERE telegram_id=?", (int(telegram_id),)).fetchone()
+    new_balance = (Decimal(current[0]) if current else Decimal("0.00")) + amount_decimal
+    db.execute(
+        """INSERT INTO unared_wallets (telegram_id, balance) VALUES (?, ?)
+           ON CONFLICT(telegram_id) DO UPDATE SET balance=excluded.balance, updated_at=CURRENT_TIMESTAMP""",
+        (int(telegram_id), format(new_balance, ".2f")),
+    )
+    return True
 
 def save_customer(user):
     """Guarda/actualiza al cliente y devuelve True únicamente en su primer registro."""
@@ -1908,6 +1945,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "pages_invoices": "Páginas Web / Buy CC",
                 "icloud_invoices": "iCloud",
                 "edit_upload_invoices": "Editar y subir papel",
+                "wallet_topup_invoices": "Recarga de saldo UnaRed",
             }
             service_name = service_names.get(table_name, "Servicio UnaRed")
             if status_now == "PAID":
@@ -1976,6 +2014,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         "UPDATE ssn_assistance_invoices SET request_status='PAID' WHERE invoice_id=? AND request_status='WAITING_PAYMENT'",
                         (invoice_id,),
                     )
+                elif table_name == "wallet_topup_invoices":
+                    credit_wallet_topup(db, invoice_id, telegram_id, expected_amount)
             if admin_bot:
                 username = "@" + update.effective_user.username if update.effective_user.username else "Sin username público"
                 await admin_bot.send_message(
@@ -1999,6 +2039,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text(
                 "✅ WolvPay confirma el pago. Tu factura quedó marcada como PAGADA y el equipo de UnaRed fue notificado."
                 + ("\n\n⌛️ Estado de tu solicitud: Cargando... Puedes consultar el avance con «Ver estado»." if table_name == "ssn_assistance_invoices" else "")
+                + ("\n\n💰 Tu recarga fue acreditada una sola vez. Consulta tu saldo desde Mi perfil." if table_name == "wallet_topup_invoices" else "")
             )
         except (aiohttp.ClientError, asyncio.TimeoutError, sqlite3.Error, InvalidOperation, ValueError, TypeError):
             logger.exception("Error processing customer invoice action %s for %s", choice, update.effective_user.id)
@@ -2031,7 +2072,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice.startswith("cancel_invoice:"):
         try:
             _, table_name, invoice_id = choice.split(":", 2)
-            allowed_tables = {"dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "bill_invoices", "edit_upload_invoices"}
+            allowed_tables = {"dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "bill_invoices", "edit_upload_invoices", "wallet_topup_invoices"}
             if table_name not in allowed_tables:
                 raise ValueError("Invalid invoice table")
             with sqlite3.connect(DATABASE_PATH) as db:
@@ -3692,29 +3733,49 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice == "ssn_status":
         user = update.effective_user
         with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+            ensure_wallet_tables(db)
+            wallet_row = db.execute("SELECT balance FROM unared_wallets WHERE telegram_id=?", (user.id,)).fetchone()
+            balance = wallet_row[0] if wallet_row else "0.00"
             exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ssn_assistance_invoices'").fetchone()
-            row = db.execute(
-                "SELECT invoice_id, status, request_status, created_at FROM ssn_assistance_invoices WHERE telegram_id=? ORDER BY created_at DESC LIMIT 1",
-                (user.id,),
-            ).fetchone() if exists else None
-        if not row:
-            status_text = "Todavía no tienes solicitudes registradas."
-        else:
-            invoice_id, payment_status, request_status, created_at = row
-            labels = {
-                "WAITING_PAYMENT": "💳 Esperando pago",
-                "PAID": "⌛️ Cargando... — pago confirmado, en cola de revisión",
-                "PROCESSING": "⌛️ Cargando... — solicitud en revisión",
-                "COMPLETED": "✅ Completada",
-            }
+            requests = db.execute(
+                """SELECT invoice_id, status, request_status, created_at FROM ssn_assistance_invoices
+                   WHERE telegram_id=? ORDER BY created_at DESC LIMIT 10""", (user.id,)
+            ).fetchall() if exists else []
+            topups = db.execute(
+                """SELECT invoice_id, amount, created_at FROM unared_wallet_ledger
+                   WHERE telegram_id=? AND entry_type='TOPUP' ORDER BY created_at DESC LIMIT 5""", (user.id,)
+            ).fetchall()
+        labels = {"WAITING_PAYMENT": "💳 Esperando pago", "PAID": "⌛️ Pago confirmado · En cola",
+                  "PROCESSING": "🔄 En revisión", "COMPLETED": "✅ Completada"}
+        request_lines = []
+        for invoice_id, payment_status, request_status, created_at in requests:
             state = request_status if str(payment_status).upper() == "PAID" else "WAITING_PAYMENT"
-            status_text = f"Factura: {invoice_id}\nEstado: {labels.get(state, state)}\nFecha: {created_at}"
+            request_lines.append(f"• {labels.get(state, state)}\n  Factura: {invoice_id}\n  Fecha: {created_at}")
+        topup_lines = [f"• +US${amount} · {created_at}" for _, amount, created_at in topups]
+        profile_text = (
+            "👤 UNARED | MI PERFIL\n\n"
+            f"🆔 Telegram: {user.id}\n👤 Nombre: {user.full_name or 'No disponible'}\n"
+            f"🔗 Usuario: @{user.username if user.username else 'Sin username'}\n\n"
+            f"💰 SALDO DISPONIBLE: US${balance}\n\n"
+            "📋 MIS SOLICITUDES\n"
+            + ("\n\n".join(request_lines) if request_lines else "Todavía no tienes solicitudes registradas.")
+            + "\n\n💳 ÚLTIMAS RECARGAS\n"
+            + ("\n".join(topup_lines) if topup_lines else "Todavía no tienes recargas confirmadas.")
+        )
+        await query.message.reply_text(profile_text, reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("➕ Recargar saldo", callback_data="wallet_topup_start")],
+            [InlineKeyboardButton("🔄 Actualizar perfil", callback_data="ssn_status")],
+            [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
+        ]))
+        return
+
+    if choice == "wallet_topup_start":
+        context.user_data["wallet_topup_step"] = "amount"
         await query.message.reply_text(
-            "📋 UNARED | ESTADO DE MI SOLICITUD\n\n" + status_text,
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔄 Actualizar", callback_data="ssn_status")],
-                [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
-            ]),
+            "💚 UNARED | RECARGAR SALDO\n\nEscribe el monto que deseas recargar en USD.\n"
+            "Mínimo: US$1.00 · Máximo: US$5,000.00\n\n"
+            "La factura WolvPay se generará por el importe exacto. El saldo solo se acreditará "
+            "después de que WolvPay confirme el pago.\n\nEscribe /cancel para cancelar."
         )
         return
 
@@ -4332,6 +4393,62 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.effective_chat or update.effective_chat.type != "private":
         return
 
+    if context.user_data.get("wallet_topup_step") == "amount":
+        raw_amount = (update.message.text or "").strip().replace(",", ".")
+        try:
+            amount = Decimal(raw_amount).quantize(Decimal("0.01"))
+            if not amount.is_finite() or amount < Decimal("1.00") or amount > Decimal("5000.00"):
+                raise InvalidOperation
+        except (InvalidOperation, ValueError):
+            await update.message.reply_text("⚠️ Monto no válido. Escribe una cantidad entre US$1.00 y US$5,000.00, por ejemplo: 25.00.")
+            return
+        if not WOLVPAY_API_KEY:
+            context.user_data.pop("wallet_topup_step", None)
+            await update.message.reply_text("⚠️ WolvPay no está configurado. Contacta al equipo de UnaRed.")
+            return
+        user = update.effective_user
+        amount_text = format(amount, ".2f")
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{WOLVPAY_API_URL}/invoices",
+                    headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}", "Content-Type": "application/json"},
+                    json={"amount": float(amount), "currency": "USD", "coin": "trc20_usdt",
+                          "description": f"UNARED_WALLET_TOPUP|telegram_id={user.id}", "white_label": False},
+                    timeout=aiohttp.ClientTimeout(total=25),
+                ) as response:
+                    payload = await response.json(content_type=None)
+                    if response.status not in (200, 201) or payload.get("success") is False:
+                        raise RuntimeError("WolvPay invoice creation failed")
+            data = payload.get("data") or payload
+            invoice_id = data.get("invoice_id")
+            invoice_url = data.get("url") or data.get("payment_url")
+            if not invoice_id or not invoice_url:
+                raise RuntimeError("Incomplete WolvPay invoice response")
+            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                ensure_wallet_tables(db)
+                db.execute("INSERT INTO wallet_topup_invoices (invoice_id, telegram_id, amount, status) VALUES (?, ?, ?, 'PENDING')",
+                           (invoice_id, user.id, amount_text))
+            context.user_data.pop("wallet_topup_step", None)
+            await notify_invoice_pending(context.application, user.id, invoice_id, amount_text,
+                "Recarga de saldo UnaRed", "wallet_topup_invoices", send_customer=False, send_admin=True)
+            await update.message.reply_text(
+                "💚 UNARED | FACTURA DE RECARGA\n\n"
+                f"💵 Importe: US${amount_text}\n🧾 Factura: {invoice_id}\n"
+                "🌐 Método: USDT (TRC20) · WolvPay\n\n"
+                "Completa el pago desde la factura. El saldo se acreditará automáticamente "
+                "cuando WolvPay confirme el importe exacto.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("💳 Abrir factura y pagar", url=invoice_url)],
+                    [InlineKeyboardButton("🔎 Verificar pago", callback_data=f"iv:{invoice_id}")],
+                    [InlineKeyboardButton("👤 Ver mi perfil", callback_data="ssn_status")],
+                ]),
+            )
+        except Exception:
+            logger.exception("No se pudo crear la factura de recarga de saldo.")
+            await update.message.reply_text("❌ No pudimos generar la factura. Tu saldo no fue modificado; inténtalo más tarde.")
+        return
+
     # El administrador puede configurar la portada de Modo Digital
     # enviando la imagen al bot con el texto /setdigitalbanner como caption.
     if (
@@ -4781,6 +4898,12 @@ async def wolvpay_webhook(request):
                     (invoice_id,),
                 ).fetchone()
                 invoice_type = "ssn_assistance"
+            if not row:
+                row = db.execute(
+                    "SELECT telegram_id, amount, status FROM wallet_topup_invoices WHERE invoice_id = ?",
+                    (invoice_id,),
+                ).fetchone()
+                invoice_type = "wallet_topup"
     except sqlite3.Error:
         logger.exception("Could not read WolvPay invoice record.")
         return web.Response(status=500, text="Database error.")
@@ -4794,6 +4917,11 @@ async def wolvpay_webhook(request):
         customer_description = "Tu pago de US$5.00 para orientación de recuperación de tu propio SSN fue confirmado automáticamente."
         order_detail = "Servicio: orientación para utilizar los canales oficiales de la SSA."
         admin_detail = "Servicio: asistencia SSN propia\nImporte confirmado: US$5.00"
+    elif invoice_type == "wallet_topup":
+        telegram_id, expected_amount, current_status = row
+        customer_description = f"Tu recarga de saldo por US${expected_amount} fue confirmada automáticamente."
+        order_detail = "Servicio: recarga de saldo UnaRed"
+        admin_detail = f"Servicio: recarga de saldo\nImporte acreditado: US${expected_amount}"
     elif invoice_type == "dayler":
         telegram_id, expected_amount, username, current_status = row
         customer_description = "Tu pago de US$150 para la solicitud Dayler fue confirmado automáticamente."
@@ -4858,7 +4986,7 @@ async def wolvpay_webhook(request):
 
     try:
         with sqlite3.connect(DATABASE_PATH) as db:
-            table_name = {"dayler": "dayler_invoices", "pyp": "pyp_invoices", "pages": "pages_invoices", "icloud": "icloud_invoices", "demo": "demo_bot_invoices", "bill": "bill_invoices", "edit_upload": "edit_upload_invoices", "ssn_assistance": "ssn_assistance_invoices"}[invoice_type]
+            table_name = {"dayler": "dayler_invoices", "pyp": "pyp_invoices", "pages": "pages_invoices", "icloud": "icloud_invoices", "demo": "demo_bot_invoices", "bill": "bill_invoices", "edit_upload": "edit_upload_invoices", "ssn_assistance": "ssn_assistance_invoices", "wallet_topup": "wallet_topup_invoices"}[invoice_type]
             db.execute(
                 f"UPDATE {table_name} SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'",
                 (invoice_id,),
@@ -4868,6 +4996,8 @@ async def wolvpay_webhook(request):
                     "UPDATE ssn_assistance_invoices SET request_status='PAID' WHERE invoice_id=? AND request_status='WAITING_PAYMENT'",
                     (invoice_id,),
                 )
+            elif invoice_type == "wallet_topup":
+                credit_wallet_topup(db, invoice_id, telegram_id, expected_amount)
             confirmed = db.execute(
                 f"SELECT status FROM {table_name} WHERE invoice_id = ?",
                 (invoice_id,),
@@ -4921,10 +5051,10 @@ async def wolvpay_webhook(request):
         "✅ PAGO REALIZADO | UNARED\n\n"
         f"{customer_description}\n{order_detail}\n"
         f"Factura: {invoice_id}\n\n"
-        ("Tu solicitud está en cola. Puedes consultar el estado desde el botón «Ver estado»." if invoice_type == "ssn_assistance" else "El equipo de UnaRed continuará con la preparación de tu servicio.")
+        ("Tu solicitud está en cola. Puedes consultar el estado desde el botón «Ver estado»." if invoice_type == "ssn_assistance" else "Tu saldo ya está disponible en Mi perfil." if invoice_type == "wallet_topup" else "El equipo de UnaRed continuará con la preparación de tu servicio.")
     )
     admin_text = (
-        "💚 PAGO " + ({"dayler": "DAYLER", "pyp": "MÉTODO PyP", "pages": "PÁGINAS WEB", "icloud": "ICLOUD", "demo": "DEMO SANDBOX", "bill": "PAGO DE SERVICIOS", "edit_upload": "EDITAR Y SUBIR PAPEL", "ssn_assistance": "ASISTENCIA SSN"}[invoice_type]) + " CONFIRMADO | UNARED\n\n"
+        "💚 PAGO " + ({"dayler": "DAYLER", "pyp": "MÉTODO PyP", "pages": "PÁGINAS WEB", "icloud": "ICLOUD", "demo": "DEMO SANDBOX", "bill": "PAGO DE SERVICIOS", "edit_upload": "EDITAR Y SUBIR PAPEL", "ssn_assistance": "ASISTENCIA SSN", "wallet_topup": "RECARGA DE SALDO"}[invoice_type]) + " CONFIRMADO | UNARED\n\n"
         f"Cliente: {customer_username}\n"
         f"Cliente Telegram ID: {telegram_id}\n{admin_detail}\n"
         f"Factura WolvPay: {invoice_id}\n"
@@ -4938,7 +5068,9 @@ async def wolvpay_webhook(request):
                 text=customer_text,
                 reply_markup=(
                     InlineKeyboardMarkup([[InlineKeyboardButton("📋 Ver estado de mi solicitud", callback_data="ssn_status")]])
-                    if invoice_type == "ssn_assistance" else None
+                    if invoice_type == "ssn_assistance" else
+                    InlineKeyboardMarkup([[InlineKeyboardButton("👤 Ver mi perfil", callback_data="ssn_status")]])
+                    if invoice_type == "wallet_topup" else None
                 ),
                 disable_web_page_preview=True,
             )
