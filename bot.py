@@ -2968,6 +2968,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "🤖 UNARED | CATÁLOGO DE BOTS\n\n"
                 "🔎 ¿Buscas un bot que esté funcionando? Aquí lo revisamos "
                 "y probamos.\n\n"
+                "💚🤖En UnaRed Bot tenemos todos los Bot que está funcionando\n\n"
                 "Selecciona el tipo de automatización que necesitas:\n\n"
             ),
             reply_markup=bot_catalog_menu(),
