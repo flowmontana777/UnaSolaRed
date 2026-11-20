@@ -1269,6 +1269,8 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                     db.rollback()
                     await query.message.reply_text("⛔ La factura no está en un estado que permita confirmarla.")
                     return
+                if table_name == "wallet_topup_invoices":
+                    credit_wallet_topup(db, invoice_id, telegram_id, expected_amount)
                 claimed = db.execute(
                     """UPDATE wolvpay_notifications
                        SET approval_status='APPROVED', image_status='SENDING',
@@ -4396,8 +4398,10 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get("wallet_topup_step") == "amount":
         raw_amount = (update.message.text or "").strip().replace(",", ".")
         try:
-            amount = Decimal(raw_amount).quantize(Decimal("0.01"))
-            if not amount.is_finite() or amount < Decimal("1.00") or amount > Decimal("5000.00"):
+            entered_amount = Decimal(raw_amount)
+            amount = entered_amount.quantize(Decimal("0.01"))
+            if (not amount.is_finite() or entered_amount != amount
+                    or amount < Decimal("1.00") or amount > Decimal("5000.00")):
                 raise InvalidOperation
         except (InvalidOperation, ValueError):
             await update.message.reply_text("⚠️ Monto no válido. Escribe una cantidad entre US$1.00 y US$5,000.00, por ejemplo: 25.00.")
