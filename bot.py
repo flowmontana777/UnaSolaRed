@@ -3767,8 +3767,6 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text("❌ No pudimos registrar tu solicitud. No intentes pagar nuevamente; contacta al equipo para revisar tu saldo.")
         return
 
-    return
-
     if choice == "ssn_status":
         user = update.effective_user
         with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
