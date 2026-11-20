@@ -2972,6 +2972,21 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    if choice.startswith("bothelp_"):
+        product = choice.rsplit("_", 1)[-1]
+        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK"}
+        label = labels.get(product)
+        if not label:
+            await query.answer("Ayuda no disponible.", show_alert=True)
+            return
+        await query.answer()
+        await query.message.reply_text(
+            f"❓ AYUDA | {label}\n\n"
+            "La sección de preguntas frecuentes se está preparando. "
+            "Pronto encontrarás aquí las respuestas a tus dudas."
+        )
+        return
+
     if choice == "botproduct_otp":
         await query.message.reply_photo(
             photo="https://i.ibb.co/21033K6c/Creating-promotional-image-design-310bdb13.jpg",
@@ -2994,6 +3009,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_otp")],
+                [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_otp")],
                 [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
             ]),
@@ -3006,6 +3022,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption="💚 UNARED | BOT SSN\n\nConsulta información y disponibilidad con nuestro equipo.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_ssn")],
+                [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_ssn")],
                 [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
             ]),
@@ -3018,6 +3035,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption="💚 UNARED | BOT CHECK\n\nConsulta información y disponibilidad con nuestro equipo.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_check")],
+                [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_check")],
                 [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
             ]),
