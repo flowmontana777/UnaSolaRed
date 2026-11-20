@@ -2979,12 +2979,39 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not label:
             await query.answer("Ayuda no disponible.", show_alert=True)
             return
+
         await query.answer()
-        await query.message.reply_text(
-            f"❓ AYUDA | {label}\n\n"
-            "La sección de preguntas frecuentes se está preparando. "
-            "Pronto encontrarás aquí las respuestas a tus dudas."
-        )
+        if product == "otp":
+            await query.message.reply_text(
+                "❓ PREGUNTAS FRECUENTES | BOT OTP\n\n"
+                "❶ ¿Qué es Bot OTP?\n"
+                "Plataforma para realizar demostraciones de verificación mediante llamadas IVR "
+                "en entornos de prueba autorizados.\n\n"
+                "❷ ¿Cómo funciona?\n"
+                "① Ingresas datos ficticios o de prueba autorizados.\n"
+                "② Eliges una categoría de demostración.\n"
+                "③ Configuras el escenario de prueba.\n"
+                "④ Se ejecuta la llamada IVR de demostración.\n"
+                "⑤ Revisas el resultado desde Telegram.\n\n"
+                "❸ ¿Qué se puede probar?\n"
+                "🔢 Flujos OTP ficticios\n"
+                "📞 Scripts IVR de demostración\n"
+                "📊 Estados y resultados simulados\n\n"
+                "❹ ¿Qué categorías hay?\n"
+                "💳 Pagos · 🏦 Banca · 🛒 E-commerce · 📱 Telecom\n"
+                "🍎 Apple · 🔵 Google · 🪟 Microsoft · ⚙️ Genérica\n"
+                "Solo para pruebas autorizadas y sin recopilar credenciales reales.\n\n"
+                "❺ ¿Cómo pago?\n"
+                "Mediante WolvPay con criptomonedas compatibles, como BTC, ETH, USDT y LTC.\n\n"
+                "❻ ¿Necesito instalar algo?\n"
+                "No. Todo funciona desde Telegram en cualquier dispositivo."
+            )
+        else:
+            await query.message.reply_text(
+                f"❓ AYUDA | {label}\n\n"
+                "La sección de preguntas frecuentes se está preparando. "
+                "Pronto encontrarás aquí las respuestas a tus dudas."
+            )
         return
 
     if choice == "botproduct_otp":
