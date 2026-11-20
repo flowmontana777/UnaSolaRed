@@ -3081,7 +3081,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "botproduct_ssn":
         await query.message.reply_photo(
-            photo="https://i.ibb.co/RpJHvdrL/Create-promotional-image-with-logo-fb0d71ac.jpg",
+            photo="https://i.ibb.co/jZMvm7Mk/51859006-1795198455885885.jpg",
             caption="💚 UNARED | BOT SSN\n\nConsulta información y disponibilidad con nuestro equipo.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_ssn")],
