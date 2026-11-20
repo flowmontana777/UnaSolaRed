@@ -2976,15 +2976,15 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_photo(
             photo="https://i.ibb.co/21033K6c/Creating-promotional-image-design-310bdb13.jpg",
             caption=(
-                "🔐 OTP Verification System v3.2\\n\\n"
-                "Automated call & SMS verification system\\n"
-                "💵 Precio: US$35\\n\\n"
-                "✨ Features:\\n"
-                "• Real-time call panel\\n"
-                "• Automated voice notifications\\n"
-                "• Multi-country support\\n"
-                "• Live status logs\\n\\n"
-                "Servicio para verificaciones en líneas y cuentas bajo tu control."
+                "🔐 OTP Verification System v3.2\n\n"
+                "Automated Call & SMS Verification System.\n\n"
+                "Features:\n\n"
+                "* Real-time call panel\n"
+                "* Human voice AI\n"
+                "* Verified caller ID (authorized numbers)\n"
+                "* Multi-country routes\n"
+                "* Live status logs\n\n"
+                "Price: $35"
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_otp")],
