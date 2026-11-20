@@ -1971,6 +1971,11 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "UPDATE " + table_name + " SET status='PAID' WHERE invoice_id=? AND telegram_id=? AND status='PENDING'",
                     (invoice_id, update.effective_user.id),
                 )
+                if table_name == "ssn_assistance_invoices":
+                    db.execute(
+                        "UPDATE ssn_assistance_invoices SET request_status='PAID' WHERE invoice_id=? AND request_status='WAITING_PAYMENT'",
+                        (invoice_id,),
+                    )
             if admin_bot:
                 username = "@" + update.effective_user.username if update.effective_user.username else "Sin username público"
                 await admin_bot.send_message(
@@ -1984,8 +1989,17 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         f"🧾 Factura: {invoice_id}\n"
                         "✅ Estado: PAID, confirmado consultando WolvPay."
                     ),
+                    reply_markup=(
+                        InlineKeyboardMarkup([
+                            [InlineKeyboardButton("⌛️ Marcar en proceso", callback_data=f"ssn_process:{invoice_id}")],
+                            [InlineKeyboardButton("✅ Completar solicitud", callback_data=f"ssn_complete:{invoice_id}")],
+                        ]) if table_name == "ssn_assistance_invoices" else None
+                    ),
                 )
-            await query.message.reply_text("✅ WolvPay confirma el pago. Tu factura quedó marcada como PAGADA y el equipo de UnaRed fue notificado.")
+            await query.message.reply_text(
+                "✅ WolvPay confirma el pago. Tu factura quedó marcada como PAGADA y el equipo de UnaRed fue notificado."
+                + ("\n\n⌛️ Estado de tu solicitud: Cargando... Puedes consultar el avance con «Ver estado»." if table_name == "ssn_assistance_invoices" else "")
+            )
         except (aiohttp.ClientError, asyncio.TimeoutError, sqlite3.Error, InvalidOperation, ValueError, TypeError):
             logger.exception("Error processing customer invoice action %s for %s", choice, update.effective_user.id)
             await query.message.reply_text("⚠️ No pudimos procesar la solicitud ahora mismo. Inténtalo más tarde o contacta a UnaRed.")
@@ -4919,7 +4933,15 @@ async def wolvpay_webhook(request):
 
     try:
         if not notification_state[0]:
-            await application.bot.send_message(chat_id=int(telegram_id), text=customer_text)
+            await application.bot.send_message(
+                chat_id=int(telegram_id),
+                text=customer_text,
+                reply_markup=(
+                    InlineKeyboardMarkup([[InlineKeyboardButton("📋 Ver estado de mi solicitud", callback_data="ssn_status")]])
+                    if invoice_type == "ssn_assistance" else None
+                ),
+                disable_web_page_preview=True,
+            )
             with sqlite3.connect(DATABASE_PATH) as db:
                 db.execute(
                     "UPDATE wolvpay_notifications SET customer_sent = 1 WHERE invoice_id = ?",
