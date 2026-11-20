@@ -154,7 +154,7 @@ async def notify_invoice_pending(
 
 async def schedule_payment_reminder(application, table_name, invoice_id, telegram_id, amount, service, invoice_url=None):
     """Send up to three reminders every three minutes while the invoice remains pending."""
-    allowed_tables = {"dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "bill_invoices", "edit_upload_invoices"}
+    allowed_tables = {"dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "bill_invoices", "edit_upload_invoices", "ssn_assistance_invoices"}
     if table_name not in allowed_tables:
         return
     for attempt in range(1, 4):
@@ -685,7 +685,7 @@ async def ask_for_details(query, context, service):
 # =====================================
 # PANEL PRIVADO UNARED
 # =====================================
-INVOICE_TABLES = ("bill_invoices", "dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "edit_upload_invoices")
+INVOICE_TABLES = ("bill_invoices", "dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "edit_upload_invoices", "ssn_assistance_invoices")
 
 def save_customer(user):
     """Guarda/actualiza al cliente y devuelve True únicamente en su primer registro."""
@@ -3538,16 +3538,120 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "ssn_search":
         await query.message.reply_text(
-            "🔎 UNARED | BÚSQUEDA SSN\n\n"
-            "Podemos orientarte para localizar o recuperar tu propio número de Seguro Social "
-            "por los canales oficiales de Estados Unidos.\n\n"
-            "Por seguridad, no envíes aquí tu SSN completo, documentos ni datos de otra persona. "
-            "No realizamos búsquedas de SSN de terceros.\n\n"
-            "Contacta al equipo para recibir orientación:",
+            "🔎 UNARED | ASISTENCIA SSN\n\n"
+            "Orientación para que el titular recupere su propio SSN mediante los canales oficiales de la SSA.\n\n"
+            "💵 Precio: US$3.20\n"
+            "🔐 No solicitamos SSN completo, fecha de nacimiento, documentos, contraseñas ni datos de terceros.\n\n"
+            "No realizamos búsquedas en bases de datos ni entregamos números de Seguro Social. Al continuar confirmas que eres el titular y que solo deseas orientación oficial.",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💬 Contactar equipo", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("✅ Soy el titular — Continuar", callback_data="ssn_assist_confirm")],
+                [InlineKeyboardButton("📋 Ver estado de mi solicitud", callback_data="ssn_status")],
                 [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
-                [InlineKeyboardButton("⬅️ Centro de Herramientas", callback_data="menu_tools")],
+            ]),
+        )
+        return
+
+    if choice == "ssn_assist_confirm":
+        await query.answer()
+        user = update.effective_user
+        if not WOLVPAY_API_KEY:
+            await query.message.reply_text("⚠️ WolvPay no está configurado. Contacta al equipo de UnaRed.")
+            return
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{WOLVPAY_API_URL}/invoices",
+                    headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}", "Content-Type": "application/json"},
+                    json={
+                        "amount": 3.20,
+                        "currency": "USD",
+                        "coin": "trc20_usdt",
+                        "description": f"UNARED_SSN_ASSISTANCE|telegram_id={user.id}",
+                        "white_label": False,
+                    },
+                    timeout=aiohttp.ClientTimeout(total=25),
+                ) as response:
+                    payload = await response.json(content_type=None)
+                    if response.status not in (200, 201) or payload.get("success") is False:
+                        raise RuntimeError("WolvPay invoice creation failed")
+            data = payload.get("data") or payload
+            invoice_id = data.get("invoice_id")
+            invoice_url = data.get("url") or data.get("payment_url")
+            if not invoice_id or not invoice_url:
+                raise RuntimeError("Incomplete WolvPay invoice response")
+            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                db.execute("""CREATE TABLE IF NOT EXISTS ssn_assistance_invoices (
+                    invoice_id TEXT PRIMARY KEY,
+                    telegram_id INTEGER NOT NULL,
+                    amount TEXT NOT NULL DEFAULT '3.20',
+                    request_type TEXT NOT NULL DEFAULT 'RECOVERY_GUIDANCE',
+                    status TEXT NOT NULL DEFAULT 'PENDING',
+                    request_status TEXT NOT NULL DEFAULT 'WAITING_PAYMENT',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )""")
+                db.execute(
+                    "INSERT INTO ssn_assistance_invoices (invoice_id, telegram_id, amount, request_type, status, request_status) VALUES (?, ?, '3.20', 'RECOVERY_GUIDANCE', 'PENDING', 'WAITING_PAYMENT')",
+                    (invoice_id, user.id),
+                )
+            await notify_invoice_pending(
+                context.application, user.id, invoice_id, "3.20",
+                "Orientación oficial para recuperar SSN propio",
+                "ssn_assistance_invoices", send_customer=False, send_admin=True
+            )
+            admin_bot = context.application.bot_data.get("admin_bot")
+            if admin_bot:
+                await admin_bot.send_message(
+                    chat_id=int(BOT_OWNER_ID),
+                    text=(
+                        "🪪 NUEVA SOLICITUD | ASISTENCIA SSN\n\n"
+                        f"Cliente: {user.full_name}\nTelegram ID: {user.id}\nFactura: {invoice_id}\n"
+                        "Alcance: orientación al titular mediante canales oficiales SSA.\n"
+                        "No se recopilaron datos de identidad sensibles.\nEstado: esperando pago."
+                    ),
+                )
+            await query.message.reply_text(
+                "💚 UNARED | FACTURA DE ASISTENCIA\n\n"
+                "Servicio: orientación oficial para recuperar tu propio SSN\n"
+                "Importe: US$3.20\nMétodo: USDT (TRC20) mediante WolvPay\n"
+                f"Factura: {invoice_id}\n\n"
+                "WolvPay confirmará el pago. Después podrás consultar el estado de tu solicitud.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("💳 Abrir factura y pagar", url=invoice_url)],
+                    [InlineKeyboardButton("🔎 Verificar pago", callback_data=f"iv:{invoice_id}")],
+                    [InlineKeyboardButton("📋 Ver estado", callback_data="ssn_status")],
+                    [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
+                ]),
+            )
+        except Exception:
+            logger.exception("No se pudo crear la factura de asistencia SSN.")
+            await query.message.reply_text("❌ No pudimos generar la factura. Inténtalo más tarde o contacta al equipo.")
+        return
+
+    if choice == "ssn_status":
+        user = update.effective_user
+        with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+            exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ssn_assistance_invoices'").fetchone()
+            row = db.execute(
+                "SELECT invoice_id, status, request_status, created_at FROM ssn_assistance_invoices WHERE telegram_id=? ORDER BY created_at DESC LIMIT 1",
+                (user.id,),
+            ).fetchone() if exists else None
+        if not row:
+            status_text = "Todavía no tienes solicitudes registradas."
+        else:
+            invoice_id, payment_status, request_status, created_at = row
+            labels = {
+                "WAITING_PAYMENT": "💳 Esperando pago",
+                "PAID": "⌛️ Cargando... — pago confirmado, en cola de revisión",
+                "PROCESSING": "⌛️ Cargando... — solicitud en revisión",
+                "COMPLETED": "✅ Completada",
+            }
+            state = request_status if str(payment_status).upper() == "PAID" else "WAITING_PAYMENT"
+            status_text = f"Factura: {invoice_id}\nEstado: {labels.get(state, state)}\nFecha: {created_at}"
+        await query.message.reply_text(
+            "📋 UNARED | ESTADO DE MI SOLICITUD\n\n" + status_text,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔄 Actualizar", callback_data="ssn_status")],
+                [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
             ]),
         )
         return
