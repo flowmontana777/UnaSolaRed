@@ -3999,18 +3999,26 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if choice in ("tool_amazon", "tool_loans"):
-        label = "AMAZON" if choice == "tool_amazon" else "PRÉSTAMOS"
-        await query.message.reply_text(
-            "💚 UNARED | Amazon\n\nEste servicio estará disponible próximamente.",
+        # Mantener Amazon y Préstamos separados y editar el mensaje del menú
+        # para evitar respuestas duplicadas al pulsar los botones.
+        is_amazon = choice == "tool_amazon"
+        label = "Amazon" if is_amazon else "Préstamos"
+        coming_soon_callback = "amazon_coming_soon" if is_amazon else "loans_coming_soon"
+        await query.edit_message_caption(
+            caption=(
+                f"💚 UNARED | {label}\n\n"
+                "Este servicio estará disponible próximamente."
+            ),
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("⏳ Próximamente", callback_data="profiles_coming_soon")],
+                [InlineKeyboardButton("⏳ Próximamente", callback_data=coming_soon_callback)],
                 [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
             ]),
         )
         return
 
-    if choice == "profiles_coming_soon":
-        await query.answer("Este servicio estará disponible próximamente.")
+    if choice in ("amazon_coming_soon", "loans_coming_soon"):
+        service = "Amazon" if choice == "amazon_coming_soon" else "Préstamos"
+        await query.answer(f"{service}: servicio disponible próximamente.")
         return
 
     if choice == "tool_icloud":
