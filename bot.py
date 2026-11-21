@@ -1847,7 +1847,7 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     keyboard_rows = [
         [
-            InlineKeyboardButton("👤 Ir al perfil", callback_data=f"view_customer:{int(tid)}"),
+            customer_profile_button(tid),
             InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}"),
         ]
         for _, _, tid, _, _ in all_activity
@@ -1944,7 +1944,7 @@ async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📛 Usuario: " + (("@" + username) if username else "Sin username") +
         f"\n📅 Registro: {first_seen or 'No disponible'}\n🕒 Última actividad: {last_seen or 'No disponible'}\n🧾 Facturas: {total}",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("👤 Ir al perfil", callback_data=f"view_customer:{int(tid)}")],
+            [customer_profile_button(tid)],
             [InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{tid}")],
         ]),
     )
