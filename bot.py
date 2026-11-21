@@ -1779,6 +1779,9 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard_rows.append([
         InlineKeyboardButton("🔎 Ver más estadísticas", callback_data="admin_stats_more")
     ])
+    keyboard_rows.append([
+        InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
+    ])
     await update.effective_message.reply_text(report, reply_markup=InlineKeyboardMarkup(keyboard_rows))
 
 
