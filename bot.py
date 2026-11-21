@@ -608,7 +608,7 @@ def bot_catalog_menu():
         [InlineKeyboardButton("🤖 BOT OTP", callback_data="botproduct_otp")],
         [InlineKeyboardButton("🤖 BOT SSN", callback_data="botproduct_ssn")],
         [InlineKeyboardButton("🤖 BOT CHECK", callback_data="botproduct_check")],
-        [InlineKeyboardButton("🤖 LICENCIA", callback_data="botproduct_template")],
+        [InlineKeyboardButton("🤖 LICENCIA", callback_data="tool_license_info")],
         back_button("menu_tools"),
     ])
 
@@ -1120,6 +1120,42 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.answer("⛔ Acceso denegado.", show_alert=True)
         return
     await query.answer()
+    if query.data.startswith("license_req_process:") or query.data.startswith("license_req_reply:"):
+        action, raw_request_id = query.data.split(":", 1)
+        try:
+            request_id = int(raw_request_id)
+        except ValueError:
+            await query.message.reply_text("⚠️ Número de solicitud no válido.")
+            return
+        with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+            row = db.execute("SELECT telegram_id, status FROM license_requests WHERE request_id=?", (request_id,)).fetchone()
+            if not row:
+                await query.message.reply_text("⚠️ No encontramos esa solicitud de LICENCIA.")
+                return
+            telegram_id, current_status = int(row[0]), str(row[1]).upper()
+            if current_status == "COMPLETED":
+                await query.message.reply_text("ℹ️ Esta solicitud ya fue respondida.")
+                return
+            db.execute(
+                "UPDATE license_requests SET status='PROCESSING', updated_at=CURRENT_TIMESTAMP WHERE request_id=?",
+                (request_id,),
+            )
+        if action == "license_req_process":
+            main_bot = context.application.bot_data.get("main_bot") or context.application.bot
+            await main_bot.send_message(
+                chat_id=telegram_id,
+                text="🔄 UNARED | LICENCIA\n\nTu solicitud está en revisión. Te avisaremos cuando el administrador confirme la respuesta.",
+            )
+            await query.message.reply_text(f"🔄 Solicitud LICENCIA #{request_id} marcada EN REVISIÓN.")
+        else:
+            context.user_data["license_request_reply_id"] = request_id
+            await query.message.reply_text(
+                f"✅ CONFIRMACIÓN | SOLICITUD LICENCIA #{request_id}\n\n"
+                "Escribe ahora la respuesta o el formulario que autorizas enviar al cliente. "
+                "El cliente lo recibirá después de que envíes este mensaje."
+            )
+        return
+
     if query.data.startswith("profile_req_process:") or query.data.startswith("profile_req_reply:"):
         action, raw_request_id = query.data.split(":", 1)
         try:
@@ -1595,7 +1631,7 @@ def build_admin_application():
     admin_app.add_handler(CommandHandler("buscarcliente", find_customer))
     admin_app.add_handler(CallbackQueryHandler(
         admin_bot_callbacks,
-        pattern=r"^(admin_|av:|ap:|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
+        pattern=r"^(admin_|av:|ap:|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
     ))
     admin_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, receive_admin_profile_reply))
     return admin_app
@@ -3295,23 +3331,16 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    if choice == "botproduct_template":
+    if choice in ("botproduct_template", "tool_license_info"):
+        context.user_data.pop("waiting_license_request", None)
         await query.answer()
-        await query.message.reply_photo(
-            photo="https://i.ibb.co/5qz3HNw/115569821-1795196307147570.jpg",
-            caption=(
-                "🤖 LICENCIA | UNARED\n\n"
-                "🧪 Ejemplo demostración.\n"
-                "Name: Nombre del cliente\n"
-                "DOB: 06/04/1990\n"
-                "DI: S78491614 MA\n\n"
-                "💵 Precio: US$35\n"
-            ),
+        await query.message.reply_text(
+            "🤖 UNARED | LICENCIA\n\nSelecciona una opción:",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🛒 Comprar US$35", callback_data="botdemo_buy_template")],
-                [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_template")],
-                [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
-                [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
+                [InlineKeyboardButton("🔎 Buscar", callback_data="license_search")],
+                [InlineKeyboardButton("❓ Preguntas", callback_data="license_faq")],
+                [InlineKeyboardButton("👤 Perfil", callback_data="license_status")],
+                [InlineKeyboardButton("⬅️ Volver al Centro de Herramientas", callback_data="menu_tools")],
             ]),
         )
         return
@@ -3817,6 +3846,98 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except (aiohttp.ClientError, asyncio.TimeoutError, sqlite3.Error, InvalidOperation, ValueError, TypeError):
             logger.exception("Error verificando pago de páginas web.")
             await query.message.reply_text("No pudimos verificar el pago en este momento.")
+        return
+
+    if choice == "license_faq":
+        await query.answer()
+        await query.message.reply_text(
+            "❓ UNARED | PREGUNTAS FRECUENTES — LICENCIA\n\n"
+            "1️⃣ ¿Cómo funciona?\nEnvías el formulario con los tres campos en el orden indicado. El equipo revisa la solicitud manualmente.\n\n"
+            "2️⃣ ¿Qué debo enviar?\nName, DOB y DI, cada uno en su propia línea y con las etiquetas exactas.\n\n"
+            "3️⃣ ¿Cuándo recibo respuesta?\nDespués de que el administrador revise y confirme la respuesta, la recibirás en este chat.\n\n"
+            "4️⃣ ¿Qué información puedo enviar?\nSolo información propia o que tengas autorización expresa para compartir. Este módulo no consulta bases de datos externas ni genera licencias.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔎 Buscar", callback_data="license_search")],
+                [InlineKeyboardButton("⬅️ Volver a LICENCIA", callback_data="tool_license_info")],
+            ]),
+        )
+        return
+
+    if choice == "license_search":
+        user = update.effective_user
+        with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+            ensure_wallet_tables(db)
+            wallet_row = db.execute("SELECT balance FROM unared_wallets WHERE telegram_id=?", (user.id,)).fetchone()
+        current_balance = Decimal(wallet_row[0]) if wallet_row else Decimal("0.00")
+        if current_balance < Decimal("10.00"):
+            await query.answer()
+            await query.message.reply_text(
+                "❌ Fondo insuficiente\n\nTu saldo no alcanza para enviar una solicitud de LICENCIA (US$10.00). Recarga primero.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("➕ Recargar saldo", callback_data="wallet_topup_start")],
+                    [InlineKeyboardButton("👤 Mi perfil", callback_data="license_status")],
+                    [InlineKeyboardButton("⬅️ Volver a LICENCIA", callback_data="tool_license_info")],
+                ]),
+            )
+            return
+        await query.answer()
+        await query.message.reply_text(
+            "🤖 UNARED | LICENCIA — SOLICITUD\n\n"
+            "💵 Precio: US$10.00\n"
+            "Envía el formulario completo respetando exactamente el orden y las etiquetas. "
+            "Si falta un campo o el formato no coincide, el bot te pedirá corregirlo.\n\n"
+            "Pulsa Continuar para recibir el formato.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("✅ Continuar", callback_data="license_assist_confirm")],
+                [InlineKeyboardButton("👤 Mi perfil / Recargar saldo", callback_data="license_status")],
+                [InlineKeyboardButton("⬅️ Volver a LICENCIA", callback_data="tool_license_info")],
+            ]),
+        )
+        return
+
+    if choice == "license_assist_confirm":
+        await query.answer()
+        context.user_data["waiting_license_request"] = True
+        await query.message.reply_text(
+            "📋 UNARED | LICENCIA\n━━━━━━━━━━━━━━━━━━\n\n"
+            "Copia este formato y sustituye los ejemplos por tus propios datos autorizados:\n\n"
+            "Name: Nombre y apellido\n"
+            "DOB: DD/MM/AAAA\n"
+            "DI: Número o identificador de licencia\n\n"
+            "Envía las tres líneas en un solo mensaje, respetando el orden y las etiquetas. "
+            "Escribe /cancel para cancelar."
+        )
+        return
+
+    if choice == "license_status":
+        user = update.effective_user
+        with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+            ensure_wallet_tables(db)
+            wallet_row = db.execute("SELECT balance FROM unared_wallets WHERE telegram_id=?", (user.id,)).fetchone()
+            rows = db.execute(
+                "SELECT request_id, status, created_at FROM license_requests WHERE telegram_id=? ORDER BY request_id DESC LIMIT 10",
+                (user.id,),
+            ).fetchall()
+        balance = wallet_row[0] if wallet_row else "0.00"
+        labels = {"PENDING": "⌛️ Pendiente de confirmación", "PROCESSING": "🔄 En revisión",
+                  "COMPLETED": "✅ Respondida", "REJECTED": "❌ Rechazada"}
+        request_lines = [
+            f"• Solicitud #{request_id} — {labels.get(str(status).upper(), status)}"
+            + (f"\n  {created_at}" if created_at else "")
+            for request_id, status, created_at in rows
+        ]
+        await query.answer()
+        await query.message.reply_text(
+            "👤 UNARED | PERFIL LICENCIA\n\n"
+            + "💰 Saldo disponible: US$" + str(balance) + "\n\n"
+            + "📋 MIS SOLICITUDES\n"
+            + ("\n".join(request_lines) if request_lines else "Todavía no tienes solicitudes de LICENCIA."),
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("➕ Recargar saldo", callback_data="wallet_topup_start")],
+                [InlineKeyboardButton("🔄 Actualizar perfil", callback_data="license_status")],
+                [InlineKeyboardButton("⬅️ Volver a LICENCIA", callback_data="tool_license_info")],
+            ]),
+        )
         return
 
     if choice == "tool_ssn_info":
@@ -4734,6 +4855,43 @@ async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYP
 async def receive_admin_profile_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
         return
+    license_request_id = context.user_data.get("license_request_reply_id")
+    if license_request_id:
+        response_text = (update.message.text or "").strip()
+        if not response_text:
+            await update.message.reply_text("Escribe la respuesta que deseas enviar al cliente.")
+            return
+        if len(response_text) > 3500:
+            await update.message.reply_text("La respuesta es demasiado larga. Envíala en menos de 3500 caracteres.")
+            return
+        with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+            row = db.execute("SELECT telegram_id, status FROM license_requests WHERE request_id=?", (license_request_id,)).fetchone()
+            if not row or str(row[1]).upper() == "COMPLETED":
+                context.user_data.pop("license_request_reply_id", None)
+                await update.message.reply_text("⚠️ La solicitud LICENCIA no existe o ya fue respondida.")
+                return
+            telegram_id = int(row[0])
+            db.execute(
+                "UPDATE license_requests SET status='COMPLETED', admin_response=?, updated_at=CURRENT_TIMESTAMP WHERE request_id=?",
+                (response_text, license_request_id),
+            )
+        context.user_data.pop("license_request_reply_id", None)
+        main_bot = context.application.bot_data.get("main_bot") or context.application.bot
+        try:
+            await main_bot.send_message(
+                chat_id=telegram_id,
+                text=(
+                    "✅ UNARED | RESPUESTA DE LICENCIA\n━━━━━━━━━━━━━━━━━━\n\n"
+                    f"{response_text}\n\n"
+                    f"📋 Solicitud: #{license_request_id}\nEstado: COMPLETADA"
+                ),
+            )
+            await update.message.reply_text(f"✅ Respuesta confirmada y enviada. Solicitud LICENCIA #{license_request_id} completada.")
+        except Exception:
+            logger.exception("No se pudo enviar la respuesta LICENCIA %s.", license_request_id)
+            await update.message.reply_text("⚠️ La respuesta quedó guardada, pero no se pudo entregar al cliente.")
+        return
+
     request_id = context.user_data.get("profile_request_reply_id")
     if not request_id:
         return
@@ -4793,6 +4951,134 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Los mensajes de grupos/canales no son solicitudes de clientes.
     # La música de @Una1Red se procesa únicamente en channel_music_ingest.
     if not update.effective_chat or update.effective_chat.type != "private":
+        return
+
+    if context.user_data.get("waiting_license_request"):
+        raw_form = (update.message.text or "").strip()
+        lines = [line.strip() for line in raw_form.splitlines() if line.strip()]
+        if len(lines) != 3:
+            await update.message.reply_text(
+                "⚠️ Formato incorrecto. Envía exactamente tres líneas, en este orden:\n"
+                "Name: Nombre y apellido\nDOB: DD/MM/AAAA\nDI: Número o identificador de licencia"
+            )
+            return
+        values = []
+        for line, expected in zip(lines, ("name", "dob", "di")):
+            if ":" not in line:
+                values = []
+                break
+            label, value = line.split(":", 1)
+            if label.strip().lower() != expected or not value.strip():
+                values = []
+                break
+            values.append(value.strip())
+        if len(values) != 3:
+            await update.message.reply_text(
+                "⚠️ Las etiquetas o el orden no coinciden. Usa exactamente:\nName: ...\nDOB: DD/MM/AAAA\nDI: ..."
+            )
+            return
+        customer_name, dob_text, di_value = values
+        if len(customer_name) < 3 or len(customer_name) > 100 or customer_name.lower() in ("nombre del cliente", "nombre y apellido"):
+            await update.message.reply_text("⚠️ Escribe el nombre y apellido del titular en Name, no el texto de ejemplo.")
+            return
+        try:
+            dob_value = datetime.strptime(dob_text, "%d/%m/%Y").date()
+            if dob_value > datetime.now().date():
+                raise ValueError("DOB futura")
+        except ValueError:
+            await update.message.reply_text("⚠️ DOB no válido. Usa DD/MM/AAAA, por ejemplo 06/04/1990.")
+            return
+        if len(di_value) < 4 or len(di_value) > 40 or di_value.lower() in ("número o identificador de licencia", "numero o identificador de licencia"):
+            await update.message.reply_text("⚠️ DI debe contener el identificador, no el texto de ejemplo.")
+            return
+
+        user = update.effective_user
+        loading = await update.message.reply_text("⌛️ Cargando solicitud...")
+        try:
+            invoice_id = "WALLET-LICENSE-" + uuid.uuid4().hex[:16].upper()
+            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                ensure_wallet_tables(db)
+                db.execute("BEGIN IMMEDIATE")
+                db.execute("""CREATE TABLE IF NOT EXISTS license_requests (
+                    request_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    invoice_id TEXT NOT NULL UNIQUE,
+                    telegram_id INTEGER NOT NULL,
+                    customer_name TEXT NOT NULL,
+                    request_text TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'PENDING',
+                    admin_response TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )""")
+                wallet_row = db.execute("SELECT balance FROM unared_wallets WHERE telegram_id=?", (user.id,)).fetchone()
+                current_balance = Decimal(wallet_row[0]) if wallet_row else Decimal("0.00")
+                service_price = Decimal("10.00")
+                if current_balance < service_price:
+                    db.rollback()
+                    await loading.edit_text(
+                        "❌ Fondo insuficiente. Necesitas US$10.00 para enviar la solicitud.",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("➕ Recargar saldo", callback_data="wallet_topup_start")],
+                            [InlineKeyboardButton("👤 Mi perfil", callback_data="license_status")],
+                        ]),
+                    )
+                    return
+                new_balance = current_balance - service_price
+                db.execute(
+                    "INSERT INTO unared_wallet_ledger (telegram_id, invoice_id, entry_type, amount) VALUES (?, ?, 'SERVICE', ?)",
+                    (user.id, invoice_id, format(-service_price, ".2f")),
+                )
+                db.execute(
+                    "UPDATE unared_wallets SET balance=?, updated_at=CURRENT_TIMESTAMP WHERE telegram_id=?",
+                    (format(new_balance, ".2f"), user.id),
+                )
+                request_text = f"Name: {customer_name}\nDOB: {dob_text}\nDI: {di_value}"
+                cursor = db.execute(
+                    """INSERT INTO license_requests (invoice_id, telegram_id, customer_name, request_text, status)
+                       VALUES (?, ?, ?, ?, 'PENDING')""",
+                    (invoice_id, user.id, customer_name, request_text),
+                )
+                request_id = cursor.lastrowid
+                db.commit()
+
+            context.user_data.pop("waiting_license_request", None)
+            await asyncio.sleep(0.7)
+            await loading.edit_text(
+                "⌛️ UNARED | SOLICITUD RECIBIDA\n\n"
+                "El formulario pasó la validación de formato y quedó pendiente de confirmación del administrador. "
+                "Recibirás la respuesta después de su revisión.\n\n"
+                f"Referencia: {invoice_id}\nEstado: PENDIENTE"
+            )
+            admin_bot = context.application.bot_data.get("admin_bot") or context.application.bot
+            admin_text = (
+                "🤖 UNARED | NUEVA SOLICITUD DE LICENCIA\n━━━━━━━━━━━━━━━━━━\n\n"
+                f"📌 Solicitud: #{request_id}\n"
+                f"👤 Cliente: {user.full_name or 'Sin nombre'}\n"
+                f"🔗 Usuario: @{user.username or 'Sin usuario'}\n"
+                f"🆔 Telegram ID: {user.id}\n"
+                f"🧾 Referencia: {invoice_id}\n"
+                "💵 Cargo: US$10.00\n"
+                "⌛️ Estado: PENDIENTE DE CONFIRMACIÓN\n"
+                "🔐 El cliente declara que los datos son propios o que tiene autorización para compartirlos.\n\n"
+                "📋 FORMULARIO RECIBIDO:\n"
+                f"{request_text}"
+            )
+            admin_keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("⌛️ Marcar en revisión", callback_data=f"license_req_process:{request_id}")],
+                [InlineKeyboardButton("✅ Confirmar y responder", callback_data=f"license_req_reply:{request_id}")],
+            ])
+            try:
+                await admin_bot.send_message(chat_id=int(BOT_OWNER_ID), text=admin_text, reply_markup=admin_keyboard)
+            except Exception:
+                logger.exception("No se pudo notificar la solicitud LICENCIA %s.", request_id)
+                await loading.edit_text(
+                    "⚠️ Tu solicitud quedó registrada, pero no se pudo avisar al administrador. No la envíes otra vez; contacta al equipo."
+                )
+        except (sqlite3.Error, InvalidOperation, ValueError):
+            logger.exception("No se pudo registrar la solicitud LICENCIA.")
+            await loading.edit_text(
+                "❌ No pudimos registrar tu solicitud. Si se debitó saldo, contacta al equipo antes de volver a intentarlo."
+            )
         return
 
     if context.user_data.get("waiting_profile_update"):
@@ -4924,7 +5210,7 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         return
 
-    if is_admin(update.effective_user) and context.user_data.get("profile_request_reply_id"):
+    if is_admin(update.effective_user) and (context.user_data.get("profile_request_reply_id") or context.user_data.get("license_request_reply_id")):
         await receive_admin_profile_reply(update, context)
         return
 
