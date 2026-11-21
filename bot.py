@@ -4009,7 +4009,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "tool_amazon":
         await query.edit_message_caption(
-            caption="💚 UNARED | AMAZON\n\n"Este servicio estará disponible próximamente."
+            caption="💚 UNARED | Amazon\\n\\nEste servicio estará disponible próximamente.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("⏳ Próximamente", callback_data="amazon_coming_soon")],
                 [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
