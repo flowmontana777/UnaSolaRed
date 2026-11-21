@@ -330,7 +330,7 @@ def main_menu(user=None):
                 callback_data="amazon",
             ),
             InlineKeyboardButton(
-                "🍎 Apple",
+                "🍏 Apple",
                 callback_data="apple",
             ),
         ],
@@ -4000,7 +4000,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Amazon", callback_data="tool_amazon")],
-                [InlineKeyboardButton("🍎 iCloud", callback_data="tool_icloud")],
+                [InlineKeyboardButton("🍏 iCloud", callback_data="tool_icloud")],
                 [InlineKeyboardButton("💰 Préstamos", callback_data="tool_loans")],
                 [InlineKeyboardButton("⬅️ Volver a Herramientas", callback_data="menu_tools")],
             ]),
@@ -4009,7 +4009,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "tool_amazon":
         await query.edit_message_caption(
-            caption="💚 UNARED | Amazon\n\nEste servicio estará disponible próximamente.",
+            caption="💚 UNARED | AMAZON\n\n"Este servicio estará disponible próximamente."
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("⏳ Próximamente", callback_data="amazon_coming_soon")],
                 [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
@@ -4052,9 +4052,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["icloud_quantity"] = quantity
         total = quantity * 25
         await query.message.reply_text(
-            "💚 UNARED | ICLOUD\n\n"
+            "💚 UNARED | 📲ICLOUD\n\n"
             "🪪 Perfil Completo para aplicar a la 🍏\n"
-            "ℹ️ Lo necesario para aplicar 🍏❕.\n\n"
+            "ℹ️ Lo necesario para aplicar 📲❕.\n\n"
             "🏷️ Precio por servicio: US$25\n"
             f"📦 Cantidad: {quantity}\n"
             f"💵 Total: US${total}",
@@ -4102,9 +4102,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["icloud_quantity"] = quantity
         total = quantity * 25
         await query.edit_message_text(
-            "💚 UNARED | ICLOUD\n\n"
+            "💚 UNARED | 📲ICLOUD\n\n"
             "🪪 Perfil Completo para aplicar a la 🍏\n"
-            "ℹ️ Lo necesario para aplicar 🍏❕.\n\n"
+            "ℹ️ Lo necesario para aplicar 📲❕.\n\n"
             "🏷️ Precio por servicio: US$25\n"
             f"📦 Cantidad: {quantity}\n"
             f"💵 Total: US${total}",
