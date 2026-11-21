@@ -155,7 +155,7 @@ async def notify_invoice_pending(
 
 async def schedule_payment_reminder(application, table_name, invoice_id, telegram_id, amount, service, invoice_url=None):
     """Send up to three reminders every three minutes while the invoice remains pending."""
-    allowed_tables = {"dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "bill_invoices", "edit_upload_invoices", "ssn_assistance_invoices", "wallet_topup_invoices"}
+    allowed_tables = {"dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "loans_invoices", "bill_invoices", "edit_upload_invoices", "ssn_assistance_invoices", "wallet_topup_invoices"}
     if table_name not in allowed_tables:
         return
     for attempt in range(1, 4):
@@ -564,6 +564,13 @@ def icloud_coin_menu():
         [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_icloud")],
     ])
 
+def loans_coin_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("₿ Bitcoin (BTC)", callback_data="loans_coin_btc")],
+        [InlineKeyboardButton("₮ USDT (TRC20)", callback_data="loans_coin_trc20_usdt")],
+        [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_loans")],
+    ])
+
 
 def edit_upload_coin_menu():
     return InlineKeyboardMarkup([
@@ -692,7 +699,7 @@ async def ask_for_details(query, context, service):
 # =====================================
 # PANEL PRIVADO UNARED
 # =====================================
-INVOICE_TABLES = ("bill_invoices", "dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "edit_upload_invoices", "ssn_assistance_invoices", "wallet_topup_invoices")
+INVOICE_TABLES = ("bill_invoices", "dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "loans_invoices", "edit_upload_invoices", "ssn_assistance_invoices", "wallet_topup_invoices")
 
 def ensure_wallet_tables(db):
     db.execute("""CREATE TABLE IF NOT EXISTS unared_wallets (
@@ -1999,6 +2006,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "demo_bot_invoices": "Bot de demostración",
                 "pages_invoices": "Páginas Web / Buy CC",
                 "icloud_invoices": "iCloud",
+                "loans_invoices": "Préstamos",
                 "edit_upload_invoices": "Editar y subir papel",
                 "wallet_topup_invoices": "Recarga de saldo UnaRed",
             }
@@ -2127,7 +2135,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice.startswith("cancel_invoice:"):
         try:
             _, table_name, invoice_id = choice.split(":", 2)
-            allowed_tables = {"dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "bill_invoices", "edit_upload_invoices", "wallet_topup_invoices"}
+            allowed_tables = {"dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "loans_invoices", "bill_invoices", "edit_upload_invoices", "wallet_topup_invoices"}
             if table_name not in allowed_tables:
                 raise ValueError("Invalid invoice table")
             with sqlite3.connect(DATABASE_PATH) as db:
@@ -3911,6 +3919,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "pyp_invoices": "Método PyP",
                 "pages_invoices": "Páginas web",
                 "icloud_invoices": "iCloud",
+                "loans_invoices": "Préstamos",
                 "demo_bot_invoices": "Demo sandbox",
                 "bill_invoices": "Pago de servicios",
                 "edit_upload_invoices": "Editar y subir papel",
@@ -3998,27 +4007,43 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    if choice in ("tool_amazon", "tool_loans"):
-        # Mantener Amazon y Préstamos separados y editar el mensaje del menú
-        # para evitar respuestas duplicadas al pulsar los botones.
-        is_amazon = choice == "tool_amazon"
-        label = "Amazon" if is_amazon else "Préstamos"
-        coming_soon_callback = "amazon_coming_soon" if is_amazon else "loans_coming_soon"
+    if choice == "tool_amazon":
         await query.edit_message_caption(
-            caption=(
-                f"💚 UNARED | {label}\n\n"
-                "Este servicio estará disponible próximamente."
-            ),
+            caption="💚 UNARED | Amazon\\n\\nEste servicio estará disponible próximamente.",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("⏳ Próximamente", callback_data=coming_soon_callback)],
+                [InlineKeyboardButton("⏳ Próximamente", callback_data="amazon_coming_soon")],
                 [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
             ]),
         )
         return
 
-    if choice in ("amazon_coming_soon", "loans_coming_soon"):
-        service = "Amazon" if choice == "amazon_coming_soon" else "Préstamos"
-        await query.answer(f"{service}: servicio disponible próximamente.")
+    if choice == "amazon_coming_soon":
+        await query.answer("Amazon: servicio disponible próximamente.")
+        return
+
+    if choice == "tool_loans":
+        quantity = int(context.user_data.get("loans_quantity", 1))
+        quantity = max(1, min(quantity, 99))
+        context.user_data["loans_quantity"] = quantity
+        total = quantity * 25
+        await query.message.reply_text(
+            "💚 UNARED | PRÉSTAMOS\n\n"
+            "📄 Copia\n"
+            "Copia del servicio seleccionado.\n\n"
+            "🏷️ Precio por servicio: US$25\n"
+            f"📦 Cantidad: {quantity}\n"
+            f"💵 Total: US${total}",
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("➖", callback_data="loans_qty_minus"),
+                    InlineKeyboardButton(str(quantity), callback_data="loans_qty_display"),
+                    InlineKeyboardButton("➕", callback_data="loans_qty_plus"),
+                ],
+                [InlineKeyboardButton("💳 ¡Pagar!", callback_data="icloud_pay")],
+                [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
+            ]),
+        )
         return
 
     if choice == "tool_icloud":
@@ -4040,6 +4065,31 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     InlineKeyboardButton("➕", callback_data="icloud_qty_plus"),
                 ],
                 [InlineKeyboardButton("💳 ¡Pagar!", callback_data="icloud_pay")],
+                [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
+            ]),
+        )
+        return
+
+    if choice in ("loans_qty_plus", "loans_qty_minus"):
+        quantity = int(context.user_data.get("loans_quantity", 1))
+        quantity = min(quantity + 1, 99) if choice == "loans_qty_plus" else max(quantity - 1, 1)
+        context.user_data["loans_quantity"] = quantity
+        total = quantity * 25
+        await query.edit_message_text(
+            "💚 UNARED | PRÉSTAMOS\n\n"
+            "📄 Copia\n"
+            "Copia del servicio seleccionado.\n\n"
+            "🏷️ Precio por servicio: US$25\n"
+            f"📦 Cantidad: {quantity}\n"
+            f"💵 Total: US${total}",
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("➖", callback_data="loans_qty_minus"),
+                    InlineKeyboardButton(str(quantity), callback_data="loans_qty_display"),
+                    InlineKeyboardButton("➕", callback_data="loans_qty_plus"),
+                ],
+                [InlineKeyboardButton("💳 ¡Pagar!", callback_data="loans_pay")],
                 [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
             ]),
@@ -4075,6 +4125,19 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer("Usa ➕ o ➖ para cambiar la cantidad.")
         return
 
+    if choice == "loans_pay":
+        quantity = int(context.user_data.get("loans_quantity", 1))
+        total = quantity * 25
+        context.user_data["loans_checkout_quantity"] = quantity
+        await query.message.reply_text(
+            "💚 UNARED | PAGO DE PRÉSTAMOS\n\n"
+            f"📦 Cantidad: {quantity}\n"
+            f"💵 Total: US${total}\n\n"
+            "Selecciona tu método de pago:",
+            reply_markup=loans_coin_menu(),
+        )
+        return
+
     if choice == "icloud_pay":
         quantity = int(context.user_data.get("icloud_quantity", 1))
         total = quantity * 25
@@ -4086,6 +4149,64 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Selecciona tu método de pago:",
             reply_markup=icloud_coin_menu(),
         )
+        return
+
+    if choice.startswith("loans_coin_"):
+        coin = choice.replace("loans_coin_", "", 1)
+        if coin not in ("btc", "trc20_usdt"):
+            await query.message.reply_text("Método de pago no disponible.")
+            return
+        if not WOLVPAY_API_KEY:
+            await query.message.reply_text("El pago automático no está configurado. Contacta al equipo de UnaRed.")
+            return
+        user = update.effective_user
+        quantity = int(context.user_data.get("loans_checkout_quantity", 1))
+        total = quantity * 25
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{WOLVPAY_API_URL}/invoices",
+                    headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}", "Content-Type": "application/json"},
+                    json={"amount": total, "currency": "USD", "coin": coin,
+                          "description": f"UNARED_PRÉSTAMOS|telegram_id={user.id}|quantity={quantity}", "white_label": False},
+                    timeout=aiohttp.ClientTimeout(total=25),
+                ) as response:
+                    payload = await response.json(content_type=None)
+                    if response.status not in (200, 201) or payload.get("success") is False:
+                        logger.error("WolvPay Préstamos invoice error: HTTP %s; response=%s", response.status, payload)
+                        raise RuntimeError("Invoice creation failed")
+            data = payload.get("data") or payload
+            invoice_id = data.get("invoice_id")
+            invoice_url = data.get("url") or data.get("payment_url")
+            if not invoice_id or not invoice_url:
+                raise RuntimeError("Incomplete invoice response")
+            with sqlite3.connect(DATABASE_PATH) as db:
+                db.execute("""CREATE TABLE IF NOT EXISTS loans_invoices (
+                    invoice_id TEXT PRIMARY KEY, telegram_id INTEGER NOT NULL,
+                    amount TEXT NOT NULL, quantity INTEGER NOT NULL DEFAULT 1,
+                    status TEXT NOT NULL DEFAULT 'PENDING'
+                )""")
+                columns = [column[1] for column in db.execute("PRAGMA table_info(loans_invoices)").fetchall()]
+                if "quantity" not in columns:
+                    db.execute("ALTER TABLE loans_invoices ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1")
+                db.execute("INSERT INTO loans_invoices (invoice_id, telegram_id, amount, quantity, status) VALUES (?, ?, ?, ?, 'PENDING')", (invoice_id, user.id, str(total), quantity))
+            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "Préstamos", "loans_invoices", send_customer=False, send_admin=True)
+            asyncio.create_task(schedule_payment_reminder(context.application, "loans_invoices", invoice_id, user.id, str(total), "Préstamos", invoice_url))
+            await query.message.reply_text(
+                "💚 UNARED | FACTURA PRÉSTAMOS\n\n"
+                f"📦 Cantidad: {quantity}\n💵 Total: US${total}\n"
+                f"Factura: {invoice_id}\n\nCompleta el pago desde WolvPay.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
+                    [InlineKeyboardButton("🔎 Verificar pago", callback_data=f"iv:{invoice_id}")],
+                    [InlineKeyboardButton("✅ Ya pagué", callback_data=f"ip:{invoice_id}")],
+                    [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
+                ]),
+            )
+
+        except Exception:
+            logger.exception("No se pudo generar la factura WolvPay para Préstamos.")
+            await query.message.reply_text("No pudimos generar la factura. Inténtalo más tarde o contacta al equipo.")
         return
 
     if choice.startswith("icloud_coin_"):
