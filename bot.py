@@ -2214,14 +2214,22 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # VOLVER AL MENU PRINCIPAL
+    # VOLVER AL MENU PRINCIPAL: mostrar la misma pantalla de inicio de /start.
 
     if choice == "menu_home":
         context.user_data.clear()
 
-        await query.message.reply_text(
-            "💚 UNARED | MENÚ PRINCIPAL\n\n"
-            "LA RED QUE MUEVE TU DINERO.",
+        welcome = (
+            "💚 UNARED | LA RED QUE MUEVE TU DINERO\n\n"
+            "Todos tus servicios en un solo lugar.\n"
+            "Selecciona la opción que necesitas y nuestro equipo "
+            "recibirá tu solicitud.\n\n"
+        )
+
+        await query.answer()
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/XfdhR6bS/photo-2026-11-09-01-28-36.jpg",
+            caption=welcome,
             reply_markup=main_menu(update.effective_user),
         )
         return
