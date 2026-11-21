@@ -3339,7 +3339,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔎 Buscar", callback_data="license_search")],
                 [InlineKeyboardButton("❓ Preguntas", callback_data="license_faq")],
-                [InlineKeyboardButton("👤 Perfil", callback_data="license_status")],
+                [InlineKeyboardButton("👤 Perfil", callback_data="my_profile")],
                 [InlineKeyboardButton("⬅️ Volver al Centro de Herramientas", callback_data="menu_tools")],
             ]),
         )
@@ -3960,7 +3960,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔎 Buscar", callback_data="ssn_search")],
                 [InlineKeyboardButton("❓ FAQ", callback_data="ssn_faq")],
-                [InlineKeyboardButton("👤 Perfil", callback_data="ssn_status")],
+                [InlineKeyboardButton("👤 Perfil", callback_data="my_profile")],
                 [InlineKeyboardButton("⬅️ Volver al Centro de Herramientas", callback_data="menu_tools")],
             ]),
         )
