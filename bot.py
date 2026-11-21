@@ -3854,7 +3854,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "❓ UNARED | PREGUNTAS FRECUENTES — LICENCIA\n\n"
             "1️⃣ ¿Cómo funciona?\nEnvías el formulario propio de LICENCIA con cinco campos. El equipo revisa la solicitud manualmente.\n\n"
             "2️⃣ ¿Qué debo enviar?\nNombre y apellido, Dirección, City, Estado y ZIP, cada uno en su propia línea y en ese orden.\n\n"
-            "3️⃣ ¿Cuándo recibo respuesta?\\nDespués de que el administrador revise y confirme la respuesta, la recibirás en este chat.",
+            "3️⃣ ¿Cuándo recibo respuesta?\nDespués de que el administrador revise y confirme la respuesta, la recibirás en este chat.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔎 Buscar", callback_data="license_search")],
                 [InlineKeyboardButton("⬅️ Volver a LICENCIA", callback_data="tool_license_info")],
