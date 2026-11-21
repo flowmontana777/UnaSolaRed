@@ -1731,94 +1731,173 @@ def build_admin_application():
 async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
         return
-    await refresh_wolvpay_statuses()
-    with sqlite3.connect(DATABASE_PATH) as db:
-        db.execute("""CREATE TABLE IF NOT EXISTS unared_customers (
-            telegram_id INTEGER PRIMARY KEY, username TEXT NOT NULL DEFAULT '',
-            full_name TEXT NOT NULL DEFAULT '', first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
-        customers = db.execute("SELECT COUNT(*) FROM unared_customers").fetchone()[0]
-        today = db.execute("SELECT COUNT(*) FROM unared_customers WHERE date(first_seen)=date('now','localtime')").fetchone()[0]
-        week = db.execute("SELECT COUNT(*) FROM unared_customers WHERE first_seen >= datetime('now','-7 days')").fetchone()[0]
-        invoices = paid = pending = 0
-        income = 0.0
-        status_counts = {}
-        for table in INVOICE_TABLES:
-            exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()
-            if exists:
-                cols = {x[1] for x in db.execute("PRAGMA table_info(" + table + ")")}
-                if "amount" in cols and "status" in cols:
-                    rows = db.execute("SELECT amount,status FROM " + table).fetchall()
-                    invoices += len(rows)
-                    for amount,status in rows:
-                        status_value = str(status or "UNKNOWN").upper()
-                        status_counts[status_value] = status_counts.get(status_value, 0) + 1
-                        if status_value == "PAID":
-                            paid += 1
-                            try: income += float(amount)
-                            except (ValueError, TypeError): pass
-                        elif status_value in {"PENDING", "UNPAID", "PROCESSING", "AWAITING_SELECTION", "CREATED", "NEW"}:
-                            pending += 1
-        music = db.execute("SELECT COUNT(*) FROM digital_music_subscribers").fetchone()[0] if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='digital_music_subscribers'").fetchone() else 0
-        db.execute("""CREATE TABLE IF NOT EXISTS unared_interactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id INTEGER NOT NULL,
-            username TEXT NOT NULL DEFAULT '', full_name TEXT NOT NULL DEFAULT '',
-            button_key TEXT NOT NULL, button_label TEXT NOT NULL,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
-        total_clicks = db.execute(
-            "SELECT COUNT(*) FROM unared_interactions WHERE telegram_id != ?",
-            (int(BOT_OWNER_ID),)
-        ).fetchone()[0]
-        top_buttons = db.execute("""SELECT button_label, COUNT(*) AS total
-            FROM unared_interactions WHERE telegram_id != ?
-            GROUP BY button_key, button_label
-            ORDER BY total DESC LIMIT 8""", (int(BOT_OWNER_ID),)).fetchall()
-        recent = db.execute("""SELECT full_name, username, telegram_id, button_label, created_at
-            FROM unared_interactions WHERE telegram_id != ?
-            ORDER BY id DESC LIMIT 10""", (int(BOT_OWNER_ID),)).fetchall()
-    top_text = "\n".join(
-        f"  • {label}: {count} clics" for label, count in top_buttons
-    ) or "  • Todavía no hay clics registrados."
-    recent_text = "\n".join(
-        f"  • {name or ('@' + username if username else 'Cliente')} → {label} | ID {tid} ({when})"
-        for name, username, tid, label, when in recent
-    ) or "  • Todavía no hay actividad registrada."
-    report = (
-        "📊 UNARED | ESTADÍSTICAS\n"
-        "━━━━━━━━━━━━━━━━━━\n\n"
-        "👥 CLIENTES\n"
-        f"• Registrados: {customers}\n"
-        f"• Nuevos hoy: {today}\n"
-        f"• Últimos 7 días: {week}\n"
-        f"• Modo Digital: {music}\n\n"
-        "🖱️ INTERACCIÓN DE CLIENTES\n"
-        f"• Botones pulsados: {total_clicks}\n\n"
-        "🏆 BOTONES MÁS UTILIZADOS\n"
-        f"{top_text}\n\n"
-        "🕘 ACTIVIDAD RECIENTE\n"
-        f"{recent_text}\n\n"
-        "💳 FACTURACIÓN Y PAGOS\n"
-        f"• Facturas creadas: {invoices}\n"
-        f"• Pendientes: {pending}\n"
-        f"• Pagos confirmados: {paid}\n"
-        f"• Ingresos: USD {income:,.2f}\n"
-        + "• Otros estados: " + (", ".join(f"{k}: {v}" for k, v in sorted(status_counts.items()) if k not in {"PAID", "PENDING", "UNPAID", "PROCESSING"}) or "ninguno") + "\n"
-        + "━━━━━━━━━━━━━━━━━━"
-    )
-    keyboard_rows = [
-        [
-            InlineKeyboardButton("👤 Abrir perfil de Telegram", url=f"tg://user?id={int(tid)}"),
-            InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}"),
+
+    # La consulta de estadísticas no debe depender de que WolvPay esté disponible.
+    try:
+        await refresh_wolvpay_statuses()
+    except Exception:
+        logger.exception("No se pudo sincronizar WolvPay antes de mostrar estadísticas; se mostrarán los datos locales.")
+
+    try:
+        with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+            db.execute("""CREATE TABLE IF NOT EXISTS unared_customers (
+                telegram_id INTEGER PRIMARY KEY,
+                username TEXT NOT NULL DEFAULT '',
+                full_name TEXT NOT NULL DEFAULT '',
+                first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )""")
+            # Migra instalaciones antiguas que ya tenían la tabla con menos columnas.
+            customer_columns = {row[1] for row in db.execute("PRAGMA table_info(unared_customers)")}
+            for column, definition in (
+                ("username", "TEXT NOT NULL DEFAULT ''"),
+                ("full_name", "TEXT NOT NULL DEFAULT ''"),
+                ("first_seen", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"),
+                ("last_seen", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"),
+            ):
+                if column not in customer_columns:
+                    db.execute(f"ALTER TABLE unared_customers ADD COLUMN {column} {definition}")
+
+            customers = db.execute("SELECT COUNT(*) FROM unared_customers").fetchone()[0]
+            today = db.execute(
+                "SELECT COUNT(*) FROM unared_customers WHERE date(first_seen)=date('now','localtime')"
+            ).fetchone()[0]
+            week = db.execute(
+                "SELECT COUNT(*) FROM unared_customers WHERE first_seen >= datetime('now','-7 days')"
+            ).fetchone()[0]
+
+            invoices = paid = pending = 0
+            income = 0.0
+            status_counts = {}
+            for table in INVOICE_TABLES:
+                exists = db.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
+                ).fetchone()
+                if not exists:
+                    continue
+                columns = {row[1] for row in db.execute(f"PRAGMA table_info({table})")}
+                if not {"amount", "status"}.issubset(columns):
+                    continue
+                for amount, status in db.execute(f"SELECT amount, status FROM {table}").fetchall():
+                    invoices += 1
+                    status_value = str(status or "UNKNOWN").strip().upper()
+                    status_counts[status_value] = status_counts.get(status_value, 0) + 1
+                    if status_value == "PAID":
+                        paid += 1
+                        try:
+                            parsed_amount = float(amount)
+                            if parsed_amount >= 0:
+                                income += parsed_amount
+                        except (ValueError, TypeError, OverflowError):
+                            logger.warning("Importe no válido en estadísticas, tabla %s.", table)
+                    elif status_value in {
+                        "PENDING", "UNPAID", "PROCESSING", "AWAITING_SELECTION",
+                        "AWAITING_PAYMENT", "CONFIRMING_PAYMENT", "CREATED", "NEW"
+                    }:
+                        pending += 1
+
+            music_table = db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='digital_music_subscribers'"
+            ).fetchone()
+            music = (
+                db.execute("SELECT COUNT(*) FROM digital_music_subscribers").fetchone()[0]
+                if music_table else 0
+            )
+
+            db.execute("""CREATE TABLE IF NOT EXISTS unared_interactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                telegram_id INTEGER NOT NULL,
+                username TEXT NOT NULL DEFAULT '',
+                full_name TEXT NOT NULL DEFAULT '',
+                button_key TEXT NOT NULL,
+                button_label TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )""")
+            interaction_columns = {row[1] for row in db.execute("PRAGMA table_info(unared_interactions)")}
+            for column, definition in (
+                ("username", "TEXT NOT NULL DEFAULT ''"),
+                ("full_name", "TEXT NOT NULL DEFAULT ''"),
+                ("button_key", "TEXT NOT NULL DEFAULT ''"),
+                ("button_label", "TEXT NOT NULL DEFAULT ''"),
+                ("created_at", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"),
+            ):
+                if column not in interaction_columns:
+                    db.execute(f"ALTER TABLE unared_interactions ADD COLUMN {column} {definition}")
+
+            total_clicks = db.execute(
+                "SELECT COUNT(*) FROM unared_interactions WHERE telegram_id != ?",
+                (int(BOT_OWNER_ID),),
+            ).fetchone()[0]
+            top_buttons = db.execute("""SELECT button_label, COUNT(*) AS total
+                FROM unared_interactions WHERE telegram_id != ?
+                GROUP BY button_key, button_label
+                ORDER BY total DESC LIMIT 8""", (int(BOT_OWNER_ID),)).fetchall()
+            recent = db.execute("""SELECT full_name, username, telegram_id, button_label, created_at
+                FROM unared_interactions WHERE telegram_id != ?
+                ORDER BY id DESC LIMIT 10""", (int(BOT_OWNER_ID),)).fetchall()
+
+        top_text = "\\n".join(
+            f"  • {label}: {count} clics" for label, count in top_buttons
+        ) or "  • Todavía no hay clics registrados."
+        recent_text = "\\n".join(
+            f"  • {name or ('@' + username if username else 'Cliente')} → {label} | ID {tid} ({when})"
+            for name, username, tid, label, when in recent
+        ) or "  • Todavía no hay actividad registrada."
+
+        other_states = {
+            state: count for state, count in status_counts.items()
+            if state not in {
+                "PAID", "PENDING", "UNPAID", "PROCESSING", "AWAITING_SELECTION",
+                "AWAITING_PAYMENT", "CONFIRMING_PAYMENT", "CREATED", "NEW"
+            }
+        }
+        report = (
+            "📊 UNARED | ESTADÍSTICAS\\n"
+            "━━━━━━━━━━━━━━━━━━\\n\\n"
+            "👥 CLIENTES\\n"
+            f"• Registrados: {customers}\\n"
+            f"• Nuevos hoy: {today}\\n"
+            f"• Últimos 7 días: {week}\\n"
+            f"• Modo Digital: {music}\\n\\n"
+            "🖱️ INTERACCIÓN DE CLIENTES\\n"
+            f"• Botones pulsados: {total_clicks}\\n\\n"
+            "🏆 BOTONES MÁS UTILIZADOS\\n"
+            f"{top_text}\\n\\n"
+            "🕘 ACTIVIDAD RECIENTE\\n"
+            f"{recent_text}\\n\\n"
+            "💳 FACTURACIÓN Y PAGOS\\n"
+            f"• Facturas creadas: {invoices}\\n"
+            f"• Pendientes: {pending}\\n"
+            f"• Pagos confirmados: {paid}\\n"
+            f"• Ingresos: USD {income:,.2f}\\n"
+            + "• Otros estados: " + (
+                ", ".join(f"{key}: {value}" for key, value in sorted(other_states.items()))
+                or "ninguno"
+            ) + "\\n━━━━━━━━━━━━━━━━━━"
+        )
+        keyboard_rows = [
+            [
+                InlineKeyboardButton("👤 Abrir perfil de Telegram", url=f"tg://user?id={int(tid)}"),
+                InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}"),
+            ]
+            for _, _, tid, _, _ in recent
         ]
-        for _, _, tid, _, _ in recent
-    ]
-    keyboard_rows.append([
-        InlineKeyboardButton("🔎 Ver más estadísticas", callback_data="admin_stats_more")
-    ])
-    keyboard_rows.append([
-        InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
-    ])
-    await update.effective_message.reply_text(report, reply_markup=InlineKeyboardMarkup(keyboard_rows))
+        keyboard_rows.append([
+            InlineKeyboardButton("🔎 Ver más estadísticas", callback_data="admin_stats_more")
+        ])
+        keyboard_rows.append([
+            InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
+        ])
+        await update.effective_message.reply_text(
+            report, reply_markup=InlineKeyboardMarkup(keyboard_rows)
+        )
+    except Exception:
+        logger.exception("Error generando estadísticas del panel administrativo.")
+        message = update.effective_message
+        if message:
+            await message.reply_text(
+                "⚠️ No se pudieron generar las estadísticas. La causa quedó registrada en Railway."
+            )
 
 
 async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
