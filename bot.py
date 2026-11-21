@@ -3852,8 +3852,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer()
         await query.message.reply_text(
             "❓ UNARED | PREGUNTAS FRECUENTES — LICENCIA\n\n"
-            "1️⃣ ¿Cómo funciona?\nEnvías el formulario con los tres campos en el orden indicado. El equipo revisa la solicitud manualmente.\n\n"
-            "2️⃣ ¿Qué debo enviar?\nName, DOB y DI, cada uno en su propia línea y con las etiquetas exactas.\n\n"
+            "1️⃣ ¿Cómo funciona?\nEnvías el formulario propio de LICENCIA con cinco campos. El equipo revisa la solicitud manualmente.\n\n"
+            "2️⃣ ¿Qué debo enviar?\nNombre y apellido, Dirección, City, Estado y ZIP, cada uno en su propia línea y en ese orden.\n\n"
             "3️⃣ ¿Cuándo recibo respuesta?\nDespués de que el administrador revise y confirme la respuesta, la recibirás en este chat.\n\n"
             "4️⃣ ¿Qué información puedo enviar?\nSolo información propia o que tengas autorización expresa para compartir. Este módulo no consulta bases de datos externas ni genera licencias.",
             reply_markup=InlineKeyboardMarkup([
@@ -3884,7 +3884,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text(
             "🤖 UNARED | LICENCIA — SOLICITUD\n\n"
             "💵 Precio: US$10.00\n"
-            "Envía el formulario completo respetando exactamente el orden y las etiquetas. "
+            "Envía el formulario propio de LICENCIA con nombre y apellido, Dirección, City, Estado y ZIP. "
             "Si falta un campo o el formato no coincide, el bot te pedirá corregirlo.\n\n"
             "Pulsa Continuar para recibir el formato.",
             reply_markup=InlineKeyboardMarkup([
@@ -3900,11 +3900,13 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["waiting_license_request"] = True
         await query.message.reply_text(
             "📋 UNARED | LICENCIA\n━━━━━━━━━━━━━━━━━━\n\n"
-            "Copia este formato y sustituye los ejemplos por tus propios datos autorizados:\n\n"
-            "Name: Nombre y apellido\n"
-            "DOB: DD/MM/AAAA\n"
-            "DI: Número o identificador de licencia\n\n"
-            "Envía las tres líneas en un solo mensaje, respetando el orden y las etiquetas. "
+            "Copia este formato de LICENCIA y completa los cinco campos:\n\n"
+            "Nombre y apellido\n"
+            "Dirección:\n"
+            "City:\n"
+            "Estado:\n"
+            "ZIP:\n\n"
+            "Envía las cinco líneas en un solo mensaje, respetando el orden. "
             "Escribe /cancel para cancelar."
         )
         return
@@ -4971,40 +4973,39 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get("waiting_license_request"):
         raw_form = (update.message.text or "").strip()
         lines = [line.strip() for line in raw_form.splitlines() if line.strip()]
-        if len(lines) != 3:
+        if len(lines) != 5:
             await update.message.reply_text(
-                "⚠️ Formato incorrecto. Envía exactamente tres líneas, en este orden:\n"
-                "Name: Nombre y apellido\nDOB: DD/MM/AAAA\nDI: Número o identificador de licencia"
+                "⚠️ Formato incompleto. Envía exactamente cinco líneas, en este orden:\n"
+                "Nombre y apellido\nDirección:\nCity:\nEstado:\nZIP:"
             )
             return
+        customer_name = lines[0]
+        expected_labels = ("Dirección", "City", "Estado", "ZIP")
         values = []
-        for line, expected in zip(lines, ("name", "dob", "di")):
+        for line, expected in zip(lines[1:], expected_labels):
             if ":" not in line:
                 values = []
                 break
             label, value = line.split(":", 1)
-            if label.strip().lower() != expected or not value.strip():
+            if label.strip().lower() != expected.lower() or not value.strip():
                 values = []
                 break
             values.append(value.strip())
-        if len(values) != 3:
+        if len(customer_name) < 3 or len(customer_name) > 100:
+            await update.message.reply_text("⚠️ Escribe un nombre y apellido válido en la primera línea.")
+            return
+        if len(values) != 4:
             await update.message.reply_text(
-                "⚠️ Las etiquetas o el orden no coinciden. Usa exactamente:\nName: ...\nDOB: DD/MM/AAAA\nDI: ..."
+                "⚠️ El orden o las etiquetas no coinciden. Usa exactamente:\n"
+                "Nombre y apellido\nDirección: ...\nCity: ...\nEstado: ...\nZIP: ..."
             )
             return
-        customer_name, dob_text, di_value = values
-        if len(customer_name) < 3 or len(customer_name) > 100 or customer_name.lower() in ("nombre del cliente", "nombre y apellido"):
-            await update.message.reply_text("⚠️ Escribe el nombre y apellido del titular en Name, no el texto de ejemplo.")
+        address_value, city_value, state_value, zip_value = values
+        if len(address_value) < 4 or len(address_value) > 150 or len(city_value) < 2 or len(city_value) > 80:
+            await update.message.reply_text("⚠️ Revisa la Dirección y City; parecen incompletas.")
             return
-        try:
-            dob_value = datetime.strptime(dob_text, "%d/%m/%Y").date()
-            if dob_value > datetime.now().date():
-                raise ValueError("DOB futura")
-        except ValueError:
-            await update.message.reply_text("⚠️ DOB no válido. Usa DD/MM/AAAA, por ejemplo 06/04/1990.")
-            return
-        if len(di_value) < 4 or len(di_value) > 40 or di_value.lower() in ("número o identificador de licencia", "numero o identificador de licencia"):
-            await update.message.reply_text("⚠️ DI debe contener el identificador, no el texto de ejemplo.")
+        if len(state_value) < 2 or len(state_value) > 50 or len(zip_value) < 3 or len(zip_value) > 15:
+            await update.message.reply_text("⚠️ Revisa Estado y ZIP; verifica que ambos estén completos.")
             return
 
         user = update.effective_user
@@ -5047,7 +5048,7 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "UPDATE unared_wallets SET balance=?, updated_at=CURRENT_TIMESTAMP WHERE telegram_id=?",
                     (format(new_balance, ".2f"), user.id),
                 )
-                request_text = f"Name: {customer_name}\nDOB: {dob_text}\nDI: {di_value}"
+                request_text = f"{customer_name}\nDirección: {address_value}\nCity: {city_value}\nEstado: {state_value}\nZIP: {zip_value}"
                 cursor = db.execute(
                     """INSERT INTO license_requests (invoice_id, telegram_id, customer_name, request_text, status)
                        VALUES (?, ?, ?, ?, 'PENDING')""",
