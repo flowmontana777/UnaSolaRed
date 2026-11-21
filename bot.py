@@ -1025,6 +1025,18 @@ async def fetch_wolvpay_invoice_statistics():
     return invoices
 
 
+async def present_admin_billing_report(update: Update, report: str, keyboard):
+    """Actualiza el mensaje del panel según sea foto con caption o texto."""
+    if update.callback_query:
+        message = update.callback_query.message
+        if message.photo:
+            await message.edit_caption(caption=report, reply_markup=keyboard)
+        else:
+            await message.edit_text(text=report, reply_markup=keyboard)
+    else:
+        await update.effective_message.reply_text(report, reply_markup=keyboard)
+
+
 async def admin_billing(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
         return
@@ -1040,9 +1052,10 @@ async def admin_billing(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "No se mostrarán cifras locales para evitar datos incorrectos.\n\n"
             f"Detalle: {str(exc)[:250]}"
         )
-        await update.effective_message.edit_text(
+        await present_admin_billing_report(
+            update,
             report,
-            reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardMarkup([[
                 InlineKeyboardButton("🔄 Reintentar", callback_data="admin_billing"),
                 InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
             ]]),
@@ -1100,9 +1113,10 @@ async def admin_billing(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if invalid_amounts:
         report += f"\n⚠️ Facturas con importe no válido: {invalid_amounts}"
 
-    await update.effective_message.edit_text(
+    await present_admin_billing_report(
+        update,
         report,
-        reply_markup=InlineKeyboardMarkup([[
+        InlineKeyboardMarkup([[
             InlineKeyboardButton("🔄 Actualizar estadísticas", callback_data="admin_billing"),
             InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
         ]]),
