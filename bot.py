@@ -4073,7 +4073,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["icloud_checkout_quantity"] = quantity
         await query.message.reply_text(
             "💚 UNARED | PAGO DE ICLOUD\n\n"
-            "📦 Cantidad: {quantity}\n💵 Total: US${total}\n\n"
+            f"📦 Cantidad: {quantity}\n"
+            f"💵 Total: US${total}\n\n"
             "Selecciona tu método de pago:",
             reply_markup=icloud_coin_menu(),
         )
