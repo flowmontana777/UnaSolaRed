@@ -3574,8 +3574,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "━━━━━━━━━━\n\n"
                 "🏷️ Precio especial: US$17\n"
                 "💰 Precio regular: <del>US$20</del>\n\n"
-                f"📦 Cantidad: {quantity} {'unidad' if quantity == 1 else 'unidades'}\n"
-                f"🧾 Total a pagar: US${total}"
+                f"📦 Cantidad: {'unidad' if quantity == 1 else 'unidades'}\n"
+                f"🧾 Total a pagar: US$"
             ),
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup([
@@ -3603,8 +3603,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "━━━━━━━━━━\n\n"
                 "🏷️ Precio especial: US$17\n"
                 "💰 Precio regular: <del>US$20</del>\n\n"
-                f"📦 Cantidad: {quantity} {'unidad' if quantity == 1 else 'unidades'}\n"
-                f"🧾 Total a pagar: US${total}"
+                f"📦 Cantidad: {'unidad' if quantity == 1 else 'unidades'}\n"
+                f"🧾 Total a pagar: US$"
             ),
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup([
