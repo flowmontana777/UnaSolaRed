@@ -49,10 +49,19 @@ GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
 # UTILIDADES DE ADMINISTRACIÓN
 # =====================================
 
+def customer_profile_button(telegram_id, display_name=None):
+    """Abre directamente el perfil de Telegram del cliente desde el botón."""
+    label_name = str(display_name or "Telegram").strip()[:32]
+    return InlineKeyboardButton(
+        f"👤 Abrir perfil de {label_name}",
+        url=f"tg://user?id={int(telegram_id)}",
+    )
+
+
 def copy_id_keyboard(telegram_id):
     """Acciones administrativas permitidas para un cliente."""
     return InlineKeyboardMarkup([[
-        InlineKeyboardButton("👤 Ir al perfil", callback_data=f"view_customer:{int(telegram_id)}"),
+        customer_profile_button(telegram_id),
         InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(telegram_id)}"),
     ]])
 
@@ -74,7 +83,7 @@ async def notify_new_customer(application, user):
         f"🕒 Registro: {now}"
     )
     keyboard = InlineKeyboardMarkup([[
-        InlineKeyboardButton("👤 Ir al perfil", callback_data=f"view_customer:{int(user.id)}"),
+        customer_profile_button(user.id, user.full_name),
         InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(user.id)}"),
     ]])
     try:
@@ -903,8 +912,8 @@ async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for tid, data in ordered:
             buttons.append([
                 InlineKeyboardButton(
-                    f"👤 Ir al perfil: {(data['name'] or data['username'] or str(tid))[:20]}",
-                    callback_data=f"view_customer:{int(tid)}",
+                    f"👤 Abrir perfil de {(data['name'] or data['username'] or str(tid))[:20]}",
+                    url=f"tg://user?id={int(tid)}",
                 ),
                 InlineKeyboardButton(
                     "🔔 Mandar alerta",
@@ -1165,7 +1174,7 @@ async def admin_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons = []
     for name, username, tid, label, when in rows:
         buttons.append([
-            InlineKeyboardButton("👤 Ir al perfil", callback_data=f"view_customer:{int(tid)}"),
+            customer_profile_button(tid),
             InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}"),
         ])
     buttons.append([InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")])
