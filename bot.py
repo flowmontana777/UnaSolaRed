@@ -3593,11 +3593,11 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/Nqmk8fV/Promotional-graphic-card-design-9f04e875-2-K.jpg",
             caption=(
                 "💚 UNARED | MÉTODO PyP\n\n"
-                "🎉 OFERTA PARA CLIENTES NUEVOS: US$100\n\n"
-                "Aquí podrás encontrar información sobre oportunidades de pagos legítimos en Alemania.\n\n"
+                "🎉 NOVATO PARA TI NUEVOS: METODO PAYPAL US$100\n\n"
+                "Aquí podrás encontrar información sobre oportunidades de pagos de Alemania🇩🇪💸.\n\n"
                 "📋 Requisitos: móvil y traductor.\n\n"
-                "Fue mi primera experiencia y todavía está activa; hoy la comparto "
-                "con quienes desean conocer estas oportunidades."
+                "Fue mi primera metodo y todavía está activa; hoy la comparto "
+                "con quienes iniciar NOVATO💰."
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("💳 Pagar US$100", callback_data="pyp_pay")],
