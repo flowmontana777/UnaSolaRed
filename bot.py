@@ -1040,7 +1040,7 @@ async def admin_billing(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "No se mostrarán cifras locales para evitar datos incorrectos.\n\n"
             f"Detalle: {str(exc)[:250]}"
         )
-        await update.effective_message.reply_text(
+        await update.effective_message.edit_text(
             report,
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("🔄 Reintentar", callback_data="admin_billing"),
@@ -1100,7 +1100,7 @@ async def admin_billing(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if invalid_amounts:
         report += f"\n⚠️ Facturas con importe no válido: {invalid_amounts}"
 
-    await update.effective_message.reply_text(
+    await update.effective_message.edit_text(
         report,
         reply_markup=InlineKeyboardMarkup([[
             InlineKeyboardButton("🔄 Actualizar estadísticas", callback_data="admin_billing"),
