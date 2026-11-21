@@ -1140,7 +1140,7 @@ async def admin_billing(update: Update, context: ContextTypes.DEFAULT_TYPE):
         update,
         report,
         InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔄 Actualizar estadísticas", callback_data="admin_stats"),
+            InlineKeyboardButton("🔄 Actualizar estadísticas", callback_data="admin_billing"),
             InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
         ]]),
     )
