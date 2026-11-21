@@ -4001,7 +4001,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice in ("tool_amazon", "tool_loans"):
         label = "AMAZON" if choice == "tool_amazon" else "PRÉSTAMOS"
         await query.message.reply_text(
-            "💚 UNARED | {label}\n\nEste servicio estará disponible próximamente.",
+            "💚 UNARED | Amazon\n\nEste servicio estará disponible próximamente.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("⏳ Próximamente", callback_data="profiles_coming_soon")],
                 [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
