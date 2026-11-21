@@ -988,76 +988,117 @@ async def refresh_wolvpay_statuses():
             logger.exception("No se pudieron guardar los estados sincronizados de WolvPay.")
 
 
+async def fetch_wolvpay_invoice_statistics():
+    """Obtiene todas las facturas directamente de WolvPay, respetando su paginación."""
+    if not WOLVPAY_API_KEY:
+        raise RuntimeError("Falta configurar WOLVPAY_API_KEY en el entorno.")
+
+    invoices = []
+    page = 1
+    total_pages = 1
+    timeout = aiohttp.ClientTimeout(total=30)
+
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        while page <= total_pages:
+            async with session.get(
+                f"{WOLVPAY_API_URL}/invoices",
+                params={"page": page, "limit": 25},
+                headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}"},
+            ) as response:
+                payload = await response.json(content_type=None)
+                if response.status != 200 or not payload.get("success", False):
+                    message = payload.get("message") or payload.get("error") or f"HTTP {response.status}"
+                    raise RuntimeError(f"WolvPay no pudo devolver las facturas: {message}")
+
+            data = payload.get("data") or {}
+            batch = data.get("invoices") or []
+            if not isinstance(batch, list):
+                raise RuntimeError("WolvPay devolvió una lista de facturas con formato inesperado.")
+            invoices.extend(batch)
+
+            pagination = data.get("pagination") or {}
+            total_pages = int(pagination.get("total_pages") or page)
+            if not batch:
+                break
+            page += 1
+
+    return invoices
+
+
 async def admin_billing(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
         return
 
-    # Cada vez que se abre Facturación, consulta WolvPay y actualiza los estados locales.
-    await refresh_wolvpay_statuses()
+    try:
+        invoices = await fetch_wolvpay_invoice_statistics()
+    except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, TypeError, RuntimeError) as exc:
+        logger.exception("No se pudieron obtener las estadísticas oficiales de WolvPay.")
+        report = (
+            "💳 UNARED | FACTURACIÓN WOLVPAY\n"
+            "━━━━━━━━━━━━━━━━━━\n\n"
+            "⚠️ No se pudieron cargar las estadísticas oficiales de WolvPay.\n"
+            "No se mostrarán cifras locales para evitar datos incorrectos.\n\n"
+            f"Detalle: {str(exc)[:250]}"
+        )
+        await update.effective_message.reply_text(
+            report,
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔄 Reintentar", callback_data="admin_billing"),
+                InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
+            ]]),
+        )
+        return
 
     status_counts = {}
     total_invoiced = Decimal("0")
     confirmed_income = Decimal("0")
-    invoices = 0
     invalid_amounts = 0
 
-    with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
-        for table in INVOICE_TABLES:
-            if not db.execute(
-                "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
-            ).fetchone():
-                continue
-            cols = {row[1] for row in db.execute("PRAGMA table_info(" + table + ")")}
-            if not {"amount", "status"}.issubset(cols):
-                continue
+    for invoice in invoices:
+        state = str(invoice.get("status") or "UNKNOWN").strip().upper()
+        status_counts[state] = status_counts.get(state, 0) + 1
+        try:
+            amount = Decimal(str(invoice.get("amount") or "0"))
+            if amount.is_finite() and amount >= 0:
+                total_invoiced += amount
+                if state == "PAID":
+                    confirmed_income += amount
+            else:
+                invalid_amounts += 1
+        except (InvalidOperation, ValueError, TypeError):
+            invalid_amounts += 1
 
-            for amount, status in db.execute(
-                "SELECT amount, status FROM " + table
-            ).fetchall():
-                invoices += 1
-                state = str(status or "UNKNOWN").strip().upper()
-                # Unifica variantes habituales que puede devolver el proveedor.
-                if state in {"CANCELED", "CANCEL", "VOID", "VOIDED"}:
-                    state = "CANCELLED"
-                elif state in {"UNPAID", "PROCESSING", "AWAITING_SELECTION", "CREATED", "NEW"}:
-                    state = "PENDING"
-
-                status_counts[state] = status_counts.get(state, 0) + 1
-                try:
-                    value = Decimal(str(amount or "0"))
-                    if value.is_finite() and value >= 0:
-                        total_invoiced += value
-                        if state == "PAID":
-                            confirmed_income += value
-                    else:
-                        invalid_amounts += 1
-                except (InvalidOperation, ValueError, TypeError):
-                    invalid_amounts += 1
-
-    pending = status_counts.get("PENDING", 0)
     paid = status_counts.get("PAID", 0)
-    cancelled = status_counts.get("CANCELLED", 0)
+    pending = sum(status_counts.get(state, 0) for state in (
+        "AWAITING_SELECTION", "AWAITING_PAYMENT", "CONFIRMING_PAYMENT"
+    ))
+    expired = status_counts.get("EXPIRED", 0)
+    underpaid = status_counts.get("UNDERPAID", 0)
     other_states = {
         state: count for state, count in status_counts.items()
-        if state not in {"PAID", "PENDING", "CANCELLED"}
+        if state not in {
+            "PAID", "AWAITING_SELECTION", "AWAITING_PAYMENT",
+            "CONFIRMING_PAYMENT", "EXPIRED", "UNDERPAID"
+        }
     }
-    status_detail = "\\n".join(
+    status_detail = "\n".join(
         f"• {state}: {count}" for state, count in sorted(other_states.items())
     ) or "• Ninguno"
 
     report = (
-        "💳 UNARED | FACTURACIÓN WOLVPAY\\n"
-        "━━━━━━━━━━━━━━━━━━\\n\\n"
-        f"🧾 Facturas creadas: {invoices}\\n"
-        f"⌛ Pendientes: {pending}\\n"
-        f"✅ Pagadas: {paid}\\n"
-        f"❌ Canceladas: {cancelled}\\n\\n"
-        f"💰 Total facturado: USD {total_invoiced:,.2f}\\n"
-        f"💵 Ingresos confirmados: USD {confirmed_income:,.2f}\\n\\n"
-        f"📌 Otros estados:\\n{status_detail}"
+        "💳 UNARED | FACTURACIÓN WOLVPAY\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"🧾 Facturas totales: {len(invoices)}\n"
+        f"⌛ Pendientes: {pending}\n"
+        f"✅ Pagadas: {paid}\n"
+        f"⏰ Expiradas: {expired}\n"
+        f"⚠️ Pago incompleto: {underpaid}\n\n"
+        f"💰 Total facturado: USD {total_invoiced:,.2f}\n"
+        f"💵 Ingresos confirmados: USD {confirmed_income:,.2f}\n\n"
+        f"📌 Otros estados:\n{status_detail}"
     )
     if invalid_amounts:
-        report += f"\\n⚠️ Facturas con importe no válido: {invalid_amounts}"
+        report += f"\n⚠️ Facturas con importe no válido: {invalid_amounts}"
 
     await update.effective_message.reply_text(
         report,
