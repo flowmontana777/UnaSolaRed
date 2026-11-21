@@ -1794,7 +1794,7 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     keyboard_rows = [
         [
-            InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={int(tid)}"),
+            InlineKeyboardButton("👤 Abrir perfil de Telegram", url=f"tg://user?id={int(tid)}"),
             InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}"),
         ]
         for _, _, tid, _, _ in recent
