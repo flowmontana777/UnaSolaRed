@@ -3913,6 +3913,17 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
             ensure_wallet_tables(db)
+            db.execute("""CREATE TABLE IF NOT EXISTS license_requests (
+                request_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                invoice_id TEXT NOT NULL UNIQUE,
+                telegram_id INTEGER NOT NULL,
+                customer_name TEXT NOT NULL,
+                request_text TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                admin_response TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )""")
             wallet_row = db.execute("SELECT balance FROM unared_wallets WHERE telegram_id=?", (user.id,)).fetchone()
             rows = db.execute(
                 "SELECT request_id, status, created_at FROM license_requests WHERE telegram_id=? ORDER BY request_id DESC LIMIT 10",
@@ -4953,6 +4964,10 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.effective_chat or update.effective_chat.type != "private":
         return
 
+    if is_admin(update.effective_user) and context.user_data.get("license_request_reply_id"):
+        await receive_admin_profile_reply(update, context)
+        return
+
     if context.user_data.get("waiting_license_request"):
         raw_form = (update.message.text or "").strip()
         lines = [line.strip() for line in raw_form.splitlines() if line.strip()]
@@ -5970,7 +5985,7 @@ def build_main_application():
     # /buscarcliente está disponible exclusivamente en el bot de administración.
     # Solo los callbacks administrativos pasan por el control de acceso del panel.
     # Los botones de servicios y precios siguen llegando a select_option.
-    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|av:|ap:|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|copy_id:|notify_customer:)"))
+    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|av:|ap:|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:)"))
     app.add_handler(CallbackQueryHandler(select_option))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_new_members))
     app.add_handler(TypeHandler(Update, channel_music_ingest), group=-1)
