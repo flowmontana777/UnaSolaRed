@@ -1215,8 +1215,8 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
             }
             if query.data == "admin_search_help":
                 await query.message.reply_text(
-                    "🔎 UNARED | BUSCAR CLIENTE\\n\\n"
-                    "Usa el comando: /buscarcliente TELEGRAM_ID\\n"
+                    "🔎 UNARED | BUSCAR CLIENTE\n\n"
+                    "Usa el comando: /buscarcliente TELEGRAM_ID\n"
                     "Ejemplo: /buscarcliente 123456789",
                     reply_markup=InlineKeyboardMarkup([[
                         InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
