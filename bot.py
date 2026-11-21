@@ -1197,6 +1197,43 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not is_admin(update.effective_user):
         await query.answer("⛔ Acceso denegado.", show_alert=True)
         return
+    # Navegación del panel: procesar primero los botones admin_.
+    if query.data in {
+        "admin_home", "admin_stats", "admin_stats_more",
+        "admin_customers", "admin_billing", "admin_activity",
+        "admin_search_help",
+    }:
+        await query.answer()
+        try:
+            admin_routes = {
+                "admin_home": admin_panel,
+                "admin_stats": admin_stats,
+                "admin_stats_more": admin_stats_more,
+                "admin_customers": admin_customers,
+                "admin_billing": admin_billing,
+                "admin_activity": admin_activity,
+            }
+            if query.data == "admin_search_help":
+                await query.message.reply_text(
+                    "🔎 UNARED | BUSCAR CLIENTE\\n\\n"
+                    "Usa el comando: /buscarcliente TELEGRAM_ID\\n"
+                    "Ejemplo: /buscarcliente 123456789",
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
+                    ]]),
+                )
+            else:
+                await admin_routes[query.data](update, context)
+        except Exception:
+            logger.exception("Falló la navegación del panel administrativo: %s", query.data)
+            try:
+                await query.message.reply_text(
+                    "⚠️ No se pudo abrir esta sección. El error quedó registrado para corregirlo."
+                )
+            except Exception:
+                logger.exception("Tampoco se pudo informar el error en el chat administrativo.")
+        return
+
     await query.answer()
     if query.data.startswith("license_req_process:") or query.data.startswith("license_req_reply:"):
         action, raw_request_id = query.data.split(":", 1)
@@ -1675,30 +1712,6 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
         except (ValueError, IndexError):
             await query.message.reply_text("ID no válido.")
         return
-    if query.data == "admin_home":
-        await admin_panel(update, context)
-    elif query.data == "admin_stats":
-        await admin_stats(update, context)
-    elif query.data == "admin_stats_more":
-        await admin_stats_more(update, context)
-    elif query.data == "admin_customers":
-        await admin_customers(update, context)
-    elif query.data == "admin_billing":
-        await admin_billing(update, context)
-    elif query.data == "admin_activity":
-        await admin_activity(update, context)
-    elif query.data == "admin_search_help":
-        await query.message.reply_text(
-            "🔎 UNARED | BUSCAR CLIENTE\n\n"
-            "Usa el comando:\n/buscarcliente TELEGRAM_ID\n\n"
-            "Ejemplo: /buscarcliente 123456789\n"
-            "El cliente debe haber iniciado o interactuado con UnaRed para aparecer en el registro.",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
-            ]]),
-        )
-
-
 
 def build_admin_application():
     admin_app = Application.builder().token(ADMIN_BOT_TOKEN).build()
