@@ -150,7 +150,7 @@ async def notify_invoice_pending(
                     InlineKeyboardButton("✅ Pagado", callback_data=f"ap:{invoice_id}"),
                 ],
                 [
-                    InlineKeyboardButton("👤 Ir al perfil", callback_data=f"view_customer:{int(telegram_id)}"),
+                    InlineKeyboardButton("👤 Abrir perfil de Telegram", url=f"tg://user?id={int(telegram_id)}"),
                     InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(telegram_id)}"),
                 ],
             ])
@@ -1794,7 +1794,7 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     keyboard_rows = [
         [
-            InlineKeyboardButton("👤 Ir al perfil", callback_data=f"view_customer:{int(tid)}"),
+            InlineKeyboardButton("👤 Ir al perfil", url=f"tg://user?id={int(tid)}"),
             InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}"),
         ]
         for _, _, tid, _, _ in recent
