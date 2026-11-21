@@ -4022,7 +4022,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "💚 UNARED | ICLOUD\n\n🪪Perfil Completo para aplicar a la 🍏\n\"
             "Lo necesario para aplicar🍏❕.\n\n"
             "🏷️ Precio por servicio: US$25\n"
-            f"📦 Cantidad: {quantity}\n💵 Total: US${total}",
+            "📦 Cantidad: {quantity}\n💵 Total: US${total}",
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("➖", callback_data="icloud_qty_minus"),
@@ -4045,7 +4045,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "💚 UNARED | ICLOUD\n\n🪪Perfil Completo para aplicar a la 🍏\n\"
             "Lo necesario para aplicar🍏❕.\n\n"
             "🏷️ Precio por servicio: US$25\n"
-            f"📦 Cantidad: {quantity}\n💵 Total: US${total}",
+            "📦 Cantidad: {quantity}\n💵 Total: US${total}",
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("➖", callback_data="icloud_qty_minus"),
