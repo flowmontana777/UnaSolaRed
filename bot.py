@@ -4028,8 +4028,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         total = quantity * 25
         await query.message.reply_text(
             "💚 UNARED | PRÉSTAMOS\n\n"
-            "📄 Copia\n"
-            "Copia del servicio seleccionado.\n\n"
+            "🪪 Perfil Completo para aplicar💸\n"
+            "ℹ️ Lo Necesario para aplicar.\n\n"
             "🏷️ Precio por servicio: US$25\n"
             f"📦 Cantidad: {quantity}\n"
             f"💵 Total: US${total}",
@@ -4054,7 +4054,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text(
             "💚 UNARED | ICLOUD\n\n"
             "🪪 Perfil Completo para aplicar a la 🍏\n"
-            "Lo necesario para aplicar 🍏❕.\n\n"
+            "ℹ️ Lo necesario para aplicar 🍏❕.\n\n"
             "🏷️ Precio por servicio: US$25\n"
             f"📦 Cantidad: {quantity}\n"
             f"💵 Total: US${total}",
@@ -4078,8 +4078,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         total = quantity * 25
         await query.edit_message_text(
             "💚 UNARED | PRÉSTAMOS\n\n"
-            "📄 Copia\n"
-            "Copia del servicio seleccionado.\n\n"
+            "🪪 Perfil Completo para aplicar💸\n"
+            "ℹ️ Lo Necesario para aplicar.\n\n"
             "🏷️ Precio por servicio: US$25\n"
             f"📦 Cantidad: {quantity}\n"
             f"💵 Total: US${total}",
@@ -4104,7 +4104,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(
             "💚 UNARED | ICLOUD\n\n"
             "🪪 Perfil Completo para aplicar a la 🍏\n"
-            "Lo necesario para aplicar 🍏❕.\n\n"
+            "ℹ️ Lo necesario para aplicar 🍏❕.\n\n"
             "🏷️ Precio por servicio: US$25\n"
             f"📦 Cantidad: {quantity}\n"
             f"💵 Total: US${total}",
