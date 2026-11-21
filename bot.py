@@ -1836,10 +1836,10 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 FROM unared_interactions WHERE telegram_id != ?
                 ORDER BY id DESC LIMIT 10""", (int(BOT_OWNER_ID),)).fetchall()
 
-        top_text = "\\n".join(
+        top_text = "\n".join(
             f"  • {label}: {count} clics" for label, count in top_buttons
         ) or "  • Todavía no hay clics registrados."
-        recent_text = "\\n".join(
+        recent_text = "\n".join(
             f"  • {name or ('@' + username if username else 'Cliente')} → {label} | ID {tid} ({when})"
             for name, username, tid, label, when in recent
         ) or "  • Todavía no hay actividad registrada."
@@ -1852,28 +1852,28 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
             }
         }
         report = (
-            "📊 UNARED | ESTADÍSTICAS\\n"
-            "━━━━━━━━━━━━━━━━━━\\n\\n"
-            "👥 CLIENTES\\n"
-            f"• Registrados: {customers}\\n"
-            f"• Nuevos hoy: {today}\\n"
-            f"• Últimos 7 días: {week}\\n"
-            f"• Modo Digital: {music}\\n\\n"
-            "🖱️ INTERACCIÓN DE CLIENTES\\n"
-            f"• Botones pulsados: {total_clicks}\\n\\n"
-            "🏆 BOTONES MÁS UTILIZADOS\\n"
-            f"{top_text}\\n\\n"
-            "🕘 ACTIVIDAD RECIENTE\\n"
-            f"{recent_text}\\n\\n"
-            "💳 FACTURACIÓN Y PAGOS\\n"
-            f"• Facturas creadas: {invoices}\\n"
-            f"• Pendientes: {pending}\\n"
-            f"• Pagos confirmados: {paid}\\n"
-            f"• Ingresos: USD {income:,.2f}\\n"
+            "📊 UNARED | ESTADÍSTICAS\n"
+            "━━━━━━━━━━━━━━━━━━\n\n"
+            "👥 CLIENTES\n"
+            f"• Registrados: {customers}\n"
+            f"• Nuevos hoy: {today}\n"
+            f"• Últimos 7 días: {week}\n"
+            f"• Modo Digital: {music}\n\n"
+            "🖱️ INTERACCIÓN DE CLIENTES\n"
+            f"• Botones pulsados: {total_clicks}\n\n"
+            "🏆 BOTONES MÁS UTILIZADOS\n"
+            f"{top_text}\n\n"
+            "🕘 ACTIVIDAD RECIENTE\n"
+            f"{recent_text}\n\n"
+            "💳 FACTURACIÓN Y PAGOS\n"
+            f"• Facturas creadas: {invoices}\n"
+            f"• Pendientes: {pending}\n"
+            f"• Pagos confirmados: {paid}\n"
+            f"• Ingresos: USD {income:,.2f}\n"
             + "• Otros estados: " + (
                 ", ".join(f"{key}: {value}" for key, value in sorted(other_states.items()))
                 or "ninguno"
-            ) + "\\n━━━━━━━━━━━━━━━━━━"
+            ) + "\n━━━━━━━━━━━━━━━━━━"
         )
         keyboard_rows = [
             [
