@@ -4039,7 +4039,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     InlineKeyboardButton(str(quantity), callback_data="loans_qty_display"),
                     InlineKeyboardButton("➕", callback_data="loans_qty_plus"),
                 ],
-                [InlineKeyboardButton("💳 ¡Pagar!", callback_data="icloud_pay")],
+                [InlineKeyboardButton("💳 ¡Pagar!", callback_data="loans_pay")],
                 [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
             ]),
@@ -4121,7 +4121,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    if choice == "icloud_qty_display":
+    if choice in ("icloud_qty_display", "loans_qty_display"):
         await query.answer("Usa ➕ o ➖ para cambiar la cantidad.")
         return
 
