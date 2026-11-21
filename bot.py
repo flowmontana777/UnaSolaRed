@@ -3593,8 +3593,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/Nqmk8fV/Promotional-graphic-card-design-9f04e875-2-K.jpg",
             caption=(
                 "💚 UNARED | MÉTODO PyP\n\n"
-                "🎉 NOVATO PARA TI NUEVOS: METODO PAYPAL US$100\n\n"
-                "Aquí podrás encontrar información sobre oportunidades de pagos de Alemania🇩🇪💸.\n\n"
+                "🎉 NOVATO PARA TI NUEVO: METODO PAYPAL US$100\n\n"
+                "Aquí podrás encontrar una conexiones sobre pagos de Alemania🇩🇪💸.\n\n"
                 "📋 Requisitos: móvil y traductor.\n\n"
                 "Fue mi primera metodo y todavía está activa; hoy la comparto "
                 "con NOVATO para que no sean NOVATO💰."
