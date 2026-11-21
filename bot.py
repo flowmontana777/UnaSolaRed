@@ -1026,15 +1026,29 @@ async def fetch_wolvpay_invoice_statistics():
 
 
 async def present_admin_billing_report(update: Update, report: str, keyboard):
-    """Actualiza el mensaje del panel según sea foto con caption o texto."""
-    if update.callback_query:
-        message = update.callback_query.message
+    """Actualiza el mismo mensaje de facturación sin romper el callback."""
+    if not update.callback_query:
+        await update.effective_message.reply_text(report, reply_markup=keyboard)
+        return
+
+    message = update.callback_query.message
+    try:
         if message.photo:
             await message.edit_caption(caption=report, reply_markup=keyboard)
         else:
             await message.edit_text(text=report, reply_markup=keyboard)
-    else:
-        await update.effective_message.reply_text(report, reply_markup=keyboard)
+    except Exception as exc:
+        # Telegram devuelve "Message is not modified" si WolvPay conserva
+        # exactamente las mismas cifras; el refresco sí se ejecutó.
+        if "message is not modified" in str(exc).lower():
+            logger.info("Facturación WolvPay actualizada; las cifras no cambiaron.")
+            return
+        logger.exception("No se pudo editar el mensaje de facturación WolvPay.")
+        try:
+            await message.reply_text(report, reply_markup=keyboard)
+        except Exception:
+            logger.exception("Tampoco se pudo enviar el reporte actualizado de WolvPay.")
+            raise
 
 
 async def admin_billing(update: Update, context: ContextTypes.DEFAULT_TYPE):
