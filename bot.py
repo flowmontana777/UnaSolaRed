@@ -4001,7 +4001,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice in ("tool_amazon", "tool_loans"):
         label = "AMAZON" if choice == "tool_amazon" else "PRÉSTAMOS"
         await query.message.reply_text(
-            f"💚 UNARED | {label}\n\nEste servicio estará disponible próximamente.",
+            "💚 UNARED | {label}\n\nEste servicio estará disponible próximamente.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("⏳ Próximamente", callback_data="profiles_coming_soon")],
                 [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_profiles")],
@@ -4019,10 +4019,10 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["icloud_quantity"] = quantity
         total = quantity * 25
         await query.message.reply_text(
-            "💚 UNARED | ICLOUD\n\n"🪪Perfil Completo para aplicar a la 🍏\n\"
-            "Lo necesario para aplicar🍏❕.\n\n"
+            "💚 UNARED | ICLOUD\n\n"🪪Perfil Completo para aplicar a la "🍏\n\"
+            "Lo necesario para aplicar"🍏❕.\n\n"
             "🏷️ Precio por servicio: US$25\n"
-            "📦 Cantidad: {quantity}\n💵 Total: US${total}",
+            "📦 Cantidad: {quantity}\n"💵 Total: US${total}",
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("➖", callback_data="icloud_qty_minus"),
@@ -4042,10 +4042,10 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["icloud_quantity"] = quantity
         total = quantity * 25
         await query.edit_message_text(
-            "💚 UNARED | ICLOUD\n\n"🪪Perfil Completo para aplicar a la 🍏\n\"
-            "Lo necesario para aplicar🍏❕.\n\n"
+            "💚 UNARED | ICLOUD\n\n"🪪Perfil Completo para aplicar a la "🍏\n\"
+            "Lo necesario para aplicar"🍏❕.\n\n"
             "🏷️ Precio por servicio: US$25\n"
-            "📦 Cantidad: {quantity}\n💵 Total: US${total}",
+            "📦 Cantidad: {quantity}\n"💵 Total: US${total}",
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("➖", callback_data="icloud_qty_minus"),
