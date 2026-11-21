@@ -3855,7 +3855,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "1️⃣ ¿Cómo funciona?\nEnvías el formulario propio de LICENCIA con cinco campos. El equipo revisa la solicitud manualmente.\n\n"
             "2️⃣ ¿Qué debo enviar?\nNombre y apellido, Dirección, City, Estado y ZIP, cada uno en su propia línea y en ese orden.\n\n"
             "3️⃣ ¿Cuándo recibo respuesta?\nDespués de que el administrador revise y confirme la respuesta, la recibirás en este chat.\n\n"
-            "4️⃣ ¿Qué información puedo enviar?\nSolo información propia o que tengas autorización expresa para compartir. Este módulo no consulta bases de datos externas ni genera licencias.",
+
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔎 Buscar", callback_data="license_search")],
                 [InlineKeyboardButton("⬅️ Volver a LICENCIA", callback_data="tool_license_info")],
