@@ -3597,7 +3597,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Aquí podrás encontrar información sobre oportunidades de pagos de Alemania🇩🇪💸.\n\n"
                 "📋 Requisitos: móvil y traductor.\n\n"
                 "Fue mi primera metodo y todavía está activa; hoy la comparto "
-                "con quienes iniciar NOVATO💰."
+                "con NOVATO para que no sean NOVATO💰."
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("💳 Pagar US$100", callback_data="pyp_pay")],
