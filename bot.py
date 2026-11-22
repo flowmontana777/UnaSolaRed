@@ -670,7 +670,7 @@ def bot_catalog_menu():
         [InlineKeyboardButton("🤖 BOT OTP", callback_data="botproduct_otp")],
         [InlineKeyboardButton("🤖 BOT SSN", callback_data="botproduct_ssn")],
         [InlineKeyboardButton("🤖 BOT CHECK", callback_data="botproduct_check")],
-        [InlineKeyboardButton("🤖 LICENCIA", callback_data="botproduct_template")],
+        [InlineKeyboardButton("🤖 BOT LICENCIA", callback_data="botproduct_template")],
         [InlineKeyboardButton("🤖 BOT PRÓXIMAMENTE", callback_data="bot_coming_soon_1")],
         [InlineKeyboardButton("🤖 BOT PRÓXIMAMENTE", callback_data="bot_coming_soon_2")],
         back_button("menu_tools"),
