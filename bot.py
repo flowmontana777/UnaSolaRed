@@ -808,14 +808,18 @@ def save_customer(user):
     return is_new
 
 def log_customer_interaction(user, button_key):
-    """Guarda qué botón pulsó cada cliente, sin almacenar el contenido de sus mensajes."""
+    """Registra acciones del cliente sin guardar el contenido de sus mensajes."""
     if not user or not button_key or is_admin(user):
         return
+
     labels = {
         "menu_banks": "🏦 Bancos",
-        "remesas": "💸 Envíos y remesas",        "pagos": "🧾 Pago de servicios",
+        "remesas": "💸 Envíos y remesas",
+        "pagos": "🧾 Pago de servicios",
         "amazon": "🛒 Amazon",
-        "apple": "🍎 Apple",        "vuelos": "✈️ Vuelos",        "menu_tools": "🧰 Herramientas",
+        "apple": "🍎 Apple",
+        "vuelos": "✈️ Vuelos",
+        "menu_tools": "🧰 Herramientas",
         "my_profile": "👤 Mi Perfil",
         "digital": "📟 Modo Digital",
         "menu_home": "🏠 Menú principal",
@@ -827,25 +831,63 @@ def log_customer_interaction(user, button_key):
         "start": "🚀 Inició el bot",
         "message_received": "💬 Envió un mensaje",
     }
-    label = labels.get(button_key, "🔘 " + button_key.replace("_", " ").strip().capitalize())
-    with sqlite3.connect(DATABASE_PATH, timeout=30) as db:
-        db.execute("PRAGMA busy_timeout=30000")
-        db.execute("""CREATE TABLE IF NOT EXISTS unared_interactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            telegram_id INTEGER NOT NULL,
-            username TEXT NOT NULL DEFAULT '',
-            full_name TEXT NOT NULL DEFAULT '',
-            button_key TEXT NOT NULL,
-            button_label TEXT NOT NULL,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )""")
-        db.execute(
-            """INSERT INTO unared_interactions
-               (telegram_id, username, full_name, button_key, button_label)
-               VALUES (?, ?, ?, ?, ?)""",
-            (user.id, user.username or "", user.full_name or "", str(button_key), label),
-        )
+    label = labels.get(
+        str(button_key),
+        "🔘 " + str(button_key).replace("_", " ").strip().capitalize(),
+    )
 
+    try:
+        with sqlite3.connect(DATABASE_PATH, timeout=30) as db:
+            db.execute("PRAGMA busy_timeout=30000")
+            db.execute("""CREATE TABLE IF NOT EXISTS unared_interactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                telegram_id INTEGER NOT NULL,
+                username TEXT NOT NULL DEFAULT '',
+                full_name TEXT NOT NULL DEFAULT '',
+                button_key TEXT NOT NULL DEFAULT '',
+                button_label TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )""")
+
+            columns = {
+                column[1] for column in db.execute("PRAGMA table_info(unared_interactions)")
+            }
+            for column, definition in (
+                ("username", "TEXT NOT NULL DEFAULT ''"),
+                ("full_name", "TEXT NOT NULL DEFAULT ''"),
+                ("button_key", "TEXT NOT NULL DEFAULT ''"),
+                ("button_label", "TEXT NOT NULL DEFAULT ''"),
+                ("created_at", "TEXT NOT NULL DEFAULT ''"),
+            ):
+                if column not in columns:
+                    db.execute(
+                        f"ALTER TABLE unared_interactions ADD COLUMN {column} {definition}"
+                    )
+
+            if "telegram_id" not in columns:
+                logger.error(
+                    "No se registró la interacción: unared_interactions no tiene telegram_id."
+                )
+                return
+
+            db.execute(
+                """INSERT INTO unared_interactions
+                   (telegram_id, username, full_name, button_key, button_label, created_at)
+                   VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+                (
+                    int(user.id),
+                    user.username or "",
+                    user.full_name or "",
+                    str(button_key),
+                    label,
+                ),
+            )
+    except (sqlite3.Error, TypeError, ValueError):
+        # Las estadísticas no deben impedir que el cliente use el menú o los servicios.
+        logger.exception(
+            "No se pudo registrar la interacción %s del cliente.",
+            button_key,
+        )
 
 def is_admin(user):
     # Únicamente la cuenta propietaria puede ver y usar el panel.
@@ -2158,7 +2200,7 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"👥 Clientes activos: {unique_clients}\n\n"
             "📊 INTERACCIONES POR BOTÓN\n"
             f"{buttons_text}\n\n"
-            "🕘 ACTIVIDAD RECIENTE  ·  ÚLTIMOS 30\n"
+            "🕘 ACTIVIDAD RECIENTE  ·  ÚLTIMOS 20\n"
             f"{activity_text}\n\n"
             "━━━━━━━━━━━━━━━━━━━━"
         )
