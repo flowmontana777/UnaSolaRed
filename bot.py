@@ -98,7 +98,10 @@ async def reply_with_copyable_id(query, telegram_id):
 
 async def notify_new_customer(application, user):
     """Notifica al propietario el registro inicial y ofrece perfil y alerta."""
-    admin_bot = application.bot_data.get("admin_bot") or application.bot
+    admin_bot = application.bot_data.get("admin_bot")
+    if not admin_bot:
+        logger.error("ADMIN_BOT_TOKEN no está inicializado; no se pudo enviar el aviso de nuevo cliente %s.", user.id)
+        return
     now = datetime.now(ZoneInfo("America/Santo_Domingo")).strftime("%d/%m/%Y %I:%M %p")
     caption = (
         "💚 UNARED | NUEVO CLIENTE\n\n"
@@ -110,7 +113,7 @@ async def notify_new_customer(application, user):
     keyboard = copy_id_keyboard(user.id, user.full_name, user.username)
     try:
         await admin_bot.send_message(
-            chat_id=int(BOT_OWNER_ID),
+            chat_id=int(ADMIN_CHAT_ID),
             text=caption,
             reply_markup=keyboard,
         )
@@ -176,18 +179,19 @@ async def notify_invoice_pending(
                 raise RuntimeError("El bot administrativo no está inicializado.")
             invoice_keyboard = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("🔎 Verificar pago WolvPay", callback_data=f"av:{invoice_id}"),
+                    InlineKeyboardButton("🔎 Verificar pago", callback_data=f"av:{invoice_id}"),
+                    InlineKeyboardButton("✅ Ya pagó", callback_data=f"ap:{invoice_id}"),
                 ],
                 [
-                    InlineKeyboardButton("✅ Pagado", callback_data=f"ap:{invoice_id}"),
+                    InlineKeyboardButton("👤 Abrir perfil del cliente", url=f"tg://user?id={int(telegram_id)}"),
                 ],
                 [
-                    InlineKeyboardButton("👤 Abrir perfil de Telegram", url=f"tg://user?id={int(telegram_id)}"),
+                    InlineKeyboardButton("📦 Entregado", callback_data=f"delivered:{invoice_id}"),
                     InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(telegram_id)}"),
                 ],
             ])
             await admin_bot.send_photo(
-                chat_id=int(BOT_OWNER_ID), photo=image_url, caption=admin_caption,
+                chat_id=int(ADMIN_CHAT_ID), photo=image_url, caption=admin_caption,
                 reply_markup=invoice_keyboard,
             )
         except Exception:
@@ -1607,6 +1611,75 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
             await query.message.reply_text("⚠️ El estado se guardó, pero no se pudo notificar al cliente.")
         return
 
+    if query.data.startswith("delivered:"):
+        invoice_id = query.data.split(":", 1)[1]
+        try:
+            found = None
+            table_name = None
+            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                for candidate in INVOICE_TABLES:
+                    exists = db.execute(
+                        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (candidate,)
+                    ).fetchone()
+                    if not exists:
+                        continue
+                    row = db.execute(
+                        "SELECT telegram_id, status FROM " + candidate + " WHERE invoice_id=?",
+                        (invoice_id,),
+                    ).fetchone()
+                    if row:
+                        table_name, found = candidate, row
+                        break
+                if not found:
+                    await query.message.reply_text("⚠️ No encontramos esa factura.")
+                    return
+                telegram_id, payment_status = int(found[0]), str(found[1] or "").upper()
+                if payment_status != "PAID":
+                    await query.message.reply_text("⌛ Primero confirma el pago con «Ya pagó» o «Verificar pago». La entrega aún no se ha marcado.")
+                    return
+                db.execute("""CREATE TABLE IF NOT EXISTS invoice_delivery_status (
+                    invoice_id TEXT PRIMARY KEY,
+                    telegram_id INTEGER NOT NULL,
+                    delivered_by INTEGER NOT NULL,
+                    delivered_at TEXT NOT NULL
+                )""")
+                cursor = db.execute(
+                    "INSERT OR IGNORE INTO invoice_delivery_status (invoice_id, telegram_id, delivered_by, delivered_at) VALUES (?, ?, ?, ?)",
+                    (invoice_id, telegram_id, int(update.effective_user.id),
+                     datetime.now(ZoneInfo("America/Santo_Domingo")).isoformat(timespec="seconds")),
+                )
+                already_delivered = cursor.rowcount != 1
+
+            if already_delivered:
+                await query.message.reply_text("ℹ️ Esta factura ya estaba marcada como ENTREGADA.")
+                return
+
+            main_bot = context.application.bot_data.get("main_bot")
+            if main_bot:
+                try:
+                    await main_bot.send_message(
+                        chat_id=telegram_id,
+                        text=f"📦 UNARED | SERVICIO ENTREGADO\\n\\nTu servicio correspondiente a la factura {invoice_id} ha sido marcado como entregado.\\nGracias por confiar en UnaRed.",
+                    )
+                except Exception:
+                    logger.exception("La factura %s se marcó entregada, pero no se pudo avisar al cliente.", invoice_id)
+
+            current_markup = query.message.reply_markup
+            if current_markup:
+                remaining_rows = [
+                    [button for button in row if button.callback_data != f"delivered:{invoice_id}"]
+                    for row in current_markup.inline_keyboard
+                ]
+                remaining_rows = [row for row in remaining_rows if row]
+                await query.message.edit_reply_markup(
+                    reply_markup=InlineKeyboardMarkup(remaining_rows) if remaining_rows else None
+                )
+            await query.message.reply_text(f"✅ Factura {invoice_id} marcada como ENTREGADA.")
+        except Exception:
+            logger.exception("No se pudo marcar como entregada la factura %s.", invoice_id)
+            await query.message.reply_text("⚠️ No se pudo marcar la factura como entregada. Revisa el registro de Railway.")
+        return
+
     if query.data.startswith("av:") or query.data.startswith("ap:"):
         action, invoice_id = query.data.split(":", 1)
         try:
@@ -1985,7 +2058,7 @@ def build_admin_application():
     admin_app.add_handler(CommandHandler("buscarcliente", find_customer))
     admin_app.add_handler(CallbackQueryHandler(
         admin_bot_callbacks,
-        pattern=r"^(admin_|av:|ap:|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
+        pattern=r"^(admin_|av:|ap:|delivered:|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
     ))
     admin_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, receive_admin_profile_reply))
     admin_app.add_error_handler(error_handler)
@@ -6499,7 +6572,7 @@ def build_main_application():
     # /buscarcliente está disponible exclusivamente en el bot de administración.
     # Solo los callbacks administrativos pasan por el control de acceso del panel.
     # Los botones de servicios y precios siguen llegando a select_option.
-    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|av:|ap:|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:)"))
+    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|av:|ap:|delivered:|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:)"))
     app.add_handler(CallbackQueryHandler(select_option))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_new_members))
     app.add_handler(TypeHandler(Update, channel_music_ingest), group=-1)
