@@ -118,7 +118,15 @@ async def notify_new_customer(application, user):
             reply_markup=keyboard,
         )
     except Exception:
-        logger.exception("No se pudo notificar el registro del nuevo cliente %s.", user.id)
+        logger.exception("Admin Bot no pudo enviar el aviso del nuevo cliente %s; se intentará con el bot principal.", user.id)
+        try:
+            await application.bot.send_message(
+                chat_id=int(ADMIN_CHAT_ID),
+                text=caption + "\\n\\n⚠️ Aviso de respaldo enviado por el bot principal.",
+                reply_markup=keyboard,
+            )
+        except Exception:
+            logger.exception("Tampoco se pudo enviar el aviso de nuevo cliente mediante el bot principal.")
 
 # =====================================
 # METODO DE PAGO UNARED
@@ -195,7 +203,16 @@ async def notify_invoice_pending(
                 reply_markup=invoice_keyboard,
             )
         except Exception:
-            logger.exception("No se pudo enviar la notificación de factura pendiente al administrador %s.", invoice_id)
+            logger.exception("Admin Bot no pudo enviar la factura %s al administrador; se intentará con el bot principal.", invoice_id)
+            try:
+                await application.bot.send_photo(
+                    chat_id=int(ADMIN_CHAT_ID),
+                    photo=image_url,
+                    caption=admin_caption + "\\n\\n⚠️ Aviso de respaldo enviado por el bot principal.",
+                    reply_markup=invoice_keyboard,
+                )
+            except Exception:
+                logger.exception("Tampoco se pudo enviar la factura %s mediante el bot principal.", invoice_id)
 
 
 async def schedule_payment_reminder(application, table_name, invoice_id, telegram_id, amount, service, invoice_url=None):
