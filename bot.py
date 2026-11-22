@@ -1536,8 +1536,8 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
     if query.data.startswith("deliver_choice:ssn:"):
         _, product, invoice_id, choice = query.data.split(":", 3)
         ssn_resources = {
-            "1": ("Información oficial para obtener o reemplazar tu tarjeta", "https://www.ssa.gov/number-card/"),
-            "2": ("Cuenta oficial my Social Security", "https://www.ssa.gov/myaccount/"),
+            "1": ("BOT SSN", "https://t.me/ForestSearch4_bot?start=r_5864523026"),
+            "2": ("oficial my Security", "https://www.ssa.gov/myaccount/"),
         }
         if choice not in ssn_resources:
             await query.message.reply_text("⚠️ Opción de orientación SSN no válida.")
@@ -6452,9 +6452,9 @@ async def wolvpay_webhook(request):
 
     if invoice_type == "ssn_assistance":
         telegram_id, expected_amount, current_status = row
-        customer_description = "Tu pago de US$5.00 para orientación de recuperación de tu propio SSN fue confirmado automáticamente."
-        order_detail = "Servicio: orientación para utilizar los canales oficiales de la SSA."
-        admin_detail = "Servicio: asistencia SSN propia\nImporte confirmado: US$5.00"
+        customer_description = "Tu pago de US$5.00 para busqueda de SSN fue confirmado automáticamente."
+        order_detail = "Servicio: de busqueda SSN."
+        admin_detail = "Servicio: asistencia SSN\nImporte confirmado: US$5.00"
     elif invoice_type == "wallet_topup":
         telegram_id, expected_amount, current_status = row
         customer_description = f"Tu recarga de saldo por US${expected_amount} fue confirmada automáticamente."
