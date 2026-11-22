@@ -1659,7 +1659,7 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 try:
                     await main_bot.send_message(
                         chat_id=telegram_id,
-                        text=f"📦 UNARED | SERVICIO ENTREGADO\\n\\nTu servicio correspondiente a la factura {invoice_id} ha sido marcado como entregado.\\nGracias por confiar en UnaRed.",
+                        text=f"📦 UNARED | SERVICIO ENTREGADO\n\nTu servicio correspondiente a la factura {invoice_id} ha sido marcado como entregado.\nGracias por confiar en UnaRed.",
                     )
                 except Exception:
                     logger.exception("La factura %s se marcó entregada, pero no se pudo avisar al cliente.", invoice_id)
