@@ -47,9 +47,8 @@ DATABASE_PATH = os.getenv("DATABASE_PATH", "unared_payments.sqlite3")
 
 GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
 ADMIN_PANEL_PHOTO_URL = "https://i.ibb.co/PvB4jdJT/E1-ED4248-C0-F3-45-C2-A875-5165-EF2-D4504.png"
-# Enlace de la imagen aprobada para las alertas a clientes (página ImgBB).
-# Se resuelve su og:image en tiempo de envío; nunca usar la portada administrativa.
-CUSTOMER_ALERT_IMAGE_PAGE_URL = "https://ibb.co/yBqt9pR1"
+# Enlace directo de la imagen aprobada para las alertas a clientes.
+CUSTOMER_ALERT_IMAGE_URL = "https://i.ibb.co/sJqnfCPG/50-FDEC59-BC9-A-40-EC-9-AF8-E19-B16-C4931-C.png"
 
 # =====================================
 # UTILIDADES DE ADMINISTRACIÓN
@@ -1930,36 +1929,8 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 "Pulsa el botón de abajo para contactar con nuestro administrador."
             )
 
-            # ImgBB entrega un enlace de visualización (ibb.co), no el archivo.
-            # Extraemos la imagen original de og:image y enviamos SOLO esa imagen.
-            timeout = aiohttp.ClientTimeout(total=25, connect=10, sock_read=20)
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.get(
-                    CUSTOMER_ALERT_IMAGE_PAGE_URL,
-                    headers={"User-Agent": "Mozilla/5.0 (compatible; UnaRedBot/1.0)"},
-                    allow_redirects=True,
-                ) as response:
-                    response.raise_for_status()
-                    page_html = await response.text()
-            import re
-            image_match = re.search(
-                r"""<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']""",
-                page_html,
-                re.IGNORECASE,
-            )
-            if not image_match:
-                # También cubre el orden inverso de los atributos HTML.
-                image_match = re.search(
-                    r"""<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']""",
-                    page_html,
-                    re.IGNORECASE,
-                )
-            if not image_match:
-                raise RuntimeError("ImgBB no publicó una URL directa de imagen en og:image.")
-
-            alert_image_url = image_match.group(1).replace("&amp;", "&")
-            if not alert_image_url.startswith("https://i.ibb.co/"):
-                raise RuntimeError("La imagen resuelta no pertenece al archivo directo de ImgBB.")
+            # Usar el enlace directo proporcionado; no consultar la página HTML de ImgBB.
+            alert_image_url = CUSTOMER_ALERT_IMAGE_URL
 
             await main_bot.send_photo(
                 chat_id=telegram_id,
