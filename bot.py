@@ -1024,13 +1024,18 @@ async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 data["name"] or data["username"] or str(tid),
                 data["username"],
             ))
+        buttons.append([InlineKeyboardButton("🔄 Actualizar clientes", callback_data="admin_customers")])
         buttons.append([InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")])
 
-        await message.reply_text(
+        report = (
             "👥 UNARED | CLIENTES\n━━━━━━━━━━━━━━━━━━\n\n"
             f"Total de clientes únicos: {total}\nÚltimos 12 clientes:\n"
-            + ("\n".join(lines) if lines else "Todavía no hay clientes registrados."),
-            reply_markup=InlineKeyboardMarkup(buttons),
+            + ("\n".join(lines) if lines else "Todavía no hay clientes registrados.")
+        )
+        await present_admin_text_report(
+            update,
+            report,
+            InlineKeyboardMarkup(buttons),
         )
     except Exception:
         logger.exception("Error mostrando la lista de clientes en el panel administrativo.")
@@ -1140,6 +1145,36 @@ async def fetch_wolvpay_invoice_statistics():
             page += 1
 
     return invoices
+
+
+async def present_admin_text_report(update: Update, report: str, keyboard):
+    """Edita reportes de texto al navegar; si vienen de una foto, envía un mensaje nuevo."""
+    if not update.callback_query:
+        await update.effective_message.reply_text(
+            report,
+            reply_markup=keyboard,
+            disable_web_page_preview=True,
+        )
+        return
+
+    message = update.callback_query.message
+    try:
+        if getattr(message, "text", None) is None:
+            raise RuntimeError("El mensaje actual contiene una imagen y no se puede reemplazar por texto.")
+        await message.edit_text(
+            report,
+            reply_markup=keyboard,
+            disable_web_page_preview=True,
+        )
+    except Exception as exc:
+        if "message is not modified" in str(exc).lower():
+            return
+        logger.info("Se enviará el reporte como mensaje nuevo: %s", exc)
+        await message.reply_text(
+            report,
+            reply_markup=keyboard,
+            disable_web_page_preview=True,
+        )
 
 
 async def present_admin_billing_report(update: Update, report: str, keyboard):
@@ -1365,14 +1400,16 @@ async def admin_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
         ])
 
-        message = update.effective_message
-        if message:
-            await message.reply_text(
-                "🕘 UNARED | ACTIVIDAD RECIENTE\n"
-                "━━━━━━━━━━━━━━━━━━\n\n"
-                + body,
-                reply_markup=InlineKeyboardMarkup(buttons),
-            )
+        report = (
+            "🕘 UNARED | ACTIVIDAD RECIENTE\n"
+            "━━━━━━━━━━━━━━━━━━\n\n"
+            + body
+        )
+        await present_admin_text_report(
+            update,
+            report,
+            InlineKeyboardMarkup(buttons),
+        )
     except Exception:
         logger.exception("Error cargando actividad administrativa.")
         message = update.effective_message
@@ -2123,13 +2160,18 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 username,
             ))
         keyboard_rows.append([
+            InlineKeyboardButton("🔄 Actualizar estadísticas", callback_data="admin_stats")
+        ])
+        keyboard_rows.append([
             InlineKeyboardButton("🔎 Ver más estadísticas", callback_data="admin_stats_more")
         ])
         keyboard_rows.append([
             InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
         ])
-        await update.effective_message.reply_text(
-            report, reply_markup=InlineKeyboardMarkup(keyboard_rows)
+        await present_admin_text_report(
+            update,
+            report,
+            InlineKeyboardMarkup(keyboard_rows),
         )
     except Exception:
         logger.exception("Error generando estadísticas del panel administrativo.")
@@ -2218,10 +2260,15 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 username,
             ))
         keyboard_rows.extend([
+            [InlineKeyboardButton("🔄 Actualizar detalle", callback_data="admin_stats_more")],
             [InlineKeyboardButton("⬅️ Volver a estadísticas", callback_data="admin_stats")],
             [InlineKeyboardButton("🏠 Volver al panel", callback_data="admin_home")],
         ])
-        await update.effective_message.reply_text(detail, reply_markup=InlineKeyboardMarkup(keyboard_rows))
+        await present_admin_text_report(
+            update,
+            detail,
+            InlineKeyboardMarkup(keyboard_rows),
+        )
     except Exception:
         logger.exception("Error generando el detalle de estadísticas administrativas.")
         if update.effective_message:
