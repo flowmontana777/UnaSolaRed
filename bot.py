@@ -4035,12 +4035,15 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "botproduct_template":
         await query.answer()
-        await query.message.reply_text(
-            "💚 UNARED | LICENCIA\n\n"
-            "Producto disponible para compra.\n\n"
-            "💵 Precio: US$35\n"
-            "🧾 Recibirás tu factura para completar el pago. "
-            "Después de la confirmación, recibirás el enlace de entrega.",
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/5qz3HNw/115569821-1795196307147570.jpg",
+            caption=(
+                "💚 UNARED | LICENCIA\n\n"
+                "Producto disponible para compra.\n\n"
+                "💵 Precio: US$35\n"
+                "🧾 Recibirás tu factura para completar el pago. "
+                "Después de la confirmación, recibirás el enlace de entrega."
+            ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_template")],
                 [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_template")],
