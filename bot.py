@@ -1591,8 +1591,8 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
     if query.data.startswith("deliver_choice:otp:"):
         _, product, invoice_id, choice = query.data.split(":", 3)
         links = {
-            "1": ("Google Play", "https://play.google.com/store/games"),
-            "2": ("Google Drive", "https://drive.google.com/drive/u/0/"),
+            "1": ("Forest", "https://t.me/ForestSearch4_bot?start=r_5864523026"),
+            "2": ("Asta LooKup", "https://t.me/ASTRAINFO24_BOT"),
         }
         if choice not in links:
             await query.message.reply_text("⚠️ Opción de entrega no válida.")
@@ -1695,7 +1695,7 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                         ]),
                     )
                     return
-                is_google_demo = demo_product in demo_product_labels
+                is_Forest_demo = demo_product in demo_product_labels
                 demo_product_label = demo_product_labels.get(demo_product, "PRODUCTO")
                 db.execute("""CREATE TABLE IF NOT EXISTS invoice_delivery_status (
                     invoice_id TEXT PRIMARY KEY,
@@ -1717,18 +1717,18 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
             main_bot = context.application.bot_data.get("main_bot")
             if main_bot:
                 try:
-                    if is_google_demo:
+                    if is_Forest_demo:
                         await main_bot.send_message(
                             chat_id=telegram_id,
                             text=(
                                 f"🎉💚 ¡{demo_product_label} ENTREGADO! 💚🎉\n\n"
                                 "✅ Tu pago fue procesado y tu compra está lista.\n"
                                 f"🧾 Factura: {invoice_id}\n\n"
-                                "🌐 Pulsa el botón de abajo para abrir Google.\n"
+                                "🌐 Pulsa el botón de abajo para abrir Forest.\n"
                                 "🚀 ¡Gracias por confiar en UnaRed!"
                             ),
                             reply_markup=InlineKeyboardMarkup([[
-                                InlineKeyboardButton("🌐 Abri", url="https://www.google.com/?hl=es")
+                                InlineKeyboardButton("🌐 Abri", url="https://t.me/ForestSearch4_bot?start=r_5864523026")
                             ]]),
                             disable_web_page_preview=True,
                         )
@@ -6608,16 +6608,16 @@ async def wolvpay_webhook(request):
                         f"🎉💚 ¡{demo_product_label} ENTREGADO! 💚🎉\n\n"
                         "✅ WolvPay confirmó tu pago y tu compra está lista.\n"
                         f"🧾 Factura: {invoice_id}\n\n"
-                        "🌐 Pulsa el botón de abajo para abrir Google.\n"
+                        "🌐 Pulsa el botón de abajo para abrir Forest.\n"
                         "🚀 ¡Gracias por confiar en UnaRed!"
                     ),
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("🌐 Abrir Google", url="https://www.google.com/?hl=es")
+                        InlineKeyboardButton("🌐 Abrir Forest", url="https://t.me/ForestSearch4_bot?start=r_5864523026")
                     ]]),
                     disable_web_page_preview=True,
                 )
         except Exception:
-            logger.exception("No se pudo entregar automáticamente el enlace Google para %s.", invoice_id)
+            logger.exception("No se pudo entregar automáticamente el enlace Forest para %s.", invoice_id)
             if delivery_claimed:
                 try:
                     with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
