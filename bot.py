@@ -1653,13 +1653,22 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 if payment_status != "PAID":
                     await query.message.reply_text("⌛ Primero confirma el pago con «Ya pagó» o «Verificar pago». La entrega aún no se ha marcado.")
                     return
-                is_bot_check = False
+                demo_product = None
                 if table_name == "demo_bot_invoices":
                     product_row = db.execute(
                         "SELECT product FROM demo_bot_invoices WHERE invoice_id=?",
                         (invoice_id,),
                     ).fetchone()
-                    is_bot_check = bool(product_row and str(product_row[0]).lower() == "check")
+                    if product_row:
+                        demo_product = str(product_row[0]).lower()
+                demo_product_labels = {
+                    "otp": "BOT OTP",
+                    "ssn": "BOT SSN",
+                    "check": "BOT CHECK",
+                    "template": "LICENCIA",
+                }
+                is_google_demo = demo_product in demo_product_labels
+                demo_product_label = demo_product_labels.get(demo_product, "PRODUCTO")
                 db.execute("""CREATE TABLE IF NOT EXISTS invoice_delivery_status (
                     invoice_id TEXT PRIMARY KEY,
                     telegram_id INTEGER NOT NULL,
@@ -1680,11 +1689,11 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
             main_bot = context.application.bot_data.get("main_bot")
             if main_bot:
                 try:
-                    if is_bot_check:
+                    if is_google_demo:
                         await main_bot.send_message(
                             chat_id=telegram_id,
                             text=(
-                                "🎉💚 ¡BOT CHECK ENTREGADO! 💚🎉\n\n"
+                                f"🎉💚 ¡{demo_product_label} ENTREGADO! 💚🎉\n\n"
                                 "✅ Tu pago fue procesado y tu compra está lista.\n"
                                 f"🧾 Factura: {invoice_id}\n\n"
                                 "🌐 Pulsa el botón de abajo para abrir Google.\n"
@@ -6518,7 +6527,14 @@ async def wolvpay_webhook(request):
         return web.Response(status=500, text="Database error.")
 
     application = request.app["telegram_application"]
-    if invoice_type == "demo" and product == "check":
+    demo_product_labels = {
+        "otp": "BOT OTP",
+        "ssn": "BOT SSN",
+        "check": "BOT CHECK",
+        "template": "LICENCIA",
+    }
+    if invoice_type == "demo" and product in demo_product_labels:
+        demo_product_label = demo_product_labels[product]
         delivery_claimed = False
         try:
             with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
@@ -6536,14 +6552,20 @@ async def wolvpay_webhook(request):
             if delivery_claimed:
                 await application.bot.send_message(
                     chat_id=int(telegram_id),
-                    text=f"📦 UNARED | BOT CHECK ENTREGADO\n\nTu pago de la factura {invoice_id} fue confirmado por WolvPay. Ya puedes abrir la página desde este botón.",
+                    text=(
+                        f"🎉💚 ¡{demo_product_label} ENTREGADO! 💚🎉\n\n"
+                        "✅ WolvPay confirmó tu pago y tu compra está lista.\n"
+                        f"🧾 Factura: {invoice_id}\n\n"
+                        "🌐 Pulsa el botón de abajo para abrir Google.\n"
+                        "🚀 ¡Gracias por confiar en UnaRed!"
+                    ),
                     reply_markup=InlineKeyboardMarkup([[
                         InlineKeyboardButton("🌐 Abrir Google", url="https://www.google.com/?hl=es")
                     ]]),
                     disable_web_page_preview=True,
                 )
         except Exception:
-            logger.exception("No se pudo entregar automáticamente el enlace BOT CHECK para %s.", invoice_id)
+            logger.exception("No se pudo entregar automáticamente el enlace Google para %s.", invoice_id)
             if delivery_claimed:
                 try:
                     with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
