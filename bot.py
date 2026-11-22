@@ -19,6 +19,8 @@ from telegram import (
     Update,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    ReplyKeyboardMarkup,
+    KeyboardButton,
 )
 from telegram.ext import (
     Application,
@@ -44,6 +46,11 @@ WOLVPAY_API_URL = "https://wolvpay.com/api/v1"
 DATABASE_PATH = os.getenv("DATABASE_PATH", "unared_payments.sqlite3")
 
 GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
+ADMIN_PANEL_PHOTO_URL = "https://i.ibb.co/PvB4jdJT/E1-ED4248-C0-F3-45-C2-A875-5165-EF2-D4504.png"
+CUSTOMER_ALERT_PHOTO_URLS = (
+    "https://i.ibb.co/sJqnfCPG/50-FDEC59-BC-9A-40-EC-9-AF8-E19-B16-C4931-C.png",
+    ADMIN_PANEL_PHOTO_URL,
+)
 
 # =====================================
 # UTILIDADES DE ADMINISTRACIÓN
@@ -60,17 +67,35 @@ def customer_profile_button(telegram_id, display_name=None, username=None):
     )
 
 
-def copy_id_keyboard(telegram_id):
-    """Acciones administrativas permitidas para un cliente."""
-    return InlineKeyboardMarkup([[
-        customer_profile_button(telegram_id),
-        InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(telegram_id)}"),
-    ]])
+def customer_action_rows(telegram_id, display_name=None, username=None):
+    """Devuelve acciones administrativas consistentes para cualquier ficha de cliente."""
+    customer_id = int(telegram_id)
+    return [
+        [
+            customer_profile_button(customer_id, display_name, username),
+            InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{customer_id}"),
+        ],
+        [
+            InlineKeyboardButton("📋 Copiar ID", callback_data=f"copy_id:{customer_id}"),
+        ],
+    ]
+
+
+def copy_id_keyboard(telegram_id, display_name=None, username=None):
+    """Teclado reutilizable con perfil, alerta e ID copiable."""
+    return InlineKeyboardMarkup(
+        customer_action_rows(telegram_id, display_name, username)
+    )
 
 
 async def reply_with_copyable_id(query, telegram_id):
-    """Compatibilidad con callbacks antiguos: no muestra ni copia IDs."""
-    await query.answer("Usa los botones Ir al perfil y Mandar alerta.", show_alert=True)
+    """Muestra el ID en un bloque fácil de seleccionar y copiar en Telegram."""
+    await query.message.reply_text(
+        "🆔 ID DE TELEGRAM\n\n"
+        f"<code>{int(telegram_id)}</code>\n"
+        "Mantén pulsado el número para copiarlo.",
+        parse_mode="HTML",
+    )
 
 
 async def notify_new_customer(application, user):
@@ -84,10 +109,7 @@ async def notify_new_customer(application, user):
         f"🆔 ID Telegram: {user.id}\n"
         f"🕒 Registro: {now}"
     )
-    keyboard = InlineKeyboardMarkup([[
-        customer_profile_button(user.id, user.full_name),
-        InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(user.id)}"),
-    ]])
+    keyboard = copy_id_keyboard(user.id, user.full_name, user.username)
     try:
         await admin_bot.send_message(
             chat_id=int(BOT_OWNER_ID),
@@ -847,18 +869,25 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
         await update.effective_message.reply_text("⛔ Panel privado.")
         return
-    banner_url = "https://i.ibb.co/PvB4jdJT/E1-ED4248-C0-F3-45-C2-A875-5165-EF2-D4504.png"
-    await update.effective_message.reply_photo(
-        photo=banner_url,
-        caption=(
-            "💚 UNARED | ADMIN\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "CENTRO DE CONTROL PRIVADO\n\n"
-            "Administra clientes, revisa la actividad y consulta la facturación "
-            "desde un solo lugar."
-        ),
-        reply_markup=admin_dashboard_keyboard(),
+    caption = (
+        "💚 UNARED | ADMIN\n"
+        "━━━━━━━━━━━━━━━━━━\n"
+        "CENTRO DE CONTROL PRIVADO\n\n"
+        "Administra clientes, revisa la actividad y consulta la facturación "
+        "desde un solo lugar."
     )
+    try:
+        await update.effective_message.reply_photo(
+            photo=ADMIN_PANEL_PHOTO_URL,
+            caption=caption,
+            reply_markup=admin_dashboard_keyboard(),
+        )
+    except Exception:
+        logger.exception("No se pudo cargar la portada del panel administrativo.")
+        await update.effective_message.reply_text(
+            caption + "\n\n⚠️ Portada no disponible; los controles siguen activos.",
+            reply_markup=admin_dashboard_keyboard(),
+        )
 
 
 async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -933,17 +962,11 @@ async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         buttons = []
         for tid, data in ordered:
-            buttons.append([
-                customer_profile_button(
-                    tid,
-                    data["name"] or data["username"] or str(tid),
-                    data["username"],
-                ),
-                InlineKeyboardButton(
-                    "🔔 Mandar alerta",
-                    callback_data=f"notify_customer:{tid}",
-                ),
-            ])
+            buttons.extend(customer_action_rows(
+                tid,
+                data["name"] or data["username"] or str(tid),
+                data["username"],
+            ))
         buttons.append([InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")])
 
         await message.reply_text(
@@ -954,10 +977,14 @@ async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception:
         logger.exception("Error mostrando la lista de clientes en el panel administrativo.")
-        if update.callback_query:
-            await update.callback_query.answer("No se pudo cargar la lista de clientes.", show_alert=True)
+        if update.callback_query and update.callback_query.message:
+            await update.callback_query.message.reply_text(
+                "⚠️ No se pudo cargar la lista de clientes. Revisa los registros de Railway."
+            )
         elif message:
-            await message.reply_text("⚠️ No se pudo cargar la lista de clientes. Revisa los registros de Railway.")
+            await message.reply_text(
+                "⚠️ No se pudo cargar la lista de clientes. Revisa los registros de Railway."
+            )
 
 
 async def refresh_wolvpay_statuses():
@@ -1237,6 +1264,7 @@ async def admin_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         lines = []
         buttons = []
+        seen_customer_ids = set()
         for telegram_id, full_name, username, action_label, created_at in activity_rows:
             display_name = full_name or (f"@{username}" if username else "Cliente")
             action = action_label or "🔘 Interacción con el menú"
@@ -1246,13 +1274,14 @@ async def admin_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"   🧭 Acción: {action}\n"
                 f"   🕒 Fecha: {timestamp}"
             )
-            buttons.append([
-                customer_profile_button(telegram_id, display_name),
-                InlineKeyboardButton(
-                    "🔔 Enviar aviso",
-                    callback_data=f"notify_customer:{int(telegram_id)}",
-                ),
-            ])
+            customer_id = int(telegram_id)
+            if customer_id not in seen_customer_ids:
+                seen_customer_ids.add(customer_id)
+                buttons.extend(customer_action_rows(
+                    customer_id,
+                    display_name,
+                    username,
+                ))
 
         if lines:
             body = (
@@ -1798,33 +1827,59 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
             main_bot = context.application.bot_data.get("main_bot")
             if not main_bot:
                 raise RuntimeError("No está disponible la conexión con el bot principal.")
+
             customer_keyboard = InlineKeyboardMarkup([[
                 InlineKeyboardButton("📩 Contactar a Flow Montana", url="https://t.me/flowmontana777")
             ]])
-            # Enviar texto evita que un fallo al descargar una imagen bloquee la alerta.
-            await main_bot.send_message(
-                chat_id=telegram_id,
-                text=(
-                    "💚 UNARED | NOTIFICACIÓN IMPORTANTE\\n\\n"
-                    "Tenemos una notificación para ti. "
-                    "Pulsa el botón para contactar con nuestro administrador."
-                ),
-                reply_markup=customer_keyboard,
-                disable_web_page_preview=True,
+            caption = (
+                "💚 UNARED | NOTIFICACIÓN IMPORTANTE\n\n"
+                "Tenemos una notificación para ti. "
+                "Pulsa el botón de abajo para contactar con nuestro administrador."
             )
-            await query.message.reply_text("✅ Notificación enviada correctamente al cliente.")
+
+            photo_sent = False
+            photo_errors = []
+            for photo_url in CUSTOMER_ALERT_PHOTO_URLS:
+                try:
+                    await main_bot.send_photo(
+                        chat_id=telegram_id,
+                        photo=photo_url,
+                        caption=caption,
+                        reply_markup=customer_keyboard,
+                    )
+                    photo_sent = True
+                    break
+                except Exception as photo_error:
+                    photo_errors.append(photo_error)
+                    logger.warning(
+                        "Falló la imagen de alerta %s para el cliente %s: %s",
+                        photo_url, telegram_id, photo_error,
+                    )
+
+            if not photo_sent:
+                last_error = photo_errors[-1] if photo_errors else RuntimeError("imagen no disponible")
+                raise RuntimeError(
+                    "No se pudo enviar ninguna de las imágenes de notificación: "
+                    + type(last_error).__name__
+                ) from last_error
+
+            await query.message.reply_text(
+                "✅ Notificación con imagen enviada correctamente al cliente."
+            )
         except (ValueError, IndexError):
             await query.message.reply_text("⚠️ ID de cliente no válido.")
         except Exception as exc:
-            logger.exception("No se pudo enviar la notificación al cliente %s.", query.data)
+            logger.exception("No se pudo enviar la notificación con imagen al cliente.")
             error_name = type(exc).__name__
             if "Forbidden" in error_name:
                 reason = "El cliente bloqueó el bot o todavía no inició el bot principal."
             elif "Chat not found" in str(exc):
                 reason = "El cliente todavía no ha iniciado el bot principal."
+            elif "RuntimeError" in error_name:
+                reason = "No se pudo cargar ninguna imagen. No se envió un mensaje sin imagen."
             else:
-                reason = "Revisa el registro del error en Railway."
-            await query.message.reply_text(f"⚠️ No se pudo enviar la notificación. {reason}")
+                reason = "No se pudo enviar la imagen. Revisa el error registrado en Railway."
+            await query.message.reply_text(f"⚠️ No se pudo completar la alerta. {reason}")
         return
     if query.data.startswith("copy_id:"):
         try:
@@ -1846,6 +1901,7 @@ def build_admin_application():
         pattern=r"^(admin_|av:|ap:|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
     ))
     admin_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, receive_admin_profile_reply))
+    admin_app.add_error_handler(error_handler)
     return admin_app
 
 
@@ -1853,12 +1909,8 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
         return
 
-    # La consulta de estadísticas no debe depender de que WolvPay esté disponible.
-    try:
-        await refresh_wolvpay_statuses()
-    except Exception:
-        logger.exception("No se pudo sincronizar WolvPay antes de mostrar estadísticas; se mostrarán los datos locales.")
-
+    # Las estadísticas locales no esperan a WolvPay. La sección Facturación
+    # consulta la API por separado y muestra su propio estado de carga/error.
     try:
         with sqlite3.connect(DATABASE_PATH, timeout=30) as db:
             db.execute("PRAGMA busy_timeout=30000")
@@ -2000,13 +2052,19 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 or "ninguno"
             ) + "\n━━━━━━━━━━━━━━━━━━"
         )
-        keyboard_rows = [
-            [
-                InlineKeyboardButton("👤 Abrir perfil de Telegram", url=f"tg://user?id={int(tid)}"),
-                InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}"),
-            ]
-            for _, _, tid, _, _ in recent
-        ]
+        keyboard_rows = []
+        seen_customer_ids = set()
+        for name, username, tid, label, when in recent:
+            customer_id = int(tid)
+            if customer_id in seen_customer_ids:
+                continue
+            seen_customer_ids.add(customer_id)
+            display_name = name or (f"@{username}" if username else "Cliente")
+            keyboard_rows.extend(customer_action_rows(
+                customer_id,
+                display_name,
+                username,
+            ))
         keyboard_rows.append([
             InlineKeyboardButton("🔎 Ver más estadísticas", callback_data="admin_stats_more")
         ])
@@ -2097,10 +2155,11 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 continue
             seen_customer_ids.add(int(tid))
             display_name = name or (f"@{username}" if username else "Cliente")
-            keyboard_rows.append([
-                customer_profile_button(tid, display_name, username),
-                InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}")
-            ])
+            keyboard_rows.extend(customer_action_rows(
+                tid,
+                display_name,
+                username,
+            ))
         keyboard_rows.extend([
             [InlineKeyboardButton("⬅️ Volver a estadísticas", callback_data="admin_stats")],
             [InlineKeyboardButton("🏠 Volver al panel", callback_data="admin_home")],
@@ -2196,10 +2255,10 @@ async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🆔 ID: {tid}\n👤 Nombre: {name or 'Sin nombre'}\n"
         f"📛 Usuario: " + (("@" + username) if username else "Sin username") +
         f"\n📅 Registro: {first_seen or 'No disponible'}\n🕒 Última actividad: {last_seen or 'No disponible'}\n🧾 Facturas: {total}",
-        reply_markup=InlineKeyboardMarkup([
-            [customer_profile_button(tid)],
-            [InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{tid}")],
-        ]),
+        reply_markup=InlineKeyboardMarkup(
+            customer_action_rows(tid, name or "Cliente", username)
+            + [[InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")]]
+        ),
     )
 
 # =====================================
