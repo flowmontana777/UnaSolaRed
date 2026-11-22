@@ -934,13 +934,28 @@ async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "SELECT 1 FROM sqlite_master WHERE type='table' AND name='unared_interactions'"
             ).fetchone()
             if interactions_exists:
-                interaction_rows = db.execute(
-                    """SELECT telegram_id, username, full_name, MAX(created_at)
-                       FROM unared_interactions
-                       WHERE telegram_id != ?
-                       GROUP BY telegram_id""",
-                    (int(BOT_OWNER_ID),),
-                ).fetchall()
+                interaction_columns = {
+                    column[1] for column in db.execute("PRAGMA table_info(unared_interactions)")
+                }
+                for column, definition in (
+                    ("username", "TEXT NOT NULL DEFAULT ''"),
+                    ("full_name", "TEXT NOT NULL DEFAULT ''"),
+                    ("created_at", "TEXT NOT NULL DEFAULT ''"),
+                ):
+                    if column not in interaction_columns:
+                        db.execute(
+                            f"ALTER TABLE unared_interactions ADD COLUMN {column} {definition}"
+                        )
+                if "telegram_id" in interaction_columns:
+                    interaction_rows = db.execute(
+                        """SELECT telegram_id, username, full_name, MAX(created_at)
+                           FROM unared_interactions
+                           WHERE telegram_id != ?
+                           GROUP BY telegram_id""",
+                        (int(BOT_OWNER_ID),),
+                    ).fetchall()
+                else:
+                    interaction_rows = []
                 for tid, username, name, last_seen in interaction_rows:
                     tid = int(tid)
                     current = customers.get(tid, {})
@@ -1237,7 +1252,7 @@ async def admin_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 """SELECT telegram_id, full_name, username, button_label, created_at
                    FROM unared_interactions
                    WHERE telegram_id != ?
-                   ORDER BY id DESC LIMIT 15""",
+                   ORDER BY rowid DESC LIMIT 15""",
                 (int(BOT_OWNER_ID),),
             ).fetchall()
 
@@ -2011,7 +2026,7 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ORDER BY total DESC LIMIT 8""", (int(BOT_OWNER_ID),)).fetchall()
             recent = db.execute("""SELECT full_name, username, telegram_id, button_label, created_at
                 FROM unared_interactions WHERE telegram_id != ?
-                ORDER BY id DESC LIMIT 10""", (int(BOT_OWNER_ID),)).fetchall()
+                ORDER BY rowid DESC LIMIT 10""", (int(BOT_OWNER_ID),)).fetchall()
 
         top_text = "\n".join(
             f"  • {label}: {count} clics" for label, count in top_buttons
@@ -2110,11 +2125,11 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ).fetchone()[0]
             all_buttons = db.execute("""SELECT button_key, button_label, COUNT(*) FROM unared_interactions
                 WHERE telegram_id != ?
-                GROUP BY button_key, button_label ORDER BY COUNT(*) DESC, button_key ASC""",
+                GROUP BY button_key, button_label ORDER BY COUNT(*) DESC, button_key ASC LIMIT 12""",
                 (int(BOT_OWNER_ID),)).fetchall()
             all_activity = db.execute("""SELECT full_name, username, telegram_id, button_key, button_label, created_at
                 FROM unared_interactions WHERE telegram_id != ?
-                ORDER BY id DESC LIMIT 30""", (int(BOT_OWNER_ID),)).fetchall()
+                ORDER BY rowid DESC LIMIT 20""", (int(BOT_OWNER_ID),)).fetchall()
 
         # Normaliza nombres técnicos antiguos para que el panel muestre etiquetas claras.
         friendly_labels = {
@@ -2126,7 +2141,7 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "start": "🚀 Inició el bot",
             "message_received": "💬 Envió un mensaje",
         }
-        buttons_text = "\\n".join(
+        buttons_text = "\n".join(
             f"• {friendly_labels.get(key, label or 'Interacción')}: {count} {'clic' if count == 1 else 'clics'}"
             for key, label, count in all_buttons
         ) or "• Todavía no hay botones registrados."
@@ -2134,17 +2149,17 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for name, username, tid, key, label, when in all_activity:
             customer_name = name or (f"@{username}" if username else "Cliente")
             clean_label = friendly_labels.get(key, label or "Interacción")
-            activity_lines.append(f"👤 {customer_name}\\n   ↳ {clean_label}  ·  {when}")
-        activity_text = "\\n".join(activity_lines) or "• Todavía no hay actividad registrada."
+            activity_lines.append(f"👤 {customer_name}\n   ↳ {clean_label}  ·  {when}")
+        activity_text = "\n".join(activity_lines) or "• Todavía no hay actividad registrada."
 
         detail = (
-            "💚 UNARED  |  DETALLE DE INTERACCIONES\\n"
-            "━━━━━━━━━━━━━━━━━━━━\\n\\n"
-            f"👥 Clientes activos: {unique_clients}\\n\\n"
-            "📊 INTERACCIONES POR BOTÓN\\n"
-            f"{buttons_text}\\n\\n"
-            "🕘 ACTIVIDAD RECIENTE  ·  ÚLTIMOS 30\\n"
-            f"{activity_text}\\n\\n"
+            "💚 UNARED  |  DETALLE DE INTERACCIONES\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"👥 Clientes activos: {unique_clients}\n\n"
+            "📊 INTERACCIONES POR BOTÓN\n"
+            f"{buttons_text}\n\n"
+            "🕘 ACTIVIDAD RECIENTE  ·  ÚLTIMOS 30\n"
+            f"{activity_text}\n\n"
             "━━━━━━━━━━━━━━━━━━━━"
         )
         # Una sola fila de acciones por cliente, sin repetir botones en cada interacción.
@@ -2207,14 +2222,18 @@ async def find_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "SELECT 1 FROM sqlite_master WHERE type='table' AND name='unared_interactions'"
                 ).fetchone()
                 if interactions_exists:
-                    interaction = db.execute(
-                        """SELECT telegram_id, username, full_name, MIN(created_at), MAX(created_at)
-                           FROM unared_interactions
-                           WHERE telegram_id=? GROUP BY telegram_id""",
-                        (tid,),
-                    ).fetchone()
-                    if interaction:
-                        row = interaction
+                    interaction_columns = {
+                        column[1] for column in db.execute("PRAGMA table_info(unared_interactions)")
+                    }
+                    if {"telegram_id", "username", "full_name", "created_at"}.issubset(interaction_columns):
+                        interaction = db.execute(
+                            """SELECT telegram_id, username, full_name, MIN(created_at), MAX(created_at)
+                               FROM unared_interactions
+                               WHERE telegram_id=? GROUP BY telegram_id""",
+                            (tid,),
+                        ).fetchone()
+                        if interaction:
+                            row = interaction
 
             total = 0
             for table in INVOICE_TABLES:
