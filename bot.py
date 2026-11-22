@@ -1943,14 +1943,14 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                     page_html = await response.text()
             import re
             image_match = re.search(
-                r'<meta[^>]+(?:property|name)=["\\'](?:og:image|twitter:image)["\\'][^>]+content=["\\']([^"\\']+)["\\']',
+                r"""<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']""",
                 page_html,
                 re.IGNORECASE,
             )
             if not image_match:
                 # También cubre el orden inverso de los atributos HTML.
                 image_match = re.search(
-                    r'<meta[^>]+content=["\\']([^"\\']+)["\\'][^>]+(?:property|name)=["\\'](?:og:image|twitter:image)["\\']',
+                    r"""<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']""",
                     page_html,
                     re.IGNORECASE,
                 )
