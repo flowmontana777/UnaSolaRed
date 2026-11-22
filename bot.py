@@ -757,6 +757,18 @@ def save_customer(user):
             telegram_id INTEGER PRIMARY KEY, username TEXT NOT NULL DEFAULT '',
             full_name TEXT NOT NULL DEFAULT '', first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
+        customer_columns = {row[1] for row in db.execute("PRAGMA table_info(unared_customers)")}
+        for column, definition in (
+            ("username", "TEXT NOT NULL DEFAULT ''"),
+            ("full_name", "TEXT NOT NULL DEFAULT ''"),
+            ("first_seen", "TEXT NOT NULL DEFAULT ''"),
+            ("last_seen", "TEXT NOT NULL DEFAULT ''"),
+        ):
+            if column not in customer_columns:
+                db.execute(f"ALTER TABLE unared_customers ADD COLUMN {column} {definition}")
+        db.execute("""UPDATE unared_customers
+                      SET first_seen=CASE WHEN first_seen IS NULL OR first_seen='' THEN CURRENT_TIMESTAMP ELSE first_seen END,
+                          last_seen=CASE WHEN last_seen IS NULL OR last_seen='' THEN CURRENT_TIMESTAMP ELSE last_seen END""")
         cursor = db.execute(
             """INSERT OR IGNORE INTO unared_customers (telegram_id, username, full_name)
                VALUES (?, ?, ?)""",
@@ -867,11 +879,15 @@ async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
             for column, definition in (
                 ("username", "TEXT NOT NULL DEFAULT ''"),
                 ("full_name", "TEXT NOT NULL DEFAULT ''"),
-                ("first_seen", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"),
-                ("last_seen", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"),
+                ("first_seen", "TEXT NOT NULL DEFAULT ''"),
+                ("last_seen", "TEXT NOT NULL DEFAULT ''"),
             ):
                 if column not in columns:
                     db.execute(f"ALTER TABLE unared_customers ADD COLUMN {column} {definition}")
+
+            db.execute("""UPDATE unared_customers
+                          SET first_seen=CASE WHEN first_seen IS NULL OR first_seen='' THEN CURRENT_TIMESTAMP ELSE first_seen END,
+                              last_seen=CASE WHEN last_seen IS NULL OR last_seen='' THEN CURRENT_TIMESTAMP ELSE last_seen END""")
 
             for tid, username, name, last_seen in db.execute(
                 "SELECT telegram_id, username, full_name, last_seen FROM unared_customers"
@@ -1774,12 +1790,15 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
             for column, definition in (
                 ("username", "TEXT NOT NULL DEFAULT ''"),
                 ("full_name", "TEXT NOT NULL DEFAULT ''"),
-                ("first_seen", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"),
-                ("last_seen", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"),
+                ("first_seen", "TEXT NOT NULL DEFAULT ''"),
+                ("last_seen", "TEXT NOT NULL DEFAULT ''"),
             ):
                 if column not in customer_columns:
                     db.execute(f"ALTER TABLE unared_customers ADD COLUMN {column} {definition}")
 
+            db.execute("""UPDATE unared_customers
+                          SET first_seen=CASE WHEN first_seen IS NULL OR first_seen='' THEN CURRENT_TIMESTAMP ELSE first_seen END,
+                              last_seen=CASE WHEN last_seen IS NULL OR last_seen='' THEN CURRENT_TIMESTAMP ELSE last_seen END""")
             customers = db.execute("SELECT COUNT(*) FROM unared_customers").fetchone()[0]
             today = db.execute(
                 "SELECT COUNT(*) FROM unared_customers WHERE date(first_seen)=date('now','localtime')"
