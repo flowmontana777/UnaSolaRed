@@ -124,7 +124,7 @@ async def notify_new_customer(application, user):
 
 async def notify_invoice_pending(
     application, telegram_id, invoice_id, amount, service, table_name,
-    send_customer=True, send_admin=True, reminder_number=None, invoice_url=None
+    send_customer=False, send_admin=True, reminder_number=None, invoice_url=None
 ):
     """Send the pending invoice notification to the customer and the admin."""
     image_url = "https://i.ibb.co/99pb657f/6-D87-B76-C-02-AD-4-AEA-97-EB-DB3409-D6-F803.png"
@@ -195,12 +195,12 @@ async def notify_invoice_pending(
 
 
 async def schedule_payment_reminder(application, table_name, invoice_id, telegram_id, amount, service, invoice_url=None):
-    """Send up to three reminders every three minutes while the invoice remains pending."""
+    """Send exactly three reminders, 30 seconds apart, while the invoice remains pending."""
     allowed_tables = {"dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "loans_invoices", "bill_invoices", "edit_upload_invoices", "ssn_assistance_invoices", "wallet_topup_invoices"}
     if table_name not in allowed_tables:
         return
     for attempt in range(1, 4):
-        await asyncio.sleep(180)
+        await asyncio.sleep(30)
         try:
             with sqlite3.connect(DATABASE_PATH) as db:
                 row = db.execute(
@@ -3338,7 +3338,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                        VALUES (?, ?, ?, ?, ?, 'PENDING')""",
                     (invoice_id, user.id, amount, category, username),
                 )
-            await notify_invoice_pending(context.application, user.id, invoice_id, amount, category, "bill_invoices", send_customer=True, send_admin=True, invoice_url=invoice_url)
+            await notify_invoice_pending(context.application, user.id, invoice_id, amount, category, "bill_invoices", send_customer=False, send_admin=True, invoice_url=invoice_url)
             asyncio.create_task(schedule_payment_reminder(
                 context.application, "bill_invoices", invoice_id, user.id, amount, category, invoice_url
             ))
@@ -3602,7 +3602,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
             await notify_invoice_pending(
                 context.application, user.id, invoice_id, "100", "Método PyP",
-                "pyp_invoices", send_customer=True, send_admin=True, invoice_url=invoice_url
+                "pyp_invoices", send_customer=False, send_admin=True, invoice_url=invoice_url
             )
             asyncio.create_task(schedule_payment_reminder(
                 context.application, "pyp_invoices", invoice_id, user.id,
@@ -3742,7 +3742,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                        VALUES (?, ?, ?, ?, 'PENDING')""",
                     (invoice_id, update.effective_user.id, "150.00", username),
                 )
-            await notify_invoice_pending(context.application, update.effective_user.id, invoice_id, "150", "Dayler", "dayler_invoices", send_customer=True, send_admin=True, invoice_url=invoice_url)
+            await notify_invoice_pending(context.application, update.effective_user.id, invoice_id, "150", "Dayler", "dayler_invoices", send_customer=False, send_admin=True, invoice_url=invoice_url)
             asyncio.create_task(schedule_payment_reminder(context.application, "dayler_invoices", invoice_id, update.effective_user.id, "150", "Dayler", invoice_url))
             await query.message.reply_text(
                 f"💚 UNARED | FACTURA DAYLER\n\n"
@@ -3999,7 +3999,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "INSERT INTO demo_bot_invoices VALUES (?, ?, ?, ?, ?, 'PENDING')",
                     (invoice_id, user.id, "35.00", product, user.username or ""),
                 )
-            await notify_invoice_pending(context.application, user.id, invoice_id, "35", labels[product], "demo_bot_invoices", send_customer=True, send_admin=True, invoice_url=invoice_url)
+            await notify_invoice_pending(context.application, user.id, invoice_id, "35", labels[product], "demo_bot_invoices", send_customer=False, send_admin=True, invoice_url=invoice_url)
             asyncio.create_task(schedule_payment_reminder(context.application, "demo_bot_invoices", invoice_id, user.id, "35", labels[product], invoice_url))
             await query.message.reply_text(
                 f"💚 UNARED | FACTURA\nProducto: {labels[product]}\nImporte: US$35\nFactura: {invoice_id}\n"
@@ -4239,7 +4239,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "INSERT INTO pages_invoices (invoice_id, telegram_id, amount, quantity, status) VALUES (?, ?, ?, ?, 'PENDING')",
                     (invoice_id, user.id, str(total), quantity),
                 )
-            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "Páginas Web", "pages_invoices", send_customer=True, send_admin=True, invoice_url=invoice_url)
+            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "Páginas Web", "pages_invoices", send_customer=False, send_admin=True, invoice_url=invoice_url)
             asyncio.create_task(schedule_payment_reminder(context.application, "pages_invoices", invoice_id, user.id, str(total), "Páginas Web", invoice_url))
             await query.message.reply_text(
                 "💚 UNARED | FACTURA DE PÁGINAS WEB\n\n"
@@ -4841,7 +4841,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if "quantity" not in columns:
                     db.execute("ALTER TABLE loans_invoices ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1")
                 db.execute("INSERT INTO loans_invoices (invoice_id, telegram_id, amount, quantity, status) VALUES (?, ?, ?, ?, 'PENDING')", (invoice_id, user.id, str(total), quantity))
-            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "Préstamos", "loans_invoices", send_customer=True, send_admin=True, invoice_url=invoice_url)
+            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "Préstamos", "loans_invoices", send_customer=False, send_admin=True, invoice_url=invoice_url)
             asyncio.create_task(schedule_payment_reminder(context.application, "loans_invoices", invoice_id, user.id, str(total), "Préstamos", invoice_url))
             await query.message.reply_text(
                 "💚 UNARED | FACTURA PRÉSTAMOS\n\n"
@@ -4899,7 +4899,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if "quantity" not in columns:
                     db.execute("ALTER TABLE icloud_invoices ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1")
                 db.execute("INSERT INTO icloud_invoices (invoice_id, telegram_id, amount, quantity, status) VALUES (?, ?, ?, ?, 'PENDING')", (invoice_id, user.id, str(total), quantity))
-            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "iCloud", "icloud_invoices", send_customer=True, send_admin=True, invoice_url=invoice_url)
+            await notify_invoice_pending(context.application, user.id, invoice_id, str(total), "iCloud", "icloud_invoices", send_customer=False, send_admin=True, invoice_url=invoice_url)
             asyncio.create_task(schedule_payment_reminder(context.application, "icloud_invoices", invoice_id, user.id, str(total), "iCloud", invoice_url))
             await query.message.reply_text(
                 "💚 UNARED | FACTURA ICLOUD\n\n"
@@ -5066,7 +5066,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "INSERT INTO edit_upload_invoices (invoice_id, telegram_id, amount, status) VALUES (?, ?, '250', 'PENDING')",
                     (invoice_id, user.id),
                 )
-            await notify_invoice_pending(context.application, user.id, invoice_id, "250", "Editar y subir papel", "edit_upload_invoices", send_customer=True, send_admin=True, invoice_url=invoice_url)
+            await notify_invoice_pending(context.application, user.id, invoice_id, "250", "Editar y subir papel", "edit_upload_invoices", send_customer=False, send_admin=True, invoice_url=invoice_url)
             asyncio.create_task(schedule_payment_reminder(context.application, "edit_upload_invoices", invoice_id, user.id, "250", "Editar y subir papel", invoice_url))
             await query.message.reply_text(
                 "💚 UNARED | FACTURA - QUIERO EDITAR Y SUBIR PAPEL\n\n"
@@ -5783,7 +5783,7 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
                            (invoice_id, user.id, amount_text))
             context.user_data.pop("wallet_topup_step", None)
             await notify_invoice_pending(context.application, user.id, invoice_id, amount_text,
-                "Recarga de saldo UnaRed", "wallet_topup_invoices", send_customer=True, send_admin=True, invoice_url=invoice_url)
+                "Recarga de saldo UnaRed", "wallet_topup_invoices", send_customer=False, send_admin=True, invoice_url=invoice_url)
             await update.message.reply_text(
                 "💚 UNARED | FACTURA DE RECARGA\n\n"
                 f"💵 Importe: US${amount_text}\n🧾 Factura: {invoice_id}\n"
