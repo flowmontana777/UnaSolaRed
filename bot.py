@@ -1690,8 +1690,8 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                     await query.message.reply_text(
                         "📦 UNARED | SELECCIONAR ENTREGA\n\nElige una opción. Solo se enviará el enlace seleccionado al cliente.",
                         reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("1️⃣ ENTREGA 1 — Google Play", callback_data=f"deliver_choice:otp:{invoice_id}:1")],
-                            [InlineKeyboardButton("2️⃣ ENTREGA 2 — Google Drive", callback_data=f"deliver_choice:otp:{invoice_id}:2")],
+                            [InlineKeyboardButton("1️⃣ ENTREGA 1 — Forest🌲", callback_data=f"deliver_choice:otp:{invoice_id}:1")],
+                            [InlineKeyboardButton("2️⃣ ENTREGA 2 — Astra Lookup", callback_data=f"deliver_choice:otp:{invoice_id}:2")],
                         ]),
                     )
                     return
@@ -1728,7 +1728,7 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                                 "🚀 ¡Gracias por confiar en UnaRed!"
                             ),
                             reply_markup=InlineKeyboardMarkup([[
-                                InlineKeyboardButton("🌐 Abrir Google", url="https://www.google.com/?hl=es")
+                                InlineKeyboardButton("🌐 Abri", url="https://www.google.com/?hl=es")
                             ]]),
                             disable_web_page_preview=True,
                         )
