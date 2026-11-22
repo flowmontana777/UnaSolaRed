@@ -1683,7 +1683,13 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                     if is_bot_check:
                         await main_bot.send_message(
                             chat_id=telegram_id,
-                            text=f"📦 UNARED | BOT CHECK ENTREGADO\n\nTu compra de la factura {invoice_id} fue marcada como entregada.\nAbre la página desde el botón siguiente.",
+                            text=(
+                                "🎉💚 ¡BOT CHECK ENTREGADO! 💚🎉\n\n"
+                                "✅ Tu pago fue procesado y tu compra está lista.\n"
+                                f"🧾 Factura: {invoice_id}\n\n"
+                                "🌐 Pulsa el botón de abajo para abrir Google.\n"
+                                "🚀 ¡Gracias por confiar en UnaRed!"
+                            ),
                             reply_markup=InlineKeyboardMarkup([[
                                 InlineKeyboardButton("🌐 Abrir Google", url="https://www.google.com/?hl=es")
                             ]]),
@@ -1692,7 +1698,12 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                     else:
                         await main_bot.send_message(
                             chat_id=telegram_id,
-                            text=f"📦 UNARED | SERVICIO ENTREGADO\n\nTu servicio correspondiente a la factura {invoice_id} ha sido marcado como entregado.\nGracias por confiar en UnaRed.",
+                            text=(
+                                "🎉💚 ¡SERVICIO ENTREGADO! 💚🎉\n\n"
+                                f"🧾 Factura: {invoice_id}\n"
+                                "✅ Tu servicio ha sido marcado como entregado.\n\n"
+                                "🤝 Gracias por elegir UnaRed. ¡Estamos para servirte!"
+                            ),
                         )
                 except Exception:
                     logger.exception("La factura %s se marcó entregada, pero no se pudo avisar al cliente.", invoice_id)
@@ -1707,7 +1718,9 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 await query.message.edit_reply_markup(
                     reply_markup=InlineKeyboardMarkup(remaining_rows) if remaining_rows else None
                 )
-            await query.message.reply_text(f"✅ Factura {invoice_id} marcada como ENTREGADA.")
+            await query.message.reply_text(
+                f"🎉📦 ¡FACTURA ENTREGADA!\n🧾 Factura: {invoice_id}\n💚 El estado se actualizó correctamente."
+            )
         except Exception:
             logger.exception("No se pudo marcar como entregada la factura %s.", invoice_id)
             await query.message.reply_text("⚠️ No se pudo marcar la factura como entregada. Revisa el registro de Railway.")
@@ -1856,9 +1869,10 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 chat_id=int(telegram_id),
                 photo=confirmation_image,
                 caption=(
-                    "✅ PAGO CONFIRMADO | UNARED\n\n"
-                    + ("WolvPay confirmó automáticamente el pago." if verified_by_wolvpay else "El administrador confirmó manualmente tu pago.")
-                    + f"\nFactura: {invoice_id}\nImporte: USD {expected_amount}"
+                    "💚💳 ¡PAGO CONFIRMADO! 💳💚\n\n"
+                    "🎉 Tu pago fue verificado correctamente.\n"
+                    + ("🤖 Confirmación automática de WolvPay." if verified_by_wolvpay else "👨‍💼 El administrador confirmó tu pago manualmente.")
+                    + f"\n\n🧾 Factura: {invoice_id}\n💵 Importe: USD {expected_amount}\n\n📦 Tu pedido está listo para el siguiente paso."
                 ),
             )
             with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
@@ -1867,9 +1881,9 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                     (invoice_id,),
                 )
             await query.message.reply_text(
-                f"✅ Factura {invoice_id} confirmada "
-                + ("por WolvPay" if verified_by_wolvpay else "manualmente")
-                + ". La imagen se envió al cliente."
+                f"💚✅ ¡PAGO CONFIRMADO!\n🧾 Factura: {invoice_id}\n"
+                + ("🤖 Verificado por WolvPay." if verified_by_wolvpay else "👨‍💼 Confirmado manualmente.")
+                + "\n📩 Notificación enviada al cliente.\n📦 Ya puedes marcarla como entregada cuando corresponda."
             )
             try:
                 await query.message.edit_reply_markup(
