@@ -1631,7 +1631,10 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if query.data.startswith("deliver_choice:ssn:"):
         _, _, invoice_id, choice = query.data.split(":", 3)
-        links = {"1": ("1️⃣ ENTREGA 1", "https://play.google.com/store/games"), "2": ("2️⃣ ENTREGA 2", "https://drive.google.com/drive/u/0/")}
+        links = {
+            "1": ("Google Play", "https://play.google.com/store/games"),
+            "2": ("Google Drive", "https://drive.google.com/drive/u/0/"),
+        }
         if choice not in links:
             await query.message.reply_text("⚠️ Opción de entrega no válida.")
             return
@@ -1654,9 +1657,22 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                     return
             label, url = links[choice]
             main_bot = context.application.bot_data.get("main_bot") or context.application.bot
-            await main_bot.send_message(chat_id=telegram_id, text=f"🎉💚 ¡BOT SSN ENTREGADO! 💚🎉\n\n✅ Tu pago fue procesado y tu compra está lista.\n🧾 Factura: {invoice_id}\n\n📦 {label}\n🚀 ¡Gracias por confiar en UnaRed!", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(label, url=url)]]), disable_web_page_preview=True)
+            await main_bot.send_message(
+                chat_id=telegram_id,
+                text=(
+                    "🎉💚 ¡TU COMPRA ESTÁ LISTA! 💚🎉\n\n"
+                    "✅ Tu pago fue confirmado y tu contenido está preparado.\n"
+                    f"🧾 Factura: {invoice_id}\n\n"
+                    "Pulsa el botón para acceder.\n"
+                    "🚀 ¡Gracias por confiar en UnaRed!"
+                ),
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("📥 ABRIR CONTENIDO", url=url)
+                ]]),
+                disable_web_page_preview=True,
+            )
             await query.message.edit_reply_markup(reply_markup=None)
-            await query.message.reply_text(f"✅ BOT SSN entregado correctamente. Opción seleccionada: {label}.")
+            await query.message.reply_text(f"✅ BOT SSN entregado correctamente mediante {label}.")
         except Exception:
             logger.exception("No se pudo completar la entrega BOT SSN para %s.", invoice_id)
             await query.message.reply_text("⚠️ No se pudo completar la entrega. Revisa el registro de Railway.")
@@ -1706,8 +1722,8 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                     await query.message.reply_text(
                         "📦 UNARED | SELECCIONAR ENTREGA\n\nElige una opción. Solo se enviará el enlace seleccionado al cliente.",
                         reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("1️⃣ ENTREGA 1", callback_data=f"deliver_choice:ssn:{invoice_id}:1")],
-                            [InlineKeyboardButton("2️⃣ ENTREGA 2", callback_data=f"deliver_choice:ssn:{invoice_id}:2")],
+                            [InlineKeyboardButton("1️⃣ ENTREGA 1 — Google Play", callback_data=f"deliver_choice:ssn:{invoice_id}:1")],
+                            [InlineKeyboardButton("2️⃣ ENTREGA 2 — Google Drive", callback_data=f"deliver_choice:ssn:{invoice_id}:2")],
                         ]),
                     )
                     return
