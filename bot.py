@@ -2038,35 +2038,59 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "SELECT COUNT(DISTINCT telegram_id) FROM unared_interactions WHERE telegram_id != ?",
                 (int(BOT_OWNER_ID),)
             ).fetchone()[0]
-            all_buttons = db.execute("""SELECT button_label, COUNT(*) FROM unared_interactions
+            all_buttons = db.execute("""SELECT button_key, button_label, COUNT(*) FROM unared_interactions
                 WHERE telegram_id != ?
-                GROUP BY button_key, button_label ORDER BY COUNT(*) DESC, button_label ASC""",
+                GROUP BY button_key, button_label ORDER BY COUNT(*) DESC, button_key ASC""",
                 (int(BOT_OWNER_ID),)).fetchall()
-            all_activity = db.execute("""SELECT full_name, username, telegram_id, button_label, created_at
+            all_activity = db.execute("""SELECT full_name, username, telegram_id, button_key, button_label, created_at
                 FROM unared_interactions WHERE telegram_id != ?
                 ORDER BY id DESC LIMIT 30""", (int(BOT_OWNER_ID),)).fetchall()
+
+        # Normaliza nombres técnicos antiguos para que el panel muestre etiquetas claras.
+        friendly_labels = {
+            "botproduct_template": "🤖 Licencia",
+            "botproduct_otp": "🤖 BOT OTP",
+            "botproduct_ssn": "🤖 BOT SSN",
+            "botproduct_check": "🤖 BOT CHECK",
+            "my_profile": "👤 Mi Perfil",
+            "start": "🚀 Inició el bot",
+            "message_received": "💬 Envió un mensaje",
+        }
         buttons_text = "\\n".join(
-            f"• {label}: {count} clics" for label, count in all_buttons
+            f"• {friendly_labels.get(key, label or 'Interacción')}: {count} {'clic' if count == 1 else 'clics'}"
+            for key, label, count in all_buttons
         ) or "• Todavía no hay botones registrados."
-        activity_text = "\\n".join(
-            f"• {name or ('@' + username if username else 'Cliente')} | ID {tid}\\n  {label} | {when}"
-            for name, username, tid, label, when in all_activity
-        ) or "• Todavía no hay actividad registrada."
+        activity_lines = []
+        for name, username, tid, key, label, when in all_activity:
+            customer_name = name or (f"@{username}" if username else "Cliente")
+            clean_label = friendly_labels.get(key, label or "Interacción")
+            activity_lines.append(f"👤 {customer_name}\\n   ↳ {clean_label}  ·  {when}")
+        activity_text = "\\n".join(activity_lines) or "• Todavía no hay actividad registrada."
+
         detail = (
-            "🔎 UNARED | DETALLE DE INTERACCIONES\\n"
-            "━━━━━━━━━━━━━━━━━━\\n\\n"
-            f"👥 Clientes que han interactuado: {unique_clients}\\n\\n"
-            "📌 TODOS LOS BOTONES REGISTRADOS\\n"
+            "💚 UNARED  |  DETALLE DE INTERACCIONES\\n"
+            "━━━━━━━━━━━━━━━━━━━━\\n\\n"
+            f"👥 Clientes activos: {unique_clients}\\n\\n"
+            "📊 INTERACCIONES POR BOTÓN\\n"
             f"{buttons_text}\\n\\n"
-            "🧾 REGISTRO DE ACTIVIDAD (últimos 30)\\n"
-            f"{activity_text}\\n"
-            "━━━━━━━━━━━━━━━━━━"
+            "🕘 ACTIVIDAD RECIENTE  ·  ÚLTIMOS 30\\n"
+            f"{activity_text}\\n\\n"
+            "━━━━━━━━━━━━━━━━━━━━"
         )
-        keyboard_rows = [
-            [customer_profile_button(tid),
-             InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}")]
-            for _, _, tid, _, _ in all_activity
-        ]
+        # Una sola fila de acciones por cliente, sin repetir botones en cada interacción.
+        seen_customer_ids = set()
+        keyboard_rows = []
+        for _, name, username, tid, _, _, _ in []:
+            pass
+        for name, username, tid, key, label, when in all_activity:
+            if int(tid) in seen_customer_ids:
+                continue
+            seen_customer_ids.add(int(tid))
+            display_name = name or (f"@{username}" if username else "Cliente")
+            keyboard_rows.append([
+                customer_profile_button(tid, display_name),
+                InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}")
+            ])
         keyboard_rows.extend([
             [InlineKeyboardButton("⬅️ Volver a estadísticas", callback_data="admin_stats")],
             [InlineKeyboardButton("🏠 Volver al panel", callback_data="admin_home")],
