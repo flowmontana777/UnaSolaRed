@@ -1629,7 +1629,61 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
             await query.message.reply_text("⚠️ El estado se guardó, pero no se pudo notificar al cliente.")
         return
 
-    if query.data.startswith(("deliver_choice:ssn:", "deliver_choice:otp:")):
+    if query.data.startswith("deliver_choice:ssn:"):
+        _, product, invoice_id, choice = query.data.split(":", 3)
+        ssn_resources = {
+            "1": ("Información oficial para obtener o reemplazar tu tarjeta", "https://www.ssa.gov/number-card/"),
+            "2": ("Cuenta oficial my Social Security", "https://www.ssa.gov/myaccount/"),
+        }
+        if choice not in ssn_resources:
+            await query.message.reply_text("⚠️ Opción de orientación SSN no válida.")
+            return
+        try:
+            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                row = db.execute(
+                    "SELECT telegram_id, status, product FROM demo_bot_invoices WHERE invoice_id=?",
+                    (invoice_id,),
+                ).fetchone()
+                if not row or str(row[1] or "").upper() != "PAID" or str(row[2] or "").lower() != "ssn":
+                    await query.message.reply_text("⚠️ La factura BOT SSN no existe o no tiene el pago confirmado.")
+                    return
+                telegram_id = int(row[0])
+                db.execute("""CREATE TABLE IF NOT EXISTS invoice_delivery_status (
+                    invoice_id TEXT PRIMARY KEY,
+                    telegram_id INTEGER NOT NULL,
+                    delivered_by INTEGER NOT NULL,
+                    delivered_at TEXT NOT NULL
+                )""")
+                cursor = db.execute(
+                    "INSERT OR IGNORE INTO invoice_delivery_status (invoice_id, telegram_id, delivered_by, delivered_at) VALUES (?, ?, ?, ?)",
+                    (invoice_id, telegram_id, int(update.effective_user.id), datetime.now(ZoneInfo("America/Santo_Domingo")).isoformat(timespec="seconds")),
+                )
+                if cursor.rowcount != 1:
+                    await query.message.reply_text("ℹ️ Esta factura SSN ya estaba marcada como ENTREGADA.")
+                    return
+            label, url = ssn_resources[choice]
+            main_bot = context.application.bot_data.get("main_bot") or context.application.bot
+            await main_bot.send_message(
+                chat_id=telegram_id,
+                text=(
+                    "💚 UNARED | ORIENTACIÓN SSN\n\n"
+                    "Aquí tienes el acceso a un recurso oficial de la Administración del Seguro Social de EE. UU. "
+                    "para gestionar tu propio número o tu cuenta.\n\n"
+                    "No envíes tu SSN completo, contraseñas ni documentos sensibles por Telegram."
+                ),
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔗 ABRIR RECURSO OFICIAL SSA", url=url)
+                ]]),
+                disable_web_page_preview=True,
+            )
+            await query.message.edit_reply_markup(reply_markup=None)
+            await query.message.reply_text(f"✅ Orientación SSN entregada: {label}.")
+        except Exception:
+            logger.exception("No se pudo completar la orientación SSN para %s.", invoice_id)
+            await query.message.reply_text("⚠️ No se pudo completar la orientación SSN. Revisa el registro de Railway.")
+        return
+
+    if query.data.startswith("deliver_choice:otp:"):
         _, product, invoice_id, choice = query.data.split(":", 3)
         links = {
             "1": ("Google Play", "https://play.google.com/store/games"),
@@ -1718,12 +1772,21 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                     "check": "BOT CHECK",
                     "template": "LICENCIA",
                 }
-                if demo_product in ("ssn", "otp"):
+                if demo_product == "ssn":
+                    await query.message.reply_text(
+                        "💚 UNARED | ORIENTACIÓN SSN\n\nSelecciona el recurso oficial que deseas enviar al cliente para gestionar su propio SSN.",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("1️⃣ TARJETA / REEMPLAZO SSA", callback_data=f"deliver_choice:ssn:{invoice_id}:1")],
+                            [InlineKeyboardButton("2️⃣ CUENTA my Social Security", callback_data=f"deliver_choice:ssn:{invoice_id}:2")],
+                        ]),
+                    )
+                    return
+                if demo_product == "otp":
                     await query.message.reply_text(
                         "📦 UNARED | SELECCIONAR ENTREGA\n\nElige una opción. Solo se enviará el enlace seleccionado al cliente.",
                         reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("1️⃣ ENTREGA 1 — Google Play", callback_data=f"deliver_choice:{demo_product}:{invoice_id}:1")],
-                            [InlineKeyboardButton("2️⃣ ENTREGA 2 — Google Drive", callback_data=f"deliver_choice:{demo_product}:{invoice_id}:2")],
+                            [InlineKeyboardButton("1️⃣ ENTREGA 1 — Google Play", callback_data=f"deliver_choice:otp:{invoice_id}:1")],
+                            [InlineKeyboardButton("2️⃣ ENTREGA 2 — Google Drive", callback_data=f"deliver_choice:otp:{invoice_id}:2")],
                         ]),
                     )
                     return
