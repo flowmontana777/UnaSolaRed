@@ -1653,6 +1653,13 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 if payment_status != "PAID":
                     await query.message.reply_text("⌛ Primero confirma el pago con «Ya pagó» o «Verificar pago». La entrega aún no se ha marcado.")
                     return
+                is_bot_check = False
+                if table_name == "demo_bot_invoices":
+                    product_row = db.execute(
+                        "SELECT product FROM demo_bot_invoices WHERE invoice_id=?",
+                        (invoice_id,),
+                    ).fetchone()
+                    is_bot_check = bool(product_row and str(product_row[0]).lower() == "check")
                 db.execute("""CREATE TABLE IF NOT EXISTS invoice_delivery_status (
                     invoice_id TEXT PRIMARY KEY,
                     telegram_id INTEGER NOT NULL,
@@ -1673,10 +1680,20 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
             main_bot = context.application.bot_data.get("main_bot")
             if main_bot:
                 try:
-                    await main_bot.send_message(
-                        chat_id=telegram_id,
-                        text=f"📦 UNARED | SERVICIO ENTREGADO\n\nTu servicio correspondiente a la factura {invoice_id} ha sido marcado como entregado.\nGracias por confiar en UnaRed.",
-                    )
+                    if is_bot_check:
+                        await main_bot.send_message(
+                            chat_id=telegram_id,
+                            text=f"📦 UNARED | BOT CHECK ENTREGADO\n\nTu compra de la factura {invoice_id} fue marcada como entregada.\nAbre la página desde el botón siguiente.",
+                            reply_markup=InlineKeyboardMarkup([[
+                                InlineKeyboardButton("🌐 Abrir Google", url="https://www.google.com/?hl=es")
+                            ]]),
+                            disable_web_page_preview=True,
+                        )
+                    else:
+                        await main_bot.send_message(
+                            chat_id=telegram_id,
+                            text=f"📦 UNARED | SERVICIO ENTREGADO\n\nTu servicio correspondiente a la factura {invoice_id} ha sido marcado como entregado.\nGracias por confiar en UnaRed.",
+                        )
                 except Exception:
                     logger.exception("La factura %s se marcó entregada, pero no se pudo avisar al cliente.", invoice_id)
 
@@ -6487,6 +6504,42 @@ async def wolvpay_webhook(request):
         return web.Response(status=500, text="Database error.")
 
     application = request.app["telegram_application"]
+    if invoice_type == "demo" and product == "check":
+        delivery_claimed = False
+        try:
+            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                db.execute("""CREATE TABLE IF NOT EXISTS invoice_delivery_status (
+                    invoice_id TEXT PRIMARY KEY,
+                    telegram_id INTEGER NOT NULL,
+                    delivered_by INTEGER NOT NULL,
+                    delivered_at TEXT NOT NULL
+                )""")
+                cursor = db.execute(
+                    "INSERT OR IGNORE INTO invoice_delivery_status (invoice_id, telegram_id, delivered_by, delivered_at) VALUES (?, ?, 0, ?)",
+                    (invoice_id, int(telegram_id), datetime.now(ZoneInfo("America/Santo_Domingo")).isoformat(timespec="seconds")),
+                )
+                delivery_claimed = cursor.rowcount == 1
+            if delivery_claimed:
+                await application.bot.send_message(
+                    chat_id=int(telegram_id),
+                    text=f"📦 UNARED | BOT CHECK ENTREGADO\n\nTu pago de la factura {invoice_id} fue confirmado por WolvPay. Ya puedes abrir la página desde este botón.",
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton("🌐 Abrir Google", url="https://www.google.com/?hl=es")
+                    ]]),
+                    disable_web_page_preview=True,
+                )
+        except Exception:
+            logger.exception("No se pudo entregar automáticamente el enlace BOT CHECK para %s.", invoice_id)
+            if delivery_claimed:
+                try:
+                    with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                        db.execute(
+                            "DELETE FROM invoice_delivery_status WHERE invoice_id=? AND delivered_by=0",
+                            (invoice_id,),
+                        )
+                except sqlite3.Error:
+                    logger.exception("No se pudo liberar el registro de entrega automática para %s.", invoice_id)
+            return web.Response(status=500, text="Payment confirmed; BOT CHECK delivery retry required.")
     try:
         customer_chat = await application.bot.get_chat(int(telegram_id))
         customer_username = "@" + customer_chat.username if customer_chat.username else "No tiene username público"
