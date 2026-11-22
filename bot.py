@@ -239,21 +239,6 @@ async def schedule_payment_reminder(application, table_name, invoice_id, telegra
 
 
 
-PAYMENT_WALLET = "TKn18e7RCxhzt9xPZ15JnDhs9kxvf7gsWm"
-
-PAYMENT_MESSAGE = (
-    "💚 UNARED | MÉTODO DE PAGO\n\n"
-    "💵 Moneda: USDT\n"
-    "🌐 Red: TRON (TRC20)\n\n"
-    "💳 Dirección de pago:\n"
-    f"{PAYMENT_WALLET}\n\n"
-    "⚠️ IMPORTANTE:\n"
-    "Envía únicamente USDT por la red TRC20.\n"
-    "No utilices otra red.\n\n"
-    "Después de realizar el pago, conserva tu "
-    "comprobante para verificarlo con nuestro equipo."
-)
-
 # =====================================
 # REGISTRO
 # =====================================
@@ -285,22 +270,9 @@ BANKS = {
     "wells": "Wells Fargo",
 }
 
-BANK_SERVICES = {
-    "account": "Información y apertura de cuentas",
-    "cards": "Consultas sobre tarjetas",
-    "transfers": "Transferencias",
-    "statements": "Estados de cuenta",
-    "online": "Banca en línea y soporte",
-    "other": "Otra consulta bancaria",
-}
-
 # =====================================
 # OTROS SERVICIOS
 # =====================================
-
-SERVICES = {
-    "digital": "Modo Digital",
-}
 
 REMITTANCE_APPS = {
     "remitly": "Remitly",
@@ -656,12 +628,6 @@ def bill_coin_menu():
         [InlineKeyboardButton("₿ Bitcoin (BTC)", callback_data="bill_coin_btc")],
         [InlineKeyboardButton("₮ USDT (TRC20)", callback_data="bill_coin_trc20_usdt")],
         [InlineKeyboardButton("⬅️ Volver", callback_data="bill_pay")],
-    ])
-
-
-def dayler_receipt_menu():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Ya realicé el pago", callback_data="dayler_paid")]
     ])
 
 
@@ -1078,67 +1044,6 @@ async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await message.reply_text(
                 "⚠️ No se pudo cargar la lista de clientes. Revisa los registros de Railway."
             )
-
-
-async def refresh_wolvpay_statuses():
-    """Sincroniza los estados de las facturas locales con el endpoint de WolvPay ya utilizado."""
-    if not WOLVPAY_API_KEY:
-        return
-    invoice_rows = []
-    try:
-        with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
-            for table in INVOICE_TABLES:
-                exists = db.execute(
-                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
-                ).fetchone()
-                if not exists:
-                    continue
-                cols = {row[1] for row in db.execute("PRAGMA table_info(" + table + ")")}
-                if "invoice_id" in cols and "status" in cols:
-                    invoice_rows.extend((table, row[0]) for row in db.execute(
-                        "SELECT invoice_id FROM " + table + " WHERE invoice_id IS NOT NULL"
-                    ).fetchall())
-    except sqlite3.Error:
-        logger.exception("No se pudieron preparar las facturas para sincronizar con WolvPay.")
-        return
-
-    timeout = aiohttp.ClientTimeout(total=20)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        semaphore = asyncio.Semaphore(8)
-
-        async def fetch_status(table, invoice_id):
-            async with semaphore:
-                try:
-                    async with session.get(
-                        f"{WOLVPAY_API_URL}/invoices/{invoice_id}",
-                        headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}"},
-                    ) as response:
-                        if response.status != 200:
-                            return None
-                        payload = await response.json(content_type=None)
-                    invoice = payload.get("data") or payload
-                    status = str(invoice.get("status") or "").strip().upper()
-                    if invoice.get("invoice_id") and str(invoice["invoice_id"]) != str(invoice_id):
-                        return None
-                    return (table, invoice_id, status) if status else None
-                except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, TypeError):
-                    logger.warning("No se pudo actualizar el estado WolvPay de %s.", invoice_id)
-                    return None
-
-        results = await asyncio.gather(
-            *(fetch_status(table, invoice_id) for table, invoice_id in invoice_rows)
-        )
-    updates = [item for item in results if item]
-    if updates:
-        try:
-            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
-                for table, invoice_id, status in updates:
-                    db.execute(
-                        "UPDATE " + table + " SET status=? WHERE invoice_id=?",
-                        (status, invoice_id),
-                    )
-        except sqlite3.Error:
-            logger.exception("No se pudieron guardar los estados sincronizados de WolvPay.")
 
 
 async def fetch_wolvpay_invoice_statistics():
