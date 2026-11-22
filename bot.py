@@ -670,7 +670,7 @@ def bot_catalog_menu():
         [InlineKeyboardButton("🤖 BOT OTP", callback_data="botproduct_otp")],
         [InlineKeyboardButton("🤖 BOT SSN", callback_data="botproduct_ssn")],
         [InlineKeyboardButton("🤖 BOT CHECK", callback_data="botproduct_check")],
-        [InlineKeyboardButton("🤖 LICENCIA", callback_data="tool_license_info")],
+        [InlineKeyboardButton("🤖 LICENCIA", callback_data="botproduct_template")],
         back_button("menu_tools"),
     ])
 
@@ -2939,7 +2939,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("📞 Alquilar Línea Dialer", callback_data="tool_dayler")],
             [InlineKeyboardButton("🗂️ Páginas Buy CC", callback_data="tool_pages")],
             [InlineKeyboardButton("🪪 SSN", callback_data="tool_ssn_info")],
-            [InlineKeyboardButton("🤖 LICENCIA", callback_data="botproduct_template")],
+            [InlineKeyboardButton("🤖 LICENCIA", callback_data="tool_license_info")],
             [InlineKeyboardButton("⬅️ Volver al menú principal", callback_data="menu_home")],
         ])
         await query.message.reply_text(
@@ -3976,7 +3976,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    if choice in ("botproduct_template", "tool_license_info"):
+    if choice == "tool_license_info":
         context.user_data.pop("waiting_license_request", None)
         await query.answer()
         await query.message.reply_text(
@@ -4031,6 +4031,23 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "La sección de preguntas frecuentes se está preparando. "
                 "Pronto encontrarás aquí las respuestas a tus dudas."
             )
+        return
+
+    if choice == "botproduct_template":
+        await query.answer()
+        await query.message.reply_text(
+            "💚 UNARED | LICENCIA\\n\\n"
+            "Producto disponible para compra.\\n\\n"
+            "💵 Precio: US$35\\n"
+            "🧾 Recibirás tu factura para completar el pago. "
+            "Después de la confirmación, recibirás el enlace de entrega.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_template")],
+                [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_template")],
+                [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
+            ]),
+        )
         return
 
     if choice == "botproduct_otp":
