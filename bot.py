@@ -800,6 +800,8 @@ def log_customer_interaction(user, button_key):
         "music_catalog": "🎵 Catálogo de música",
         "music_submit": "🎧 Enviar música",
         "tool_edit_upload": "🛠️ Editar y subir",
+        "start": "🚀 Inició el bot",
+        "message_received": "💬 Envió un mensaje",
     }
     label = labels.get(button_key, "🔘 " + button_key.replace("_", " ").strip().capitalize())
     with sqlite3.connect(DATABASE_PATH, timeout=30) as db:
@@ -2183,6 +2185,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user = update.effective_user
     is_new_customer = save_customer(user)
+    if user and update.effective_chat and update.effective_chat.type == "private":
+        log_customer_interaction(user, "start")
     if is_new_customer:
         await notify_new_customer(context.application, user)
 
@@ -5192,6 +5196,10 @@ async def receive_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # La música de @Una1Red se procesa únicamente en channel_music_ingest.
     if not update.effective_chat or update.effective_chat.type != "private":
         return
+
+    # Registrar la actividad sin guardar el contenido del mensaje del cliente.
+    if update.effective_user and not is_admin(update.effective_user):
+        log_customer_interaction(update.effective_user, "message_received")
 
     if is_admin(update.effective_user) and context.user_data.get("license_request_reply_id"):
         await receive_admin_profile_reply(update, context)
