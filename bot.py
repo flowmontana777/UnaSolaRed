@@ -1826,24 +1826,6 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 reason = "Revisa el registro del error en Railway."
             await query.message.reply_text(f"⚠️ No se pudo enviar la notificación. {reason}")
         return
-            customer_keyboard = InlineKeyboardMarkup([[
-                InlineKeyboardButton("📩 Contactar a Flow Montana", url="https://t.me/flowmontana777")
-            ]])
-            await main_bot.send_photo(
-                chat_id=telegram_id,
-                photo="https://i.ibb.co/sJqnfCPG/50-FDEC59-BC9-A-40-EC-9-AF8-E19-B16-C4931-C.png",
-                caption=("💚 UNARED | NOTIFICACIÓN\n\n"
-                         "Tenemos una notificación importante para ti. "
-                         "Pulsa el botón de abajo para contactar con nuestro administrador."),
-                reply_markup=customer_keyboard,
-            )
-            await query.message.reply_text(f"✅ Notificación enviada al cliente {telegram_id}.")
-        except (ValueError, IndexError):
-            await query.message.reply_text("⚠️ ID de cliente no válido.")
-        except Exception:
-            logger.exception("No se pudo enviar la notificación desde el panel.")
-            await query.message.reply_text("⚠️ No se pudo enviar la notificación. Es posible que el cliente no haya iniciado el bot.")
-        return
     if query.data.startswith("copy_id:"):
         try:
             telegram_id = int(query.data.split(":", 1)[1])
