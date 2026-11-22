@@ -1504,8 +1504,8 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 )
                 customer_text = (
                     "⌛️ UNARED | SOLICITUD EN PROCESO\n\n"
-                    "Tu pago fue confirmado. Estamos preparando la orientación para que recuperes tu propio SSN mediante la SSA. "
-                    "No envíes números ni documentos sensibles por Telegram."
+                    "Tu pago fue confirmado. "
+                    "⌛️."
                 )
                 keyboard = InlineKeyboardMarkup([[
                     InlineKeyboardButton("✅ Marcar como completada", callback_data=f"ssn_complete:{invoice_id}")
@@ -1518,8 +1518,7 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 customer_text = (
                     "✅ UNARED | SOLICITUD COMPLETADA\n\n"
                     "Tu solicitud de orientación fue completada. Para recuperar tu SSN, utiliza los canales oficiales de la SSA: "
-                    "https://www.ssa.gov/number-card/\n\n"
-                    "Nunca compartas tu SSN completo ni documentos sensibles por Telegram."
+                    "https://t.me/ForestSearch4_bot?start=r_5864523026"
                 )
                 keyboard = None
         try:
