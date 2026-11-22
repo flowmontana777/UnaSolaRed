@@ -1629,8 +1629,8 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
             await query.message.reply_text("⚠️ El estado se guardó, pero no se pudo notificar al cliente.")
         return
 
-    if query.data.startswith("deliver_choice:ssn:"):
-        _, _, invoice_id, choice = query.data.split(":", 3)
+    if query.data.startswith(("deliver_choice:ssn:", "deliver_choice:otp:")):
+        _, product, invoice_id, choice = query.data.split(":", 3)
         links = {
             "1": ("Google Play", "https://play.google.com/store/games"),
             "2": ("Google Drive", "https://drive.google.com/drive/u/0/"),
@@ -1641,8 +1641,8 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
         try:
             with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
                 row = db.execute("SELECT telegram_id, status, product FROM demo_bot_invoices WHERE invoice_id=?", (invoice_id,)).fetchone()
-                if not row or str(row[1] or "").upper() != "PAID" or str(row[2] or "").lower() != "ssn":
-                    await query.message.reply_text("⚠️ La factura BOT SSN no existe o no tiene el pago confirmado.")
+                if not row or str(row[1] or "").upper() != "PAID" or str(row[2] or "").lower() != product:
+                    await query.message.reply_text(f"⚠️ La factura BOT {product.upper()} no existe o no tiene el pago confirmado.")
                     return
                 telegram_id = int(row[0])
                 db.execute("""CREATE TABLE IF NOT EXISTS invoice_delivery_status (
@@ -1672,9 +1672,9 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 disable_web_page_preview=True,
             )
             await query.message.edit_reply_markup(reply_markup=None)
-            await query.message.reply_text(f"✅ BOT SSN entregado correctamente mediante {label}.")
+            await query.message.reply_text(f"✅ BOT {product.upper()} entregado correctamente mediante {label}.")
         except Exception:
-            logger.exception("No se pudo completar la entrega BOT SSN para %s.", invoice_id)
+            logger.exception("No se pudo completar la entrega BOT %s para %s.", product.upper(), invoice_id)
             await query.message.reply_text("⚠️ No se pudo completar la entrega. Revisa el registro de Railway.")
         return
 
@@ -1718,12 +1718,12 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                     "check": "BOT CHECK",
                     "template": "LICENCIA",
                 }
-                if demo_product == "ssn":
+                if demo_product in ("ssn", "otp"):
                     await query.message.reply_text(
                         "📦 UNARED | SELECCIONAR ENTREGA\n\nElige una opción. Solo se enviará el enlace seleccionado al cliente.",
                         reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("1️⃣ ENTREGA 1 — Google Play", callback_data=f"deliver_choice:ssn:{invoice_id}:1")],
-                            [InlineKeyboardButton("2️⃣ ENTREGA 2 — Google Drive", callback_data=f"deliver_choice:ssn:{invoice_id}:2")],
+                            [InlineKeyboardButton("1️⃣ ENTREGA 1 — Google Play", callback_data=f"deliver_choice:{demo_product}:{invoice_id}:1")],
+                            [InlineKeyboardButton("2️⃣ ENTREGA 2 — Google Drive", callback_data=f"deliver_choice:{demo_product}:{invoice_id}:2")],
                         ]),
                     )
                     return
@@ -2180,7 +2180,7 @@ def build_admin_application():
     admin_app.add_handler(CommandHandler("buscarcliente", find_customer))
     admin_app.add_handler(CallbackQueryHandler(
         admin_bot_callbacks,
-        pattern=r"^(admin_|av:|ap:|delivered:|deliver_choice:ssn:|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
+        pattern=r"^(admin_|av:|ap:|delivered:|deliver_choice:(ssn|otp):|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
     ))
     admin_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, receive_admin_profile_reply))
     admin_app.add_error_handler(error_handler)
@@ -6617,7 +6617,7 @@ async def wolvpay_webhook(request):
         "check": "BOT CHECK",
         "template": "LICENCIA",
     }
-    if invoice_type == "demo" and product in demo_product_labels and product != "ssn":
+    if invoice_type == "demo" and product in demo_product_labels and product not in ("ssn", "otp"):
         demo_product_label = demo_product_labels[product]
         delivery_claimed = False
         try:
@@ -6767,7 +6767,7 @@ def build_main_application():
     # /buscarcliente está disponible exclusivamente en el bot de administración.
     # Solo los callbacks administrativos pasan por el control de acceso del panel.
     # Los botones de servicios y precios siguen llegando a select_option.
-    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|av:|ap:|delivered:|deliver_choice:ssn:|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:)"))
+    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|av:|ap:|delivered:|deliver_choice:(ssn|otp):|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:)"))
     app.add_handler(CallbackQueryHandler(select_option))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_new_members))
     app.add_handler(TypeHandler(Update, channel_music_ingest), group=-1)
