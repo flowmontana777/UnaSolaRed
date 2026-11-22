@@ -1953,7 +1953,7 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"  • {label}: {count} clics" for label, count in top_buttons
         ) or "  • Todavía no hay clics registrados."
         recent_text = "\n".join(
-            f"  • {name or ('@' + username if username else 'Cliente')} → {label} | ID {tid} ({when})"
+            f"  • {name or ('@' + username if username else 'Cliente')} → {label} ({when})"
             for name, username, tid, label, when in recent
         ) or "  • Todavía no hay actividad registrada."
 
