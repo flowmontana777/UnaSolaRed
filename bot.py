@@ -194,7 +194,6 @@ async def notify_invoice_pending(
                     InlineKeyboardButton("👤 Abrir perfil del cliente", url=f"tg://user?id={int(telegram_id)}"),
                 ],
                 [
-                    InlineKeyboardButton("📦 Entregado", callback_data=f"delivered:{invoice_id}"),
                     InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(telegram_id)}"),
                 ],
             ])
@@ -1856,9 +1855,15 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 + ". La imagen se envió al cliente."
             )
             try:
-                await query.message.edit_reply_markup(reply_markup=None)
+                await query.message.edit_reply_markup(
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("📦 Entregado", callback_data=f"delivered:{invoice_id}")],
+                        [InlineKeyboardButton("👤 Abrir perfil del cliente", url=f"tg://user?id={int(telegram_id)}")],
+                        [InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(telegram_id)}")],
+                    ])
+                )
             except Exception:
-                pass
+                logger.exception("No se pudo actualizar el teclado de la factura %s tras confirmar el pago.", invoice_id)
         except Exception:
             logger.exception("Error procesando la acción administrativa de la factura %s.", invoice_id)
             try:
