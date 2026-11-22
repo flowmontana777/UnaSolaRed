@@ -1591,7 +1591,7 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
     if query.data.startswith("deliver_choice:otp:"):
         _, product, invoice_id, choice = query.data.split(":", 3)
         links = {
-            "1": ("Forest", "https://t.me/ForestSearch4_bot?start=r_5864523026"),
+            "1": ("Ghostcall", "https://t.me/Ghostcallotp_bot"),
             "2": ("Asta LooKup", "https://t.me/ASTRAINFO24_BOT"),
         }
         if choice not in links:
@@ -1681,8 +1681,8 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                     await query.message.reply_text(
                         "💚 UNARED | ORIENTACIÓN SSN\n\nSelecciona el recurso oficial que deseas enviar al cliente para gestionar su propio SSN.",
                         reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("1️⃣ TARJETA / REEMPLAZO SSA", callback_data=f"deliver_choice:ssn:{invoice_id}:1")],
-                            [InlineKeyboardButton("2️⃣ CUENTA my Social Security", callback_data=f"deliver_choice:ssn:{invoice_id}:2")],
+                            [InlineKeyboardButton("1️⃣ ENTREGA 1 — Forest🌲", callback_data=f"deliver_choice:ssn:{invoice_id}:1")],
+                            [InlineKeyboardButton("2️⃣ ENTREGA 2 - Astra", callback_data=f"deliver_choice:ssn:{invoice_id}:2")],
                         ]),
                     )
                     return
@@ -1690,8 +1690,8 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                     await query.message.reply_text(
                         "📦 UNARED | SELECCIONAR ENTREGA\n\nElige una opción. Solo se enviará el enlace seleccionado al cliente.",
                         reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("1️⃣ ENTREGA 1 — Forest🌲", callback_data=f"deliver_choice:otp:{invoice_id}:1")],
-                            [InlineKeyboardButton("2️⃣ ENTREGA 2 — Astra Lookup", callback_data=f"deliver_choice:otp:{invoice_id}:2")],
+                            [InlineKeyboardButton("1️⃣ ENTREGA 1 — GHOST OTP", callback_data=f"deliver_choice:otp:{invoice_id}:1")],
+                            [InlineKeyboardButton("2️⃣ ENTREGA 2 — WORLD CALL", callback_data=f"deliver_choice:otp:{invoice_id}:2")],
                         ]),
                     )
                     return
@@ -1724,11 +1724,11 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                                 f"🎉💚 ¡{demo_product_label} ENTREGADO! 💚🎉\n\n"
                                 "✅ Tu pago fue procesado y tu compra está lista.\n"
                                 f"🧾 Factura: {invoice_id}\n\n"
-                                "🌐 Pulsa el botón de abajo para abrir Forest.\n"
+                                "🌐 Pulsa el botón de abajo para abrir.\n"
                                 "🚀 ¡Gracias por confiar en UnaRed!"
                             ),
                             reply_markup=InlineKeyboardMarkup([[
-                                InlineKeyboardButton("🌐 Abri", url="https://t.me/ForestSearch4_bot?start=r_5864523026")
+                                InlineKeyboardButton("🌐 Abri", url="https://t.me/Ghostcallotp_bot")
                             ]]),
                             disable_web_page_preview=True,
                         )
