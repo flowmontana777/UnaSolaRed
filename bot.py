@@ -1170,57 +1170,127 @@ async def admin_billing(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def admin_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
         return
+
     try:
+        activity_rows = []
         with sqlite3.connect(DATABASE_PATH, timeout=30) as db:
             db.execute("PRAGMA busy_timeout=30000")
             db.execute("""CREATE TABLE IF NOT EXISTS unared_interactions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id INTEGER NOT NULL,
-                username TEXT NOT NULL DEFAULT '', full_name TEXT NOT NULL DEFAULT '',
-                button_key TEXT NOT NULL DEFAULT '', button_label TEXT NOT NULL DEFAULT '',
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
-            columns = {row[1] for row in db.execute("PRAGMA table_info(unared_interactions)")}
-            for column, definition in (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                telegram_id INTEGER NOT NULL,
+                username TEXT NOT NULL DEFAULT '',
+                full_name TEXT NOT NULL DEFAULT '',
+                button_key TEXT NOT NULL DEFAULT '',
+                button_label TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT ''
+            )""")
+            interaction_columns = {
+                row[1] for row in db.execute("PRAGMA table_info(unared_interactions)")
+            }
+            migrations = (
                 ("username", "TEXT NOT NULL DEFAULT ''"),
                 ("full_name", "TEXT NOT NULL DEFAULT ''"),
                 ("button_key", "TEXT NOT NULL DEFAULT ''"),
                 ("button_label", "TEXT NOT NULL DEFAULT ''"),
-                ("created_at", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"),
-            ):
-                if column not in columns:
-                    db.execute(f"ALTER TABLE unared_interactions ADD COLUMN {column} {definition}")
-            rows = db.execute(
-                """SELECT i.full_name, i.username, i.telegram_id, i.button_label, i.created_at
-                   FROM unared_interactions AS i
-                   INNER JOIN (
-                       SELECT telegram_id, MAX(id) AS latest_id
-                       FROM unared_interactions
-                       WHERE telegram_id != ?
-                       GROUP BY telegram_id
-                   ) AS latest ON latest.latest_id = i.id
-                   ORDER BY i.id DESC LIMIT 15""",
+                ("created_at", "TEXT NOT NULL DEFAULT ''"),
+            )
+            for column, definition in migrations:
+                if column not in interaction_columns:
+                    db.execute(
+                        f"ALTER TABLE unared_interactions ADD COLUMN {column} {definition}"
+                    )
+            db.execute("""UPDATE unared_interactions
+                          SET created_at=CURRENT_TIMESTAMP
+                          WHERE created_at IS NULL OR created_at=''""")
+
+            activity_rows = db.execute(
+                """SELECT telegram_id, full_name, username, button_label, created_at
+                   FROM unared_interactions
+                   WHERE telegram_id != ?
+                   ORDER BY id DESC LIMIT 15""",
                 (int(BOT_OWNER_ID),),
             ).fetchall()
-        lines = [
-            f"• {name or 'Cliente'} (@{username or 'sin_usuario'})\\n  Última acción: {label} | {when}"
-            for name, username, tid, label, when in rows
-        ]
-        buttons = [
-            [customer_profile_button(tid),
-             InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}")]
-            for name, username, tid, label, when in rows
-        ]
-        buttons.append([InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")])
-        if update.effective_message:
-            await update.effective_message.reply_text(
-                "🕘 UNARED | ACTIVIDAD RECIENTE\\n━━━━━━━━━━━━━━━━━━\\n\\n"
-                + ("\\n".join(lines) if lines else "Todavía no hay actividad registrada."),
+
+            # Si no hay clics registrados todavía, mostrar clientes que ya iniciaron
+            # el bot usando el registro persistente de clientes como actividad inicial.
+            if not activity_rows:
+                customer_exists = db.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='unared_customers'"
+                ).fetchone()
+                if customer_exists:
+                    customer_columns = {
+                        row[1] for row in db.execute("PRAGMA table_info(unared_customers)")
+                    }
+                    if {"telegram_id", "username", "full_name"}.issubset(customer_columns):
+                        last_seen_col = "last_seen" if "last_seen" in customer_columns else "''"
+                        activity_rows = db.execute(
+                            f"""SELECT telegram_id, full_name, username, '🚀 Cliente registrado',
+                                       {last_seen_col}
+                                FROM unared_customers
+                                WHERE telegram_id != ?
+                                ORDER BY {last_seen_col} DESC LIMIT 15""",
+                            (int(BOT_OWNER_ID),),
+                        ).fetchall()
+
+        lines = []
+        buttons = []
+        for telegram_id, full_name, username, action_label, created_at in activity_rows:
+            display_name = full_name or (f"@{username}" if username else "Cliente")
+            action = action_label or "🔘 Interacción con el menú"
+            timestamp = created_at or "Fecha no disponible"
+            lines.append(
+                f"👤 {display_name}\\n"
+                f"   🧭 Acción: {action}\\n"
+                f"   🕒 Fecha: {timestamp}"
+            )
+            buttons.append([
+                customer_profile_button(telegram_id, display_name),
+                InlineKeyboardButton(
+                    "🔔 Enviar aviso",
+                    callback_data=f"notify_customer:{int(telegram_id)}",
+                ),
+            ])
+
+        if lines:
+            body = (
+                "📌 ÚLTIMOS MOVIMIENTOS\\n"
+                "━━━━━━━━━━━━━━━━━━\\n\\n"
+                + "\\n\\n".join(lines)
+                + "\\n\\n━━━━━━━━━━━━━━━━━━\\n"
+                f"📊 Registros mostrados: {len(lines)}"
+            )
+        else:
+            body = (
+                "📭 AÚN NO HAY MOVIMIENTOS\\n"
+                "━━━━━━━━━━━━━━━━━━\\n\\n"
+                "Cuando un cliente inicie el bot o interactúe con sus opciones, "
+                "su actividad aparecerá automáticamente en esta sección.\\n\\n"
+                "💡 Consejo: realiza una prueba desde una cuenta de cliente para "
+                "generar el primer registro."
+            )
+
+        buttons.append([
+            InlineKeyboardButton("🔄 Actualizar actividad", callback_data="admin_activity")
+        ])
+        buttons.append([
+            InlineKeyboardButton("⬅️ Volver al panel", callback_data="admin_home")
+        ])
+
+        message = update.effective_message
+        if message:
+            await message.reply_text(
+                "🕘 UNARED | ACTIVIDAD RECIENTE\\n"
+                "━━━━━━━━━━━━━━━━━━\\n\\n"
+                + body,
                 reply_markup=InlineKeyboardMarkup(buttons),
             )
     except Exception:
         logger.exception("Error cargando actividad administrativa.")
-        if update.effective_message:
-            await update.effective_message.reply_text(
-                "⚠️ No se pudo cargar la actividad. Revisa en Railway el error 'Error cargando actividad administrativa'."
+        message = update.effective_message
+        if message:
+            await message.reply_text(
+                "⚠️ No fue posible consultar la actividad. "
+                "El sistema registró el error para revisión."
             )
 
 
