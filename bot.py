@@ -1571,13 +1571,13 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
             await main_bot.send_message(
                 chat_id=telegram_id,
                 text=(
-                    "💚 UNARED | ORIENTACIÓN SSN\n\n"
-                    "Aquí tienes el acceso a un recurso oficial de la Administración del Seguro Social de EE. UU. "
-                    "para gestionar tu propio número o tu cuenta.\n\n"
-                    "No envíes tu SSN completo, contraseñas ni documentos sensibles por Telegram."
+                    "💚 UNARED | BOT SSN\n\n"
+                    "Aquí tienes el acceso a uno de los BOT mas completo. "
+                    "para busqueda de Número de Seguro Social.\n\n"
+                    "🤖⤵️."
                 ),
                 reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔗 ABRIR RECURSO OFICIAL SSA", url=url)
+                    InlineKeyboardButton("🤖 ABRIR BOT", url=url)
                 ]]),
                 disable_web_page_preview=True,
             )
@@ -1592,7 +1592,7 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
         _, product, invoice_id, choice = query.data.split(":", 3)
         links = {
             "1": ("Ghostcall", "https://t.me/Ghostcallotp_bot"),
-            "2": ("Asta LooKup", "https://t.me/ASTRAINFO24_BOT"),
+            "2": ("LooKup", "https://t.me/ASTRAINFO24_BOT"),
         }
         if choice not in links:
             await query.message.reply_text("⚠️ Opción de entrega no válida.")
