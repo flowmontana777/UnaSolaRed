@@ -2080,8 +2080,6 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Una sola fila de acciones por cliente, sin repetir botones en cada interacción.
         seen_customer_ids = set()
         keyboard_rows = []
-        for _, name, username, tid, _, _, _ in []:
-            pass
         for name, username, tid, key, label, when in all_activity:
             if int(tid) in seen_customer_ids:
                 continue
