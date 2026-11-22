@@ -49,12 +49,14 @@ GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
 # UTILIDADES DE ADMINISTRACIÓN
 # =====================================
 
-def customer_profile_button(telegram_id, display_name=None):
-    """Abre directamente el perfil de Telegram del cliente desde el botón."""
+def customer_profile_button(telegram_id, display_name=None, username=None):
+    """Abre el perfil público del cliente; usa el enlace interno si no tiene username."""
     label_name = str(display_name or "Telegram").strip()[:32]
+    clean_username = str(username or "").strip().lstrip("@")
+    profile_url = f"https://t.me/{clean_username}" if clean_username else f"tg://user?id={int(telegram_id)}"
     return InlineKeyboardButton(
         f"👤 Abrir perfil de {label_name}",
-        url=f"tg://user?id={int(telegram_id)}",
+        url=profile_url,
     )
 
 
@@ -932,9 +934,10 @@ async def admin_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         buttons = []
         for tid, data in ordered:
             buttons.append([
-                InlineKeyboardButton(
-                    f"👤 Abrir perfil de {(data['name'] or data['username'] or str(tid))[:20]}",
-                    url=f"tg://user?id={int(tid)}",
+                customer_profile_button(
+                    tid,
+                    data["name"] or data["username"] or str(tid),
+                    data["username"],
                 ),
                 InlineKeyboardButton(
                     "🔔 Mandar alerta",
@@ -1794,8 +1797,35 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
             telegram_id = int(query.data.split(":", 1)[1])
             main_bot = context.application.bot_data.get("main_bot")
             if not main_bot:
-                await query.message.reply_text("⚠️ No está disponible la conexión con el bot principal.")
-                return
+                raise RuntimeError("No está disponible la conexión con el bot principal.")
+            customer_keyboard = InlineKeyboardMarkup([[
+                InlineKeyboardButton("📩 Contactar a Flow Montana", url="https://t.me/flowmontana777")
+            ]])
+            # Enviar texto evita que un fallo al descargar una imagen bloquee la alerta.
+            await main_bot.send_message(
+                chat_id=telegram_id,
+                text=(
+                    "💚 UNARED | NOTIFICACIÓN IMPORTANTE\\n\\n"
+                    "Tenemos una notificación para ti. "
+                    "Pulsa el botón para contactar con nuestro administrador."
+                ),
+                reply_markup=customer_keyboard,
+                disable_web_page_preview=True,
+            )
+            await query.message.reply_text("✅ Notificación enviada correctamente al cliente.")
+        except (ValueError, IndexError):
+            await query.message.reply_text("⚠️ ID de cliente no válido.")
+        except Exception as exc:
+            logger.exception("No se pudo enviar la notificación al cliente %s.", query.data)
+            error_name = type(exc).__name__
+            if "Forbidden" in error_name:
+                reason = "El cliente bloqueó el bot o todavía no inició el bot principal."
+            elif "Chat not found" in str(exc):
+                reason = "El cliente todavía no ha iniciado el bot principal."
+            else:
+                reason = "Revisa el registro del error en Railway."
+            await query.message.reply_text(f"⚠️ No se pudo enviar la notificación. {reason}")
+        return
             customer_keyboard = InlineKeyboardMarkup([[
                 InlineKeyboardButton("📩 Contactar a Flow Montana", url="https://t.me/flowmontana777")
             ]])
@@ -2086,7 +2116,7 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
             seen_customer_ids.add(int(tid))
             display_name = name or (f"@{username}" if username else "Cliente")
             keyboard_rows.append([
-                customer_profile_button(tid, display_name),
+                customer_profile_button(tid, display_name, username),
                 InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(tid)}")
             ])
         keyboard_rows.extend([
