@@ -1239,8 +1239,8 @@ async def admin_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
             action = action_label or "🔘 Interacción con el menú"
             timestamp = created_at or "Fecha no disponible"
             lines.append(
-                f"👤 {display_name}\\n"
-                f"   🧭 Acción: {action}\\n"
+                f"👤 {display_name}\n"
+                f"   🧭 Acción: {action}\n"
                 f"   🕒 Fecha: {timestamp}"
             )
             buttons.append([
@@ -1253,18 +1253,18 @@ async def admin_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if lines:
             body = (
-                "📌 ÚLTIMOS MOVIMIENTOS\\n"
-                "━━━━━━━━━━━━━━━━━━\\n\\n"
-                + "\\n\\n".join(lines)
-                + "\\n\\n━━━━━━━━━━━━━━━━━━\\n"
+                "📌 ÚLTIMOS MOVIMIENTOS\n"
+                "━━━━━━━━━━━━━━━━━━\n\n"
+                + "\n\n".join(lines)
+                + "\n\n━━━━━━━━━━━━━━━━━━\n"
                 f"📊 Registros mostrados: {len(lines)}"
             )
         else:
             body = (
-                "📭 AÚN NO HAY MOVIMIENTOS\\n"
-                "━━━━━━━━━━━━━━━━━━\\n\\n"
+                "📭 AÚN NO HAY MOVIMIENTOS\n"
+                "━━━━━━━━━━━━━━━━━━\n\n"
                 "Cuando un cliente inicie el bot o interactúe con sus opciones, "
-                "su actividad aparecerá automáticamente en esta sección.\\n\\n"
+                "su actividad aparecerá automáticamente en esta sección.\n\n"
                 "💡 Consejo: realiza una prueba desde una cuenta de cliente para "
                 "generar el primer registro."
             )
@@ -1279,8 +1279,8 @@ async def admin_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = update.effective_message
         if message:
             await message.reply_text(
-                "🕘 UNARED | ACTIVIDAD RECIENTE\\n"
-                "━━━━━━━━━━━━━━━━━━\\n\\n"
+                "🕘 UNARED | ACTIVIDAD RECIENTE\n"
+                "━━━━━━━━━━━━━━━━━━\n\n"
                 + body,
                 reply_markup=InlineKeyboardMarkup(buttons),
             )
