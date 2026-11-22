@@ -47,10 +47,9 @@ DATABASE_PATH = os.getenv("DATABASE_PATH", "unared_payments.sqlite3")
 
 GROUP_LINK = "https://t.me/+slI1SJL6HIQ4Nzcx"
 ADMIN_PANEL_PHOTO_URL = "https://i.ibb.co/PvB4jdJT/E1-ED4248-C0-F3-45-C2-A875-5165-EF2-D4504.png"
-CUSTOMER_ALERT_PHOTO_URLS = (
-    "https://i.ibb.co/sJqnfCPG/50-FDEC59-BC-9A-40-EC-9-AF8-E19-B16-C4931-C.png",
-    ADMIN_PANEL_PHOTO_URL,
-)
+# Enlace de la imagen aprobada para las alertas a clientes (página ImgBB).
+# Se resuelve su og:image en tiempo de envío; nunca usar la portada administrativa.
+CUSTOMER_ALERT_IMAGE_PAGE_URL = "https://ibb.co/yBqt9pR1"
 
 # =====================================
 # UTILIDADES DE ADMINISTRACIÓN
@@ -1931,31 +1930,43 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 "Pulsa el botón de abajo para contactar con nuestro administrador."
             )
 
-            photo_sent = False
-            photo_errors = []
-            for photo_url in CUSTOMER_ALERT_PHOTO_URLS:
-                try:
-                    await main_bot.send_photo(
-                        chat_id=telegram_id,
-                        photo=photo_url,
-                        caption=caption,
-                        reply_markup=customer_keyboard,
-                    )
-                    photo_sent = True
-                    break
-                except Exception as photo_error:
-                    photo_errors.append(photo_error)
-                    logger.warning(
-                        "Falló la imagen de alerta %s para el cliente %s: %s",
-                        photo_url, telegram_id, photo_error,
-                    )
+            # ImgBB entrega un enlace de visualización (ibb.co), no el archivo.
+            # Extraemos la imagen original de og:image y enviamos SOLO esa imagen.
+            timeout = aiohttp.ClientTimeout(total=25, connect=10, sock_read=20)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(
+                    CUSTOMER_ALERT_IMAGE_PAGE_URL,
+                    headers={"User-Agent": "Mozilla/5.0 (compatible; UnaRedBot/1.0)"},
+                    allow_redirects=True,
+                ) as response:
+                    response.raise_for_status()
+                    page_html = await response.text()
+            import re
+            image_match = re.search(
+                r'<meta[^>]+(?:property|name)=["\\'](?:og:image|twitter:image)["\\'][^>]+content=["\\']([^"\\']+)["\\']',
+                page_html,
+                re.IGNORECASE,
+            )
+            if not image_match:
+                # También cubre el orden inverso de los atributos HTML.
+                image_match = re.search(
+                    r'<meta[^>]+content=["\\']([^"\\']+)["\\'][^>]+(?:property|name)=["\\'](?:og:image|twitter:image)["\\']',
+                    page_html,
+                    re.IGNORECASE,
+                )
+            if not image_match:
+                raise RuntimeError("ImgBB no publicó una URL directa de imagen en og:image.")
 
-            if not photo_sent:
-                last_error = photo_errors[-1] if photo_errors else RuntimeError("imagen no disponible")
-                raise RuntimeError(
-                    "No se pudo enviar ninguna de las imágenes de notificación: "
-                    + type(last_error).__name__
-                ) from last_error
+            alert_image_url = image_match.group(1).replace("&amp;", "&")
+            if not alert_image_url.startswith("https://i.ibb.co/"):
+                raise RuntimeError("La imagen resuelta no pertenece al archivo directo de ImgBB.")
+
+            await main_bot.send_photo(
+                chat_id=telegram_id,
+                photo=alert_image_url,
+                caption=caption,
+                reply_markup=customer_keyboard,
+            )
 
             await query.message.reply_text(
                 "✅ Notificación con imagen enviada correctamente al cliente."
