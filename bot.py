@@ -2939,7 +2939,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("📞 Alquilar Línea Dialer", callback_data="tool_dayler")],
             [InlineKeyboardButton("🗂️ Páginas Buy CC", callback_data="tool_pages")],
             [InlineKeyboardButton("🪪 SSN", callback_data="tool_ssn_info")],
-            [InlineKeyboardButton("🤖 LICENCIA", callback_data="tool_license_info")],
+            [InlineKeyboardButton("🤖 LICENCIA", callback_data="botproduct_template")],
             [InlineKeyboardButton("⬅️ Volver al menú principal", callback_data="menu_home")],
         ])
         await query.message.reply_text(
@@ -4036,9 +4036,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice == "botproduct_template":
         await query.answer()
         await query.message.reply_text(
-            "💚 UNARED | LICENCIA\\n\\n"
-            "Producto disponible para compra.\\n\\n"
-            "💵 Precio: US$35\\n"
+            "💚 UNARED | LICENCIA\n\n"
+            "Producto disponible para compra.\n\n"
+            "💵 Precio: US$35\n"
             "🧾 Recibirás tu factura para completar el pago. "
             "Después de la confirmación, recibirás el enlace de entrega.",
             reply_markup=InlineKeyboardMarkup([
