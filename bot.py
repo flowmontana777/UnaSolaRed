@@ -1537,7 +1537,7 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
         _, product, invoice_id, choice = query.data.split(":", 3)
         ssn_resources = {
             "1": ("BOT SSN", "https://t.me/ForestSearch4_bot?start=r_5864523026"),
-            "2": ("oficial my Security", "https://www.ssa.gov/myaccount/"),
+            "2": ("BOT ASTRA", "https://t.me/ASTRAINFO24_BOT"),
         }
         if choice not in ssn_resources:
             await query.message.reply_text("⚠️ Opción de orientación SSN no válida.")
