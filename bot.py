@@ -671,6 +671,8 @@ def bot_catalog_menu():
         [InlineKeyboardButton("🤖 BOT SSN", callback_data="botproduct_ssn")],
         [InlineKeyboardButton("🤖 BOT CHECK", callback_data="botproduct_check")],
         [InlineKeyboardButton("🤖 LICENCIA", callback_data="botproduct_template")],
+        [InlineKeyboardButton("🤖 BOT PRÓXIMAMENTE", callback_data="bot_coming_soon_1")],
+        [InlineKeyboardButton("🤖 BOT PRÓXIMAMENTE", callback_data="bot_coming_soon_2")],
         back_button("menu_tools"),
     ])
 
@@ -2636,6 +2638,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     choice = query.data
+
+    if choice in ("bot_coming_soon_1", "bot_coming_soon_2"):
+        await query.answer("🤖 BOT PRÓXIMAMENTE", show_alert=True)
+        return
 
     # Acciones vinculadas a la factura exacta del mensaje del cliente.
     if choice.startswith(("iv:", "ip:")):
