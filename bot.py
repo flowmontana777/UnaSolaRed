@@ -189,7 +189,7 @@ async def notify_invoice_pending(
                 InlineKeyboardButton("✅ Ya pagó", callback_data=f"ap:{invoice_id}"),
             ],
             [
-                InlineKeyboardButton("👤 Abrir perfil del cliente", url=f"tg://user?id={int(telegram_id)}"),
+                InlineKeyboardButton("👤 Ver perfil del cliente", callback_data=f"view_customer:{int(telegram_id)}"),
             ],
             [
                 InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(telegram_id)}"),
@@ -1935,6 +1935,7 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                     invoice_id TEXT PRIMARY KEY,
                     customer_sent INTEGER NOT NULL DEFAULT 0,
                     admin_sent INTEGER NOT NULL DEFAULT 0,
+                    payment_bot_sent INTEGER NOT NULL DEFAULT 0,
                     approval_status TEXT NOT NULL DEFAULT 'PENDING',
                     image_status TEXT NOT NULL DEFAULT 'PENDING'
                 )""")
@@ -6807,6 +6808,8 @@ async def wolvpay_webhook(request):
                 )"""
             )
             notification_columns = {row[1] for row in db.execute("PRAGMA table_info(wolvpay_notifications)")}
+            if "payment_bot_sent" not in notification_columns:
+                db.execute("ALTER TABLE wolvpay_notifications ADD COLUMN payment_bot_sent INTEGER NOT NULL DEFAULT 0")
             if "approval_status" not in notification_columns:
                 db.execute("ALTER TABLE wolvpay_notifications ADD COLUMN approval_status TEXT NOT NULL DEFAULT 'PENDING'")
             if "image_status" not in notification_columns:
@@ -6823,7 +6826,7 @@ async def wolvpay_webhook(request):
                 (invoice_id,),
             )
             notification_state = db.execute(
-                "SELECT customer_sent, admin_sent FROM wolvpay_notifications WHERE invoice_id = ?",
+                "SELECT customer_sent, admin_sent, payment_bot_sent FROM wolvpay_notifications WHERE invoice_id = ?",
                 (invoice_id,),
             ).fetchone()
     except sqlite3.Error:
@@ -6900,6 +6903,22 @@ async def wolvpay_webhook(request):
                     "UPDATE wolvpay_notifications SET admin_sent = 1 WHERE invoice_id = ?",
                     (invoice_id,),
                 )
+
+        payment_notifications_bot = application.bot_data.get("payment_notifications_bot")
+        if payment_notifications_bot and not notification_state[2]:
+            try:
+                await payment_notifications_bot.send_photo(
+                    chat_id=int(BOT_OWNER_ID), photo=payment_image_url,
+                    caption=admin_text, reply_markup=review_keyboard,
+                )
+                with sqlite3.connect(DATABASE_PATH) as db:
+                    db.execute(
+                        "UPDATE wolvpay_notifications SET payment_bot_sent = 1 WHERE invoice_id = ?",
+                        (invoice_id,),
+                    )
+            except Exception:
+                logger.exception("Payment notification bot delivery failed for %s", invoice_id)
+                return web.Response(status=500, text="Payment confirmed; payment notification retry required.")
     except Exception:
         logger.exception("Payment confirmed; notification retry is pending for %s", invoice_id)
         return web.Response(status=500, text="Payment confirmed; notification retry required.")
