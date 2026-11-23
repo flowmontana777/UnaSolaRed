@@ -123,7 +123,7 @@ async def notify_new_customer(application, user):
         try:
             await application.bot.send_message(
                 chat_id=int(ADMIN_CHAT_ID),
-                text=caption + "\\n\\n⚠️ Aviso de respaldo enviado por el bot principal.",
+                text=caption + "\n\n⚠️ Aviso de respaldo enviado por el bot principal.",
                 reply_markup=keyboard,
             )
         except Exception:
@@ -207,7 +207,7 @@ async def notify_invoice_pending(
                     await application.bot.send_photo(
                         chat_id=int(ADMIN_CHAT_ID),
                         photo=image_url,
-                        caption=admin_caption + "\\n\\n⚠️ Aviso de respaldo enviado por el bot principal.",
+                        caption=admin_caption + "\n\n⚠️ Aviso de respaldo enviado por el bot principal.",
                         reply_markup=invoice_keyboard,
                     )
                 except Exception:
@@ -4798,11 +4798,11 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["service_return_to_profile"] = False
         await query.answer()
         await query.message.reply_text(
-            "🧭 UNARED | RUTA & CUENTA\\n"
-            "━━━━━━━━━━━━━━━━━━\\n\\n"
-            "🇺🇸 Directorio de bancos de Estados Unidos\\n\\n"
+            "🧭 UNARED | RUTA & CUENTA\n"
+            "━━━━━━━━━━━━━━━━━━\n\n"
+            "🇺🇸 Directorio de bancos de Estados Unidos\n\n"
             "Selecciona tu banco para consultar dónde verificar su routing number (ABA) "
-            "y cómo localizar tu número de cuenta.\\n\\n"
+            "y cómo localizar tu número de cuenta.\n\n"
             "⚠️ El routing number puede variar según el estado y el tipo de transferencia "
             "(ACH o wire). Confirma siempre el dato con tu banco.",
             reply_markup=route_account_menu(),
@@ -4832,10 +4832,10 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("⬅️ Centro de Herramientas", callback_data="menu_tools")],
         ])
         await query.message.reply_text(
-            f"🏦 UNARED | {bank_name}\\n\\n"
+            f"🏦 UNARED | {bank_name}\n\n"
             "Para consultar el routing number, selecciona el directorio o la página oficial disponible. "
             "El número correcto depende del estado donde se abrió la cuenta y de si el movimiento es ACH "
-            "o transferencia wire.\\n\\n"
+            "o transferencia wire.\n\n"
             "💳 Número de cuenta: consulta el dato dentro de la aplicación o banca en línea oficial "
             "del banco. No envíes aquí contraseñas, códigos de acceso ni números completos de cuenta.",
             reply_markup=InlineKeyboardMarkup(buttons),
