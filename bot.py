@@ -11,6 +11,7 @@ from io import BytesIO
 from decimal import Decimal, InvalidOperation
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from urllib.parse import urlparse
 
 import aiohttp
 from aiohttp import web
@@ -1587,6 +1588,38 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
             await query.message.reply_text("⚠️ No se pudo completar la orientación SSN. Revisa el registro de Railway.")
         return
 
+    if query.data.startswith("deliver_choice:check:"):
+        _, product, invoice_id, choice = query.data.split(":", 3)
+        if product != "check" or choice not in ("1", "2"):
+            await query.message.reply_text("⚠️ Opción BOT CHECK no válida.")
+            return
+        with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+            row = db.execute(
+                "SELECT telegram_id, status, product FROM demo_bot_invoices WHERE invoice_id=?",
+                (invoice_id,),
+            ).fetchone()
+            if not row or str(row[1] or "").upper() != "PAID" or str(row[2] or "").lower() != "check":
+                await query.message.reply_text("⚠️ La factura BOT CHECK no existe o el pago no está confirmado.")
+                return
+            table_exists = db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='invoice_delivery_status'"
+            ).fetchone()
+            already = db.execute(
+                "SELECT 1 FROM invoice_delivery_status WHERE invoice_id=?", (invoice_id,)
+            ).fetchone() if table_exists else None
+        if already:
+            await query.message.reply_text("ℹ️ Esta factura BOT CHECK ya fue entregada.")
+            return
+        context.user_data["bot_check_delivery_request"] = {
+            "invoice_id": invoice_id, "choice": choice, "telegram_id": int(row[0])
+        }
+        await query.message.reply_text(
+            f"🔗 BOT CHECK | OPCIÓN {choice} seleccionada.\n\n"
+            "Envía ahora el enlace legítimo del bot en formato https://t.me/.... "
+            "Solo se aceptarán enlaces de Telegram y no se enviará nada hasta que pegues el enlace."
+        )
+        return
+
     if query.data.startswith("deliver_choice:otp:"):
         _, product, invoice_id, choice = query.data.split(":", 3)
         links = {
@@ -1676,6 +1709,15 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                     "check": "BOT CHECK",
                     "template": "LICENCIA",
                 }
+                if demo_product == "check":
+                    await query.message.reply_text(
+                        "💚 UNARED | BOT CHECK\n\nSelecciona la opción que deseas preparar. Después podrás pegar el enlace de Telegram correspondiente; no se enviará ningún enlace de Forest automáticamente.",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("1️⃣ OPCIÓN 1", callback_data=f"deliver_choice:check:{invoice_id}:1")],
+                            [InlineKeyboardButton("2️⃣ OPCIÓN 2", callback_data=f"deliver_choice:check:{invoice_id}:2")],
+                        ]),
+                    )
+                    return
                 if demo_product == "ssn":
                     await query.message.reply_text(
                         "💚 UNARED | ORIENTACIÓN SSN\n\nSelecciona el recurso oficial que deseas enviar al cliente para gestionar su propio SSN.",
@@ -2147,7 +2189,7 @@ def build_admin_application():
     admin_app.add_handler(CommandHandler("buscarcliente", find_customer))
     admin_app.add_handler(CallbackQueryHandler(
         admin_bot_callbacks,
-        pattern=r"^(admin_|av:|ap:|delivered:|deliver_choice:(ssn|otp):|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
+        pattern=r"^(admin_|av:|ap:|delivered:|deliver_choice:(ssn|otp|check):|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
     ))
     admin_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, receive_admin_profile_reply))
     admin_app.add_error_handler(error_handler)
@@ -5563,6 +5605,82 @@ async def channel_music_ingest(update: Update, context: ContextTypes.DEFAULT_TYP
 async def receive_admin_profile_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user):
         return
+    bot_check_request = context.user_data.get("bot_check_delivery_request")
+    if bot_check_request:
+        raw_link = (update.message.text or "").strip()
+        parsed = urlparse(raw_link)
+        if (
+            len(raw_link) > 2000
+            or parsed.scheme != "https"
+            or parsed.hostname not in ("t.me", "www.t.me", "telegram.me", "www.telegram.me")
+            or not parsed.path.strip("/")
+            or parsed.username
+            or parsed.password
+        ):
+            await update.message.reply_text(
+                "⚠️ Enlace no válido. Envía un enlace HTTPS de Telegram, por ejemplo https://t.me/nombre_del_bot."
+            )
+            return
+        invoice_id = str(bot_check_request["invoice_id"])
+        choice = str(bot_check_request["choice"])
+        telegram_id = int(bot_check_request["telegram_id"])
+        try:
+            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                row = db.execute(
+                    "SELECT telegram_id, status, product FROM demo_bot_invoices WHERE invoice_id=?",
+                    (invoice_id,),
+                ).fetchone()
+                if not row or int(row[0]) != telegram_id or str(row[1] or "").upper() != "PAID" or str(row[2] or "").lower() != "check":
+                    context.user_data.pop("bot_check_delivery_request", None)
+                    await update.message.reply_text("⚠️ La factura BOT CHECK ya no está disponible o no tiene el pago confirmado.")
+                    return
+                db.execute("""CREATE TABLE IF NOT EXISTS invoice_delivery_status (
+                    invoice_id TEXT PRIMARY KEY,
+                    telegram_id INTEGER NOT NULL,
+                    delivered_by INTEGER NOT NULL,
+                    delivered_at TEXT NOT NULL
+                )""")
+                cursor = db.execute(
+                    "INSERT OR IGNORE INTO invoice_delivery_status (invoice_id, telegram_id, delivered_by, delivered_at) VALUES (?, ?, ?, ?)",
+                    (invoice_id, telegram_id, int(update.effective_user.id),
+                     datetime.now(ZoneInfo("America/Santo_Domingo")).isoformat(timespec="seconds")),
+                )
+                if cursor.rowcount != 1:
+                    context.user_data.pop("bot_check_delivery_request", None)
+                    await update.message.reply_text("ℹ️ Esta factura BOT CHECK ya fue entregada.")
+                    return
+            main_bot = context.application.bot_data.get("main_bot") or context.application.bot
+            try:
+                await main_bot.send_message(
+                    chat_id=telegram_id,
+                    text=(
+                        "💚 UNARED | BOT CHECK\n\n"
+                        "Tu pago fue confirmado y tu acceso está preparado.\n"
+                        f"🧾 Factura: {invoice_id}\n"
+                        f"📦 Opción seleccionada: {choice}\n\n"
+                        "Pulsa el botón para abrir el recurso."
+                    ),
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton(f"🤖 ABRIR BOT CHECK · OPCIÓN {choice}", url=raw_link)
+                    ]]),
+                    disable_web_page_preview=True,
+                )
+            except Exception:
+                with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
+                    db.execute(
+                        "DELETE FROM invoice_delivery_status WHERE invoice_id=? AND delivered_by=?",
+                        (invoice_id, int(update.effective_user.id)),
+                    )
+                raise
+            context.user_data.pop("bot_check_delivery_request", None)
+            await update.message.reply_text(
+                f"✅ BOT CHECK · Opción {choice} enviada al cliente. Factura: {invoice_id}"
+            )
+        except Exception:
+            logger.exception("No se pudo entregar BOT CHECK %s.", invoice_id)
+            await update.message.reply_text("⚠️ No se pudo enviar el enlace. Puedes intentarlo nuevamente.")
+        return
+
     license_request_id = context.user_data.get("license_request_reply_id")
     if license_request_id:
         response_text = (update.message.text or "").strip()
@@ -6584,49 +6702,6 @@ async def wolvpay_webhook(request):
         "check": "BOT CHECK",
         "template": "LICENCIA",
     }
-    if invoice_type == "demo" and product == "template":  # BOT CHECK no entrega enlaces automáticos
-        demo_product_label = demo_product_labels[product]
-        delivery_claimed = False
-        try:
-            with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
-                db.execute("""CREATE TABLE IF NOT EXISTS invoice_delivery_status (
-                    invoice_id TEXT PRIMARY KEY,
-                    telegram_id INTEGER NOT NULL,
-                    delivered_by INTEGER NOT NULL,
-                    delivered_at TEXT NOT NULL
-                )""")
-                cursor = db.execute(
-                    "INSERT OR IGNORE INTO invoice_delivery_status (invoice_id, telegram_id, delivered_by, delivered_at) VALUES (?, ?, 0, ?)",
-                    (invoice_id, int(telegram_id), datetime.now(ZoneInfo("America/Santo_Domingo")).isoformat(timespec="seconds")),
-                )
-                delivery_claimed = cursor.rowcount == 1
-            if delivery_claimed:
-                await application.bot.send_message(
-                    chat_id=int(telegram_id),
-                    text=(
-                        f"🎉💚 ¡{demo_product_label} ENTREGADO! 💚🎉\n\n"
-                        "✅ WolvPay confirmó tu pago y tu compra está lista.\n"
-                        f"🧾 Factura: {invoice_id}\n\n"
-                        "🌐 Pulsa el botón de abajo para abrir Forest.\n"
-                        "🚀 ¡Gracias por confiar en UnaRed!"
-                    ),
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("🌐 Abrir Forest", url="https://t.me/ForestSearch4_bot?start=r_5864523026")
-                    ]]),
-                    disable_web_page_preview=True,
-                )
-        except Exception:
-            logger.exception("No se pudo entregar automáticamente el enlace Forest para %s.", invoice_id)
-            if delivery_claimed:
-                try:
-                    with sqlite3.connect(DATABASE_PATH, timeout=20) as db:
-                        db.execute(
-                            "DELETE FROM invoice_delivery_status WHERE invoice_id=? AND delivered_by=0",
-                            (invoice_id,),
-                        )
-                except sqlite3.Error:
-                    logger.exception("No se pudo liberar el registro de entrega automática para %s.", invoice_id)
-            return web.Response(status=500, text="Payment confirmed; BOT CHECK delivery retry required.")
     try:
         customer_chat = await application.bot.get_chat(int(telegram_id))
         customer_username = "@" + customer_chat.username if customer_chat.username else "No tiene username público"
@@ -6734,7 +6809,7 @@ def build_main_application():
     # /buscarcliente está disponible exclusivamente en el bot de administración.
     # Solo los callbacks administrativos pasan por el control de acceso del panel.
     # Los botones de servicios y precios siguen llegando a select_option.
-    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|av:|ap:|delivered:|deliver_choice:(ssn|otp):|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:)"))
+    app.add_handler(CallbackQueryHandler(admin_bot_callbacks, pattern=r"^(admin_|av:|ap:|delivered:|deliver_choice:(ssn|otp|check):|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:)"))
     app.add_handler(CallbackQueryHandler(select_option))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_new_members))
     app.add_handler(TypeHandler(Update, channel_music_ingest), group=-1)
