@@ -6972,22 +6972,6 @@ async def main():
             await current.initialize()
             initialized.append(current)
 
-        if payment_notifications_app:
-            try:
-                await payment_notifications_app.initialize()
-                initialized.append(payment_notifications_app)
-                app.bot_data["payment_notifications_bot"] = payment_notifications_app.bot
-                applications.append(payment_notifications_app)
-            except Exception as exc:
-                # Un token incorrecto del bot opcional no debe tumbar los bots principales.
-                logger.error(
-                    "No se pudo iniciar el bot de notificaciones (%s). "
-                    "Revisa PAYMENT_NOTIFICATIONS_BOT_TOKEN en Railway.",
-                    type(exc).__name__,
-                )
-                app.bot_data.pop("payment_notifications_bot", None)
-                payment_notifications_app = None
-
         await start_webhook_server(app)
         for current in applications:
             await current.start()
