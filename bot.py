@@ -4825,7 +4825,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ])
         await query.message.reply_text(
             f"🏦 UNARED | {bank_name}\n\n"
-            "Para consultar el routing number, selecciona el directorio o la página oficial disponible. "
+            "Pulsa «Consulta Routing Number» para contactar con el perfil oficial de UnaRed y solicitar orientación sobre el routing number de este banco. "
             "El número correcto depende del estado donde se abrió la cuenta y de si el movimiento es ACH "
             "o transferencia wire.\n\n"
             "💳 Número de cuenta: consulta el dato dentro de la aplicación o banca en línea oficial "
