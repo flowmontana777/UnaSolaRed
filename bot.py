@@ -700,7 +700,7 @@ def tools_menu():
         # Servicios secundarios organizados en dos columnas.
         [
             InlineKeyboardButton("🤖 Comprar Bot", callback_data="tool_bots"),
-            InlineKeyboardButton("🧭 Ruta y cuenta", callback_data="tool_ssn_info"),
+            InlineKeyboardButton("🧭 Ruta & Cuenta", callback_data="tool_ssn_info"),
         ],
         [
             InlineKeyboardButton("👤 Perfiles", callback_data="tool_profiles"),
