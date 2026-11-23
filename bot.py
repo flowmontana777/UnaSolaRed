@@ -4801,10 +4801,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🧭 UNARED | RUTA & CUENTA\n"
             "━━━━━━━━━━━━━━━━━━\n\n"
             "🇺🇸 Directorio de bancos de Estados Unidos\n\n"
-            "Selecciona tu banco para consultar dónde verificar su routing number (ABA) "
-            "y cómo localizar tu número de cuenta.\n\n"
-            "⚠️ El routing number puede variar según el estado y el tipo de transferencia "
-            "(ACH o wire). Confirma siempre el dato con tu banco.",
+            "Selecciona tu banco para consultar dónde verificar routing number.\n\n"
             reply_markup=route_account_menu(),
         )
         return
