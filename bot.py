@@ -700,7 +700,7 @@ def tools_menu():
         # Servicios secundarios organizados en dos columnas.
         [
             InlineKeyboardButton("🤖 Comprar Bot", callback_data="tool_bots"),
-            InlineKeyboardButton("🧭 Ruta & Cuenta", callback_data="tool_ssn_info"),
+            InlineKeyboardButton("🧭 Ruta & Cuenta", callback_data="tool_route_account"),
         ],
         [
             InlineKeyboardButton("👤 Perfiles", callback_data="tool_profiles"),
@@ -713,6 +713,60 @@ def tools_menu():
         back_button(),
     ]
     return InlineKeyboardMarkup(keyboard)
+
+
+# =====================================
+# RUTA & CUENTA - BANCOS DE ESTADOS UNIDOS
+# =====================================
+
+def route_account_menu():
+    keyboard = [
+        [
+            InlineKeyboardButton("🏦 Chase", callback_data="route_bank_chase"),
+            InlineKeyboardButton("🏦 Bank of America", callback_data="route_bank_boa"),
+        ],
+        [
+            InlineKeyboardButton("🏦 Wells Fargo", callback_data="route_bank_wells"),
+            InlineKeyboardButton("🏦 Citibank", callback_data="route_bank_citi"),
+        ],
+        [
+            InlineKeyboardButton("🏦 Capital One", callback_data="route_bank_capital"),
+            InlineKeyboardButton("🏦 PNC Bank", callback_data="route_bank_pnc"),
+        ],
+        [
+            InlineKeyboardButton("🏦 Navy Federal", callback_data="route_bank_navy"),
+            InlineKeyboardButton("🏦 Discover Bank", callback_data="route_bank_discover"),
+        ],
+        [
+            InlineKeyboardButton("🏦 Truist", callback_data="route_bank_truist"),
+            InlineKeyboardButton("🏦 Citizens Bank", callback_data="route_bank_citizens"),
+        ],
+        [
+            InlineKeyboardButton("🏦 Regions Bank", callback_data="route_bank_regions"),
+            InlineKeyboardButton("🏦 DCU", callback_data="route_bank_dcu"),
+        ],
+        [InlineKeyboardButton("🔎 Directorio de routing numbers", url="https://www.bankrouting.org/en-us/")],
+        back_button("menu_tools"),
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def route_account_bank_name(bank_id):
+    names = {
+        "chase": "JPMorgan Chase",
+        "boa": "Bank of America",
+        "wells": "Wells Fargo",
+        "citi": "Citibank",
+        "capital": "Capital One",
+        "pnc": "PNC Bank",
+        "navy": "Navy Federal Credit Union",
+        "discover": "Discover Bank",
+        "truist": "Truist Bank",
+        "citizens": "Citizens Bank",
+        "regions": "Regions Bank",
+        "dcu": "DCU",
+    }
+    return names.get(bank_id)
 
 
 # =====================================
@@ -4737,6 +4791,54 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("🔄 Actualizar perfil", callback_data="license_status")],
                 [InlineKeyboardButton("⬅️ Volver a LICENCIA", callback_data="license_menu_return")],
             ]),
+        )
+        return
+
+    if choice == "tool_route_account":
+        context.user_data["service_return_to_profile"] = False
+        await query.answer()
+        await query.message.reply_text(
+            "🧭 UNARED | RUTA & CUENTA\\n"
+            "━━━━━━━━━━━━━━━━━━\\n\\n"
+            "🇺🇸 Directorio de bancos de Estados Unidos\\n\\n"
+            "Selecciona tu banco para consultar dónde verificar su routing number (ABA) "
+            "y cómo localizar tu número de cuenta.\\n\\n"
+            "⚠️ El routing number puede variar según el estado y el tipo de transferencia "
+            "(ACH o wire). Confirma siempre el dato con tu banco.",
+            reply_markup=route_account_menu(),
+        )
+        return
+
+    if choice.startswith("route_bank_"):
+        bank_id = choice.removeprefix("route_bank_")
+        bank_name = route_account_bank_name(bank_id)
+        if not bank_name:
+            await query.answer("Banco no disponible.", show_alert=True)
+            return
+        await query.answer()
+        official_links = {
+            "chase": ("Información oficial de Chase", "https://www.chase.com/personal/checking/routing-numbers"),
+            "wells": ("Información oficial de Wells Fargo", "https://www.wellsfargo.com/help/routing-number/"),
+            "pnc": ("Información oficial de PNC", "https://www.pnc.com/en/customer-service/routing-number.html"),
+        }
+        buttons = [
+            [InlineKeyboardButton("🔎 Consultar routing number", url="https://www.bankrouting.org/en-us/")],
+        ]
+        if bank_id in official_links:
+            link_label, link_url = official_links[bank_id]
+            buttons.insert(0, [InlineKeyboardButton("🏦 " + link_label, url=link_url)])
+        buttons.extend([
+            [InlineKeyboardButton("⬅️ Volver a bancos", callback_data="tool_route_account")],
+            [InlineKeyboardButton("⬅️ Centro de Herramientas", callback_data="menu_tools")],
+        ])
+        await query.message.reply_text(
+            f"🏦 UNARED | {bank_name}\\n\\n"
+            "Para consultar el routing number, selecciona el directorio o la página oficial disponible. "
+            "El número correcto depende del estado donde se abrió la cuenta y de si el movimiento es ACH "
+            "o transferencia wire.\\n\\n"
+            "💳 Número de cuenta: consulta el dato dentro de la aplicación o banca en línea oficial "
+            "del banco. No envíes aquí contraseñas, códigos de acceso ni números completos de cuenta.",
+            reply_markup=InlineKeyboardMarkup(buttons),
         )
         return
 
