@@ -4817,19 +4817,12 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         await query.answer()
         buttons = [
-            [InlineKeyboardButton("🔎 Consulta Routing Number", url="https://t.me/flowmontana777")],
-        ]
-        buttons.extend([
             [InlineKeyboardButton("⬅️ Volver a bancos", callback_data="tool_route_account")],
             [InlineKeyboardButton("⬅️ Centro de Herramientas", callback_data="menu_tools")],
-        ])
+        ]
         await query.message.reply_text(
-            f"🏦 UNARED | {bank_name}\n\n"
-            "Pulsa «Consulta Routing Number» para contactar con el perfil oficial de UnaRed y solicitar orientación sobre el routing number de este banco. "
-            "El número correcto depende del estado donde se abrió la cuenta y de si el movimiento es ACH "
-            "o transferencia wire.\n\n"
-            "💳 Número de cuenta: consulta el dato dentro de la aplicación o banca en línea oficial "
-            "del banco. No envíes aquí contraseñas, códigos de acceso ni números completos de cuenta.",
+            f"🏦 UNARED | {bank_name}\\n\\n"
+            "⏳ Este servicio estará disponible próximamente.",
             reply_markup=InlineKeyboardMarkup(buttons),
         )
         return
