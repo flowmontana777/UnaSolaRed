@@ -950,6 +950,50 @@ def is_admin(user):
     # Únicamente la cuenta propietaria puede ver y usar el panel.
     return bool(user and str(user.id) == BOT_OWNER_ID)
 
+
+async def publish_channel_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Publica el menú fijo de acceso en el canal oficial de UnaRed."""
+    if not is_admin(update.effective_user):
+        await update.effective_message.reply_text("⛔ Solo el propietario puede publicar el menú del canal.")
+        return
+
+    try:
+        bot_info = await context.bot.get_me()
+        bot_url = f"https://t.me/{bot_info.username}"
+        support_url = "https://t.me/flowmontana777"
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🤖 ABRIR UNARED", url=bot_url)],
+            [
+                InlineKeyboardButton("🛒 CATÁLOGO DE SERVICIOS", url=bot_url),
+                InlineKeyboardButton("💳 COMPRAR", url=bot_url),
+            ],
+            [
+                InlineKeyboardButton("👤 MI CUENTA", url=bot_url),
+                InlineKeyboardButton("🆘 SOPORTE", url=support_url),
+            ],
+            [InlineKeyboardButton("📢 ACTUALIZACIONES", url="https://t.me/Una1Red")],
+        ])
+        await context.bot.send_message(
+            chat_id="@Una1Red",
+            text=(
+                "💚 UNARED | CENTRO OFICIAL\n"
+                "━━━━━━━━━━━━━━━━━━\n\n"
+                "Bienvenido a UnaRed. Accede desde aquí a nuestros servicios, "
+                "catálogo, compras y asistencia.\n\n"
+                "👇 Selecciona una opción:"
+            ),
+            reply_markup=keyboard,
+            disable_web_page_preview=True,
+        )
+        await update.effective_message.reply_text(
+            "✅ Menú publicado en @Una1Red. Recuerda que el bot debe ser administrador del canal."
+        )
+    except Exception:
+        logger.exception("No se pudo publicar el menú en @Una1Red.")
+        await update.effective_message.reply_text(
+            "⚠️ No se pudo publicar. Comprueba que el bot sea administrador de @Una1Red y tenga permiso para publicar mensajes."
+        )
+
 def admin_dashboard_keyboard():
     return InlineKeyboardMarkup([
         [
@@ -7017,6 +7061,7 @@ def build_main_application():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("menu", publish_group_menu))
+    app.add_handler(CommandHandler("publicar_canal", publish_channel_menu))
     app.add_handler(MessageHandler(filters.Regex(r"^Menu$"), open_private_menu_from_group))
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(CommandHandler("panel", admin_panel))
