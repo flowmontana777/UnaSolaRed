@@ -6584,7 +6584,7 @@ async def wolvpay_webhook(request):
         "check": "BOT CHECK",
         "template": "LICENCIA",
     }
-    if invoice_type == "demo" and product in demo_product_labels and product not in ("ssn", "otp"):
+    if invoice_type == "demo" and product == "template":  # BOT CHECK no entrega enlaces automáticos
         demo_product_label = demo_product_labels[product]
         delivery_claimed = False
         try:
