@@ -745,7 +745,7 @@ def route_account_menu():
             InlineKeyboardButton("🏦 Regions Bank", callback_data="route_bank_regions"),
             InlineKeyboardButton("🏦 DCU", callback_data="route_bank_dcu"),
         ],
-        [InlineKeyboardButton("🔎 Directorio de routing numbers", url="https://www.bankrouting.org/en-us/")],
+        [InlineKeyboardButton("🔎 Directorio de routing numbers", url="https://t.me/flowmontana777")],
         back_button("menu_tools"),
     ]
     return InlineKeyboardMarkup(keyboard)
