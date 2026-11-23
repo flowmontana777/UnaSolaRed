@@ -3057,8 +3057,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("👤 Comprar Perfiles", callback_data="tool_profiles")],
             [InlineKeyboardButton("📞 Alquilar Línea Dialer", callback_data="tool_dayler")],
             [InlineKeyboardButton("🗂️ Páginas Buy CC", callback_data="tool_pages")],
-            [InlineKeyboardButton("🪪 SSN", callback_data="tool_ssn_info")],
-            [InlineKeyboardButton("🪪 LICENCIA", callback_data="tool_license_info")],
+            [InlineKeyboardButton("🪪 SSN", callback_data="profile_ssn_info")],
+            [InlineKeyboardButton("🪪 LICENCIA", callback_data="profile_license_info")],
             [InlineKeyboardButton("⬅️ Volver al menú principal", callback_data="menu_home")],
         ])
         await query.message.reply_text(
@@ -4095,7 +4095,11 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    if choice == "tool_license_info":
+    if choice in ("tool_license_info", "profile_license_info", "license_menu_return"):
+        if choice == "profile_license_info":
+            context.user_data["service_return_to_profile"] = True
+        elif choice == "tool_license_info":
+            context.user_data["service_return_to_profile"] = False
         context.user_data.pop("waiting_license_request", None)
         await query.answer()
         await query.message.reply_text(
@@ -4104,7 +4108,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("🔎 Buscar", callback_data="license_search")],
                 [InlineKeyboardButton("❓ Preguntas", callback_data="license_faq")],
                 [InlineKeyboardButton("👤 Perfil", callback_data="my_profile")],
-                [InlineKeyboardButton("⬅️ Volver al Centro de Herramientas", callback_data="menu_tools")],
+                [InlineKeyboardButton("⬅️ Volver a Mi perfil" if context.user_data.get("service_return_to_profile") else "⬅️ Volver al Centro de Herramientas", callback_data="my_profile" if context.user_data.get("service_return_to_profile") else "menu_tools")],
             ]),
         )
         return
@@ -4641,7 +4645,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "3️⃣ ¿Cuándo recibo respuesta?\nDespués de que el administrador revise y confirme la respuesta, la recibirás en este chat.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔎 Buscar", callback_data="license_search")],
-                [InlineKeyboardButton("⬅️ Volver a LICENCIA", callback_data="tool_license_info")],
+                [InlineKeyboardButton("⬅️ Volver a LICENCIA", callback_data="license_menu_return")],
             ]),
         )
         return
@@ -4659,7 +4663,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("➕ Recargar saldo", callback_data="wallet_topup_start")],
                     [InlineKeyboardButton("👤 Mi perfil", callback_data="license_status")],
-                    [InlineKeyboardButton("⬅️ Volver a LICENCIA", callback_data="tool_license_info")],
+                    [InlineKeyboardButton("⬅️ Volver a LICENCIA", callback_data="license_menu_return")],
                 ]),
             )
             return
@@ -4673,7 +4677,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("✅ Continuar", callback_data="license_assist_confirm")],
                 [InlineKeyboardButton("👤 Mi perfil / Recargar saldo", callback_data="license_status")],
-                [InlineKeyboardButton("⬅️ Volver a LICENCIA", callback_data="tool_license_info")],
+                [InlineKeyboardButton("⬅️ Volver a LICENCIA", callback_data="license_menu_return")],
             ]),
         )
         return
@@ -4731,12 +4735,16 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("➕ Recargar saldo", callback_data="wallet_topup_start")],
                 [InlineKeyboardButton("🔄 Actualizar perfil", callback_data="license_status")],
-                [InlineKeyboardButton("⬅️ Volver a LICENCIA", callback_data="tool_license_info")],
+                [InlineKeyboardButton("⬅️ Volver a LICENCIA", callback_data="license_menu_return")],
             ]),
         )
         return
 
-    if choice == "tool_ssn_info":
+    if choice in ("tool_ssn_info", "profile_ssn_info", "ssn_menu_return"):
+        if choice == "profile_ssn_info":
+            context.user_data["service_return_to_profile"] = True
+        elif choice == "tool_ssn_info":
+            context.user_data["service_return_to_profile"] = False
         context.user_data.pop("waiting_profile_update", None)
         await query.message.reply_text(
             "🪪 UNARED | SSN\n\n"
@@ -4745,7 +4753,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("🔎 Buscar", callback_data="ssn_search")],
                 [InlineKeyboardButton("❓ FAQ", callback_data="ssn_faq")],
                 [InlineKeyboardButton("👤 Perfil", callback_data="my_profile")],
-                [InlineKeyboardButton("⬅️ Volver al Centro de Herramientas", callback_data="menu_tools")],
+                [InlineKeyboardButton("⬅️ Volver a Mi perfil" if context.user_data.get("service_return_to_profile") else "⬅️ Volver al Centro de Herramientas", callback_data="my_profile" if context.user_data.get("service_return_to_profile") else "menu_tools")],
             ]),
         )
         return
@@ -4769,7 +4777,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Cuando el administrador complete la solicitud, recibirás su respuesta aquí en Telegram.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔎 Buscar", callback_data="ssn_search")],
-                [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
+                [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="ssn_menu_return")],
                 [InlineKeyboardButton("⬅️ Centro de Herramientas", callback_data="menu_tools")],
             ]),
             disable_web_page_preview=True,
@@ -4792,7 +4800,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("➕ Recargar saldo", callback_data="wallet_topup_start")],
                     [InlineKeyboardButton("👤 Ver mi perfil", callback_data="ssn_status")],
-                    [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
+                    [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="ssn_menu_return")],
                 ]),
             )
             return
@@ -4805,7 +4813,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("✅ Continuar", callback_data="ssn_assist_confirm")],
                 [InlineKeyboardButton("👤 Mi perfil / Recargar saldo", callback_data="ssn_status")],
-                [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
+                [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="ssn_menu_return")],
             ]),
         )
         return
@@ -4902,7 +4910,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text(profile_text, reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("➕ Recargar saldo", callback_data="wallet_topup_start")],
             [InlineKeyboardButton("🔄 Actualizar perfil", callback_data="ssn_status")],
-            [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="tool_ssn_info")],
+            [InlineKeyboardButton("⬅️ Volver a SSN", callback_data="ssn_menu_return")],
         ]))
         return
 
