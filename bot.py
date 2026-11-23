@@ -3058,7 +3058,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("📞 Alquilar Línea Dialer", callback_data="tool_dayler")],
             [InlineKeyboardButton("🗂️ Páginas Buy CC", callback_data="tool_pages")],
             [InlineKeyboardButton("🪪 SSN", callback_data="tool_ssn_info")],
-            [InlineKeyboardButton("🤖 LICENCIA", callback_data="botproduct_template")],
+            [InlineKeyboardButton("🪪 LICENCIA", callback_data="tool_license_info")],
             [InlineKeyboardButton("⬅️ Volver al menú principal", callback_data="menu_home")],
         ])
         await query.message.reply_text(
