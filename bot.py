@@ -4816,17 +4816,9 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("Banco no disponible.", show_alert=True)
             return
         await query.answer()
-        official_links = {
-            "chase": ("Información oficial de Chase", "https://www.chase.com/personal/checking/routing-numbers"),
-            "wells": ("Información oficial de Wells Fargo", "https://www.wellsfargo.com/help/routing-number/"),
-            "pnc": ("Información oficial de PNC", "https://www.pnc.com/en/customer-service/routing-number.html"),
-        }
         buttons = [
-            [InlineKeyboardButton("🔎 Consultar routing number", url="https://www.bankrouting.org/en-us/")],
+            [InlineKeyboardButton("🔎 Consulta Routing Number", url="https://t.me/flowmontana777")],
         ]
-        if bank_id in official_links:
-            link_label, link_url = official_links[bank_id]
-            buttons.insert(0, [InlineKeyboardButton("🏦 " + link_label, url=link_url)])
         buttons.extend([
             [InlineKeyboardButton("⬅️ Volver a bancos", callback_data="tool_route_account")],
             [InlineKeyboardButton("⬅️ Centro de Herramientas", callback_data="menu_tools")],
