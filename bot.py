@@ -4821,7 +4821,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("⬅️ Centro de Herramientas", callback_data="menu_tools")],
         ]
         await query.message.reply_text(
-            f"🏦 UNARED | {bank_name}\\n\\n"
+            f"🏦 UNARED | {bank_name}\n━━━━━━━━━━━━━━━━━━\n\n"
             "⏳ Este servicio estará disponible próximamente.",
             reply_markup=InlineKeyboardMarkup(buttons),
         )
