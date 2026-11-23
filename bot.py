@@ -39,7 +39,6 @@ from telegram.ext import (
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ADMIN_BOT_TOKEN = os.getenv("ADMIN_BOT_TOKEN")
-PAYMENT_NOTIFICATIONS_BOT_TOKEN = os.getenv("PAYMENT_NOTIFICATIONS_BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID", "5864523026")
 BOT_OWNER_ID = "5864523026"
 WOLVPAY_API_KEY = os.getenv("WOLVPAY_API_KEY")
@@ -216,19 +215,7 @@ async def notify_invoice_pending(
         else:
             logger.error("Admin Bot no inicializado; no se pudo enviar la factura %s.", invoice_id)
 
-        payment_notifications_bot = application.bot_data.get("payment_notifications_bot")
-        if payment_notifications_bot:
-            try:
-                await payment_notifications_bot.send_photo(
-                    chat_id=int(BOT_OWNER_ID),
-                    photo=image_url,
-                    caption=admin_caption,
-                    reply_markup=invoice_keyboard,
-                )
-            except Exception:
-                logger.exception("El bot de notificaciones no pudo enviar la factura pendiente %s.", invoice_id)
-        else:
-            logger.warning("PAYMENT_NOTIFICATIONS_BOT_TOKEN no configurado; factura %s enviada solo al Admin Bot.", invoice_id)
+
 
 
 async def schedule_payment_reminder(application, table_name, invoice_id, telegram_id, amount, service, invoice_url=None):
@@ -1935,7 +1922,6 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                     invoice_id TEXT PRIMARY KEY,
                     customer_sent INTEGER NOT NULL DEFAULT 0,
                     admin_sent INTEGER NOT NULL DEFAULT 0,
-                    payment_bot_sent INTEGER NOT NULL DEFAULT 0,
                     approval_status TEXT NOT NULL DEFAULT 'PENDING',
                     image_status TEXT NOT NULL DEFAULT 'PENDING'
                 )""")
@@ -6808,8 +6794,6 @@ async def wolvpay_webhook(request):
                 )"""
             )
             notification_columns = {row[1] for row in db.execute("PRAGMA table_info(wolvpay_notifications)")}
-            if "payment_bot_sent" not in notification_columns:
-                db.execute("ALTER TABLE wolvpay_notifications ADD COLUMN payment_bot_sent INTEGER NOT NULL DEFAULT 0")
             if "approval_status" not in notification_columns:
                 db.execute("ALTER TABLE wolvpay_notifications ADD COLUMN approval_status TEXT NOT NULL DEFAULT 'PENDING'")
             if "image_status" not in notification_columns:
@@ -6826,7 +6810,7 @@ async def wolvpay_webhook(request):
                 (invoice_id,),
             )
             notification_state = db.execute(
-                "SELECT customer_sent, admin_sent, payment_bot_sent FROM wolvpay_notifications WHERE invoice_id = ?",
+                "SELECT customer_sent, admin_sent FROM wolvpay_notifications WHERE invoice_id = ?",
                 (invoice_id,),
             ).fetchone()
     except sqlite3.Error:
@@ -6904,21 +6888,6 @@ async def wolvpay_webhook(request):
                     (invoice_id,),
                 )
 
-        payment_notifications_bot = application.bot_data.get("payment_notifications_bot")
-        if payment_notifications_bot and not notification_state[2]:
-            try:
-                await payment_notifications_bot.send_photo(
-                    chat_id=int(BOT_OWNER_ID), photo=payment_image_url,
-                    caption=admin_text, reply_markup=review_keyboard,
-                )
-                with sqlite3.connect(DATABASE_PATH) as db:
-                    db.execute(
-                        "UPDATE wolvpay_notifications SET payment_bot_sent = 1 WHERE invoice_id = ?",
-                        (invoice_id,),
-                    )
-            except Exception:
-                logger.exception("Payment notification bot delivery failed for %s", invoice_id)
-                return web.Response(status=500, text="Payment confirmed; payment notification retry required.")
     except Exception:
         logger.exception("Payment confirmed; notification retry is pending for %s", invoice_id)
         return web.Response(status=500, text="Payment confirmed; notification retry required.")
@@ -6985,7 +6954,6 @@ async def main():
     # Permite que /buscarcliente envíe alertas aunque se ejecute desde el bot principal.
     app.bot_data["main_bot"] = app.bot
     admin_app = None
-    payment_notifications_app = None
     applications = [app]
     if ADMIN_BOT_TOKEN:
         admin_app = build_admin_application()
@@ -6995,18 +6963,6 @@ async def main():
     else:
         logger.warning("ADMIN_BOT_TOKEN no configurado; solo se iniciará el bot principal.")
 
-    if PAYMENT_NOTIFICATIONS_BOT_TOKEN:
-        payment_notifications_app = Application.builder().token(PAYMENT_NOTIFICATIONS_BOT_TOKEN).build()
-        payment_notifications_app.bot_data["main_bot"] = app.bot
-        payment_notifications_app.bot_data["admin_bot"] = admin_app.bot if admin_app else None
-        payment_notifications_app.add_handler(CommandHandler("start", admin_bot_start))
-        payment_notifications_app.add_handler(CallbackQueryHandler(
-            admin_bot_callbacks,
-            pattern=r"^(admin_|av:|ap:|delivered:|deliver_choice:(ssn|otp|check|license):|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
-        ))
-        payment_notifications_app.add_error_handler(error_handler)
-    else:
-        logger.warning("PAYMENT_NOTIFICATIONS_BOT_TOKEN no configurado; las facturas pendientes no se copiarán al tercer bot.")
 
     initialized = []
     started = []
@@ -7045,8 +7001,6 @@ async def main():
         print("💚 UnaRed Bot está funcionando.")
         if admin_app:
             logger.info("💚 UnaRed Admin Bot está funcionando.")
-        if payment_notifications_app:
-            logger.info("💚 UnaRed Payment Notifications Bot está funcionando.")
         await asyncio.Event().wait()
     finally:
         for current in reversed(polling):
