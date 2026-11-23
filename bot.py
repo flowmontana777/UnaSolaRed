@@ -4801,7 +4801,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🧭 UNARED | RUTA & CUENTA\n"
             "━━━━━━━━━━━━━━━━━━\n\n"
             "🇺🇸 Directorio de bancos de Estados Unidos\n\n"
-            "Selecciona tu banco para consultar dónde verificar routing number.\n\n"
+            "Selecciona tu banco para consultar dónde verificar routing number."
             reply_markup=route_account_menu(),
         )
         return
