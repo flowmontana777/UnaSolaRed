@@ -39,6 +39,7 @@ from telegram.ext import (
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ADMIN_BOT_TOKEN = os.getenv("ADMIN_BOT_TOKEN")
+PAYMENT_NOTIFICATIONS_BOT_TOKEN = os.getenv("PAYMENT_NOTIFICATIONS_BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID", "5864523026")
 BOT_OWNER_ID = "5864523026"
 WOLVPAY_API_KEY = os.getenv("WOLVPAY_API_KEY")
@@ -182,37 +183,52 @@ async def notify_invoice_pending(
         except Exception:
             logger.exception("No se pudo enviar la imagen de pago pendiente al cliente %s.", telegram_id)
     if send_admin:
-        try:
-            admin_bot = application.bot_data.get("admin_bot")
-            if not admin_bot:
-                raise RuntimeError("El bot administrativo no está inicializado.")
-            invoice_keyboard = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("🔎 Verificar pago", callback_data=f"av:{invoice_id}"),
-                    InlineKeyboardButton("✅ Ya pagó", callback_data=f"ap:{invoice_id}"),
-                ],
-                [
-                    InlineKeyboardButton("👤 Abrir perfil del cliente", url=f"tg://user?id={int(telegram_id)}"),
-                ],
-                [
-                    InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(telegram_id)}"),
-                ],
-            ])
-            await admin_bot.send_photo(
-                chat_id=int(ADMIN_CHAT_ID), photo=image_url, caption=admin_caption,
-                reply_markup=invoice_keyboard,
-            )
-        except Exception:
-            logger.exception("Admin Bot no pudo enviar la factura %s al administrador; se intentará con el bot principal.", invoice_id)
+        invoice_keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("🔎 Verificar pago", callback_data=f"av:{invoice_id}"),
+                InlineKeyboardButton("✅ Ya pagó", callback_data=f"ap:{invoice_id}"),
+            ],
+            [
+                InlineKeyboardButton("👤 Abrir perfil del cliente", url=f"tg://user?id={int(telegram_id)}"),
+            ],
+            [
+                InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{int(telegram_id)}"),
+            ],
+        ])
+        admin_bot = application.bot_data.get("admin_bot")
+        if admin_bot:
             try:
-                await application.bot.send_photo(
-                    chat_id=int(ADMIN_CHAT_ID),
-                    photo=image_url,
-                    caption=admin_caption + "\\n\\n⚠️ Aviso de respaldo enviado por el bot principal.",
+                await admin_bot.send_photo(
+                    chat_id=int(ADMIN_CHAT_ID), photo=image_url, caption=admin_caption,
                     reply_markup=invoice_keyboard,
                 )
             except Exception:
-                logger.exception("Tampoco se pudo enviar la factura %s mediante el bot principal.", invoice_id)
+                logger.exception("Admin Bot no pudo enviar la factura %s.", invoice_id)
+                try:
+                    await application.bot.send_photo(
+                        chat_id=int(ADMIN_CHAT_ID),
+                        photo=image_url,
+                        caption=admin_caption + "\\n\\n⚠️ Aviso de respaldo enviado por el bot principal.",
+                        reply_markup=invoice_keyboard,
+                    )
+                except Exception:
+                    logger.exception("Tampoco se pudo enviar la factura %s mediante el bot principal.", invoice_id)
+        else:
+            logger.error("Admin Bot no inicializado; no se pudo enviar la factura %s.", invoice_id)
+
+        payment_notifications_bot = application.bot_data.get("payment_notifications_bot")
+        if payment_notifications_bot:
+            try:
+                await payment_notifications_bot.send_photo(
+                    chat_id=int(BOT_OWNER_ID),
+                    photo=image_url,
+                    caption=admin_caption,
+                    reply_markup=invoice_keyboard,
+                )
+            except Exception:
+                logger.exception("El bot de notificaciones no pudo enviar la factura pendiente %s.", invoice_id)
+        else:
+            logger.warning("PAYMENT_NOTIFICATIONS_BOT_TOKEN no configurado; factura %s enviada solo al Admin Bot.", invoice_id)
 
 
 async def schedule_payment_reminder(application, table_name, invoice_id, telegram_id, amount, service, invoice_url=None):
@@ -6948,6 +6964,7 @@ async def main():
     # Permite que /buscarcliente envíe alertas aunque se ejecute desde el bot principal.
     app.bot_data["main_bot"] = app.bot
     admin_app = None
+    payment_notifications_app = None
     applications = [app]
     if ADMIN_BOT_TOKEN:
         admin_app = build_admin_application()
@@ -6956,6 +6973,21 @@ async def main():
         applications.append(admin_app)
     else:
         logger.warning("ADMIN_BOT_TOKEN no configurado; solo se iniciará el bot principal.")
+
+    if PAYMENT_NOTIFICATIONS_BOT_TOKEN:
+        payment_notifications_app = Application.builder().token(PAYMENT_NOTIFICATIONS_BOT_TOKEN).build()
+        payment_notifications_app.bot_data["main_bot"] = app.bot
+        payment_notifications_app.bot_data["admin_bot"] = admin_app.bot if admin_app else None
+        payment_notifications_app.add_handler(CommandHandler("start", admin_bot_start))
+        payment_notifications_app.add_handler(CallbackQueryHandler(
+            admin_bot_callbacks,
+            pattern=r"^(admin_|av:|ap:|delivered:|deliver_choice:(ssn|otp|check|license):|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
+        ))
+        payment_notifications_app.add_error_handler(error_handler)
+        app.bot_data["payment_notifications_bot"] = payment_notifications_app.bot
+        applications.append(payment_notifications_app)
+    else:
+        logger.warning("PAYMENT_NOTIFICATIONS_BOT_TOKEN no configurado; las facturas pendientes no se copiarán al tercer bot.")
 
     initialized = []
     started = []
@@ -6978,6 +7010,8 @@ async def main():
         print("💚 UnaRed Bot está funcionando.")
         if admin_app:
             logger.info("💚 UnaRed Admin Bot está funcionando.")
+        if payment_notifications_app:
+            logger.info("💚 UnaRed Payment Notifications Bot está funcionando.")
         await asyncio.Event().wait()
     finally:
         for current in reversed(polling):
