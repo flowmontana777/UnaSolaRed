@@ -6984,8 +6984,6 @@ async def main():
             pattern=r"^(admin_|av:|ap:|delivered:|deliver_choice:(ssn|otp|check|license):|ssn_process:|ssn_complete:|profile_req_process:|profile_req_reply:|license_req_process:|license_req_reply:|copy_id:|notify_customer:|view_customer:|contact_admin$)",
         ))
         payment_notifications_app.add_error_handler(error_handler)
-        app.bot_data["payment_notifications_bot"] = payment_notifications_app.bot
-        applications.append(payment_notifications_app)
     else:
         logger.warning("PAYMENT_NOTIFICATIONS_BOT_TOKEN no configurado; las facturas pendientes no se copiarán al tercer bot.")
 
@@ -6996,6 +6994,22 @@ async def main():
         for current in applications:
             await current.initialize()
             initialized.append(current)
+
+        if payment_notifications_app:
+            try:
+                await payment_notifications_app.initialize()
+                initialized.append(payment_notifications_app)
+                app.bot_data["payment_notifications_bot"] = payment_notifications_app.bot
+                applications.append(payment_notifications_app)
+            except Exception as exc:
+                # Un token incorrecto del bot opcional no debe tumbar los bots principales.
+                logger.error(
+                    "No se pudo iniciar el bot de notificaciones (%s). "
+                    "Revisa PAYMENT_NOTIFICATIONS_BOT_TOKEN en Railway.",
+                    type(exc).__name__,
+                )
+                app.bot_data.pop("payment_notifications_bot", None)
+                payment_notifications_app = None
 
         await start_webhook_server(app)
         for current in applications:
