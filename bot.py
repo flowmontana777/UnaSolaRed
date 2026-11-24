@@ -577,6 +577,10 @@ def dayler_coin_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("₿ Bitcoin (BTC)", callback_data="dayler_coin_btc")],
         [InlineKeyboardButton("₮ USDT (TRC20)", callback_data="dayler_coin_trc20_usdt")],
+        [InlineKeyboardButton("Ł Litecoin (LTC)", callback_data="dayler_coin_ltc")],
+        [InlineKeyboardButton("₿ Bitcoin Cash (BCH)", callback_data="dayler_coin_bch")],
+        [InlineKeyboardButton("Ξ Ethereum (ETH)", callback_data="dayler_coin_eth")],
+        [InlineKeyboardButton("🔴 TRON (TRX)", callback_data="dayler_coin_trx")],
         [InlineKeyboardButton("⬅️ Volver", callback_data="menu_tools")],
     ])
 
@@ -585,6 +589,10 @@ def pyp_coin_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("₿ Bitcoin (BTC)", callback_data="pyp_coin_btc")],
         [InlineKeyboardButton("₮ USDT (TRC20)", callback_data="pyp_coin_trc20_usdt")],
+        [InlineKeyboardButton("Ł Litecoin (LTC)", callback_data="pyp_coin_ltc")],
+        [InlineKeyboardButton("₿ Bitcoin Cash (BCH)", callback_data="pyp_coin_bch")],
+        [InlineKeyboardButton("Ξ Ethereum (ETH)", callback_data="pyp_coin_eth")],
+        [InlineKeyboardButton("🔴 TRON (TRX)", callback_data="pyp_coin_trx")],
         [InlineKeyboardButton("⬅️ Volver", callback_data="menu_tools")],
     ])
 
@@ -593,6 +601,10 @@ def pages_coin_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("₿ Bitcoin (BTC)", callback_data="pages_coin_btc")],
         [InlineKeyboardButton("₮ USDT (TRC20)", callback_data="pages_coin_trc20_usdt")],
+        [InlineKeyboardButton("Ł Litecoin (LTC)", callback_data="pages_coin_ltc")],
+        [InlineKeyboardButton("₿ Bitcoin Cash (BCH)", callback_data="pages_coin_bch")],
+        [InlineKeyboardButton("Ξ Ethereum (ETH)", callback_data="pages_coin_eth")],
+        [InlineKeyboardButton("🔴 TRON (TRX)", callback_data="pages_coin_trx")],
         [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_pages")],
     ])
 
@@ -601,6 +613,10 @@ def icloud_coin_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("₿ Bitcoin (BTC)", callback_data="icloud_coin_btc")],
         [InlineKeyboardButton("₮ USDT (TRC20)", callback_data="icloud_coin_trc20_usdt")],
+        [InlineKeyboardButton("Ł Litecoin (LTC)", callback_data="icloud_coin_ltc")],
+        [InlineKeyboardButton("₿ Bitcoin Cash (BCH)", callback_data="icloud_coin_bch")],
+        [InlineKeyboardButton("Ξ Ethereum (ETH)", callback_data="icloud_coin_eth")],
+        [InlineKeyboardButton("🔴 TRON (TRX)", callback_data="icloud_coin_trx")],
         [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_icloud")],
     ])
 
@@ -608,6 +624,10 @@ def loans_coin_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("₿ Bitcoin (BTC)", callback_data="loans_coin_btc")],
         [InlineKeyboardButton("₮ USDT (TRC20)", callback_data="loans_coin_trc20_usdt")],
+        [InlineKeyboardButton("Ł Litecoin (LTC)", callback_data="loans_coin_ltc")],
+        [InlineKeyboardButton("₿ Bitcoin Cash (BCH)", callback_data="loans_coin_bch")],
+        [InlineKeyboardButton("Ξ Ethereum (ETH)", callback_data="loans_coin_eth")],
+        [InlineKeyboardButton("🔴 TRON (TRX)", callback_data="loans_coin_trx")],
         [InlineKeyboardButton("⬅️ Volver a Perfiles", callback_data="tool_loans")],
     ])
 
@@ -616,6 +636,10 @@ def edit_upload_coin_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("₿ Bitcoin (BTC)", callback_data="edit_upload_coin_btc")],
         [InlineKeyboardButton("₮ USDT (TRC20)", callback_data="edit_upload_coin_trc20_usdt")],
+        [InlineKeyboardButton("Ł Litecoin (LTC)", callback_data="edit_upload_coin_ltc")],
+        [InlineKeyboardButton("₿ Bitcoin Cash (BCH)", callback_data="edit_upload_coin_bch")],
+        [InlineKeyboardButton("Ξ Ethereum (ETH)", callback_data="edit_upload_coin_eth")],
+        [InlineKeyboardButton("🔴 TRON (TRX)", callback_data="edit_upload_coin_trx")],
         [InlineKeyboardButton("⬅️ Volver al servicio", callback_data="tool_edit_upload")],
     ])
 
@@ -633,6 +657,10 @@ def bill_coin_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("₿ Bitcoin (BTC)", callback_data="bill_coin_btc")],
         [InlineKeyboardButton("₮ USDT (TRC20)", callback_data="bill_coin_trc20_usdt")],
+        [InlineKeyboardButton("Ł Litecoin (LTC)", callback_data="bill_coin_ltc")],
+        [InlineKeyboardButton("₿ Bitcoin Cash (BCH)", callback_data="bill_coin_bch")],
+        [InlineKeyboardButton("Ξ Ethereum (ETH)", callback_data="bill_coin_eth")],
+        [InlineKeyboardButton("🔴 TRON (TRX)", callback_data="bill_coin_trx")],
         [InlineKeyboardButton("⬅️ Volver", callback_data="bill_pay")],
     ])
 
@@ -3644,7 +3672,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice.startswith("bill_coin_"):
         coin = choice.replace("bill_coin_", "", 1)
-        if coin not in ("btc", "trc20_usdt"):
+        if coin not in ("btc", "trc20_usdt", "ltc", "bch", "eth", "trx"):
             await query.message.reply_text("Método de pago no disponible.")
             return
         if not WOLVPAY_API_KEY:
@@ -3698,7 +3726,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "💚 UNARED | FACTURA DE PAGO DE SERVICIOS\n\n"
                 f"🛠️ Servicio: {category}\n"
                 f"💵 Importe: USD {amount}\n"
-                f"💳 Moneda: {'Bitcoin (BTC)' if coin == 'btc' else 'USDT (TRC20)'}\n"
+                f"💳 Moneda: { {'btc': 'Bitcoin (BTC)', 'trc20_usdt': 'USDT (TRC20)', 'ltc': 'Litecoin (LTC)', 'bch': 'Bitcoin Cash (BCH)', 'eth': 'Ethereum (ETH)', 'trx': 'TRON (TRX)'}.get(coin, coin.upper())}\n"
                 f"🧾 Factura: {invoice_id}\n\n"
                 "🔐 Pulsa «Abrir factura y pagar» para completar el pago.\n"
                 "⚡️ WolvPay confirmará el pago automáticamente.",
@@ -3904,7 +3932,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice.startswith("pyp_coin_"):
         coin = choice.replace("pyp_coin_", "", 1)
-        if coin not in ("btc", "trc20_usdt"):
+        if coin not in ("btc", "trc20_usdt", "ltc", "bch", "eth", "trx"):
             await query.message.reply_text("Método de pago no disponible.")
             return
         if not WOLVPAY_API_KEY:
@@ -4036,7 +4064,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice.startswith("dayler_coin_"):
         coin = choice.replace("dayler_coin_", "", 1)
-        if coin not in ("btc", "trc20_usdt"):
+        if coin not in ("btc", "trc20_usdt", "ltc", "bch", "eth", "trx"):
             await query.message.reply_text("Método de pago no disponible.")
             return
         if not WOLVPAY_API_KEY:
@@ -4570,7 +4598,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice.startswith("pages_coin_"):
         coin = choice.replace("pages_coin_", "", 1)
-        if coin not in ("btc", "trc20_usdt"):
+        if coin not in ("btc", "trc20_usdt", "ltc", "bch", "eth", "trx"):
             await query.message.reply_text("Método de pago no disponible.")
             return
         if not WOLVPAY_API_KEY:
@@ -5214,7 +5242,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice.startswith("loans_coin_"):
         coin = choice.replace("loans_coin_", "", 1)
-        if coin not in ("btc", "trc20_usdt"):
+        if coin not in ("btc", "trc20_usdt", "ltc", "bch", "eth", "trx"):
             await query.message.reply_text("Método de pago no disponible.")
             return
         if not WOLVPAY_API_KEY:
@@ -5272,7 +5300,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice.startswith("icloud_coin_"):
         coin = choice.replace("icloud_coin_", "", 1)
-        if coin not in ("btc", "trc20_usdt"):
+        if coin not in ("btc", "trc20_usdt", "ltc", "bch", "eth", "trx"):
             await query.message.reply_text("Método de pago no disponible.")
             return
         if not WOLVPAY_API_KEY:
@@ -5434,7 +5462,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice.startswith("edit_upload_coin_"):
         coin = choice.replace("edit_upload_coin_", "", 1)
-        if coin not in ("btc", "trc20_usdt"):
+        if coin not in ("btc", "trc20_usdt", "ltc", "bch", "eth", "trx"):
             await query.message.reply_text("Método de pago no disponible.")
             return
         if not WOLVPAY_API_KEY:
