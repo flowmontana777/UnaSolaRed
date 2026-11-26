@@ -67,17 +67,26 @@ def customer_profile_button(telegram_id, display_name=None, username=None):
 
 
 def customer_action_rows(telegram_id, display_name=None, username=None):
-    """Devuelve acciones administrativas consistentes para cualquier ficha de cliente."""
+    """Devuelve acciones administrativas sin enlaces de perfil no válidos."""
     customer_id = int(telegram_id)
-    return [
-        [
-            customer_profile_button(customer_id, display_name, username),
+    clean_username = str(username or "").strip().lstrip("@")
+    actions = []
+    if clean_username:
+        actions.append([
+            customer_profile_button(customer_id, display_name, clean_username),
             InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{customer_id}"),
-        ],
-        [
-            InlineKeyboardButton("📋 Copiar ID", callback_data=f"copy_id:{customer_id}"),
-        ],
-    ]
+        ])
+    else:
+        # Telegram rechaza tg://user?id= en algunos contextos de botones inline
+        # con BadRequest: Button_user_invalid. Si no hay username público,
+        # no se genera un enlace de perfil; se conservan alerta e ID.
+        actions.append([
+            InlineKeyboardButton("🔔 Mandar alerta", callback_data=f"notify_customer:{customer_id}"),
+        ])
+    actions.append([
+        InlineKeyboardButton("📋 Copiar ID", callback_data=f"copy_id:{customer_id}"),
+    ])
+    return actions
 
 
 def copy_id_keyboard(telegram_id, display_name=None, username=None):
@@ -1216,7 +1225,7 @@ async def fetch_wolvpay_invoice_statistics():
 
 
 async def present_admin_text_report(update: Update, report: str, keyboard):
-    """Edita reportes de texto al navegar; si vienen de una foto, envía un mensaje nuevo."""
+    """Presenta reportes tanto desde mensajes de texto como desde la portada con foto."""
     if not update.callback_query:
         await update.effective_message.reply_text(
             report,
@@ -1227,8 +1236,22 @@ async def present_admin_text_report(update: Update, report: str, keyboard):
 
     message = update.callback_query.message
     try:
-        if getattr(message, "text", None) is None:
-            raise RuntimeError("El mensaje actual contiene una imagen y no se puede reemplazar por texto.")
+        if message.photo:
+            # Telegram limita las captions a 1024 caracteres. Los reportes más
+            # largos se envían como mensaje nuevo para no perder contenido.
+            if len(report) <= 1024:
+                await message.edit_caption(
+                    caption=report,
+                    reply_markup=keyboard,
+                )
+            else:
+                await message.reply_text(
+                    report,
+                    reply_markup=keyboard,
+                    disable_web_page_preview=True,
+                )
+            return
+
         await message.edit_text(
             report,
             reply_markup=keyboard,
@@ -1237,7 +1260,7 @@ async def present_admin_text_report(update: Update, report: str, keyboard):
     except Exception as exc:
         if "message is not modified" in str(exc).lower():
             return
-        logger.info("Se enviará el reporte como mensaje nuevo: %s", exc)
+        logger.info("No se pudo editar el reporte; se enviará como mensaje nuevo: %s", exc)
         await message.reply_text(
             report,
             reply_markup=keyboard,
