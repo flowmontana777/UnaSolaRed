@@ -2459,7 +2459,7 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ("full_name", "TEXT NOT NULL DEFAULT ''"),
                 ("button_key", "TEXT NOT NULL DEFAULT ''"),
                 ("button_label", "TEXT NOT NULL DEFAULT ''"),
-                ("created_at", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"),
+                ("created_at", "TEXT NOT NULL DEFAULT ''"),
             ):
                 if column not in interaction_columns:
                     db.execute(f"ALTER TABLE unared_interactions ADD COLUMN {column} {definition}")
@@ -2568,7 +2568,7 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ("full_name", "TEXT NOT NULL DEFAULT ''"),
                 ("button_key", "TEXT NOT NULL DEFAULT ''"),
                 ("button_label", "TEXT NOT NULL DEFAULT ''"),
-                ("created_at", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"),
+                ("created_at", "TEXT NOT NULL DEFAULT ''"),
             ):
                 if column not in columns:
                     db.execute(f"ALTER TABLE unared_interactions ADD COLUMN {column} {definition}")
