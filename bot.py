@@ -4383,7 +4383,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         COMING1_IMAGE_URL = "https://i.ibb.co/RkZRgV38/516870573-1795201394511117.jpg"
         await query.message.reply_photo(
             photo=COMING1_IMAGE_URL,
-            caption="💚 UNARED | BOT PRÓXIMAMENTE\\n\\nProducto independiente de BOT CHECK. Consulta información y disponibilidad con nuestro equipo.\\n\\n💵 Precio provisional: US$35",
+            caption="💚 UNARED | BOT CHECK\\n\\nConsulta información y disponibilidad con nuestro equipo.\\n\\n💵 Precio: US$35",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_coming1")],
                 [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_coming1")],
@@ -5924,7 +5924,7 @@ async def receive_admin_profile_reply(update: Update, context: ContextTypes.DEFA
                 raise
             context.user_data.pop("bot_check_delivery_request", None)
             await update.message.reply_text(
-                f"✅ BOT CHECK · Opción {choice} enviada al cliente. Factura: {invoice_id}"
+                f"✅ BOT BI · Opción {choice} enviada al cliente. Factura: {invoice_id}"
             )
         except Exception:
             logger.exception("No se pudo entregar BOT CHECK %s.", invoice_id)
