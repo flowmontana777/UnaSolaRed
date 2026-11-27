@@ -681,7 +681,7 @@ def bot_catalog_menu():
         [InlineKeyboardButton("🤖 BOT BI", callback_data="botproduct_check")],
         [InlineKeyboardButton("🤖 BOT LICENCIA", callback_data="botproduct_template")],
         [InlineKeyboardButton("🤖 BOT CHECK", callback_data="botproduct_coming1")],
-        [InlineKeyboardButton("🤖 BOT EXTRATO BANCARIO", callback_data="bot_coming_soon_2")],
+        [InlineKeyboardButton("🤖 BOT EXTRATO BANCARIO", callback_data="botproduct_statement")],
         back_button("menu_tools"),
     ])
 
@@ -2902,8 +2902,17 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     choice = query.data
 
-    if choice == "bot_coming_soon_2":
-        await query.answer("🤖 BOT EXTRATO BANCARIO — PRÓXIMAMENTE", show_alert=True)
+    if choice == "botproduct_statement":
+        await query.answer()
+        await query.message.reply_text(
+            "💚 UNARED | BOT EXTRATO BANCARIO\n\n"
+            "Herramienta disponible. Para conocer su funcionamiento y solicitar el servicio, contacta con nuestro equipo.\n\n"
+            "💵 Precio: US$45",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
+                [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
+            ]),
+        )
         return
 
     if choice == "bot_coming_soon_1":
