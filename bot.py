@@ -737,15 +737,17 @@ def tools_menu():
         [InlineKeyboardButton("📞𝐀𝐥𝐪𝐮𝐢𝐥𝐚𝐫 𝐋𝐢𝐧𝐞𝐚 𝐃𝐚𝐲𝐥𝐞𝐫", callback_data="tool_dayler", style="success")],
         [InlineKeyboardButton("🗂️ Páginas Buy CC", callback_data="tool_pages")],
 
-        # Servicios secundarios organizados en dos columnas.
+        # Segunda fila: catálogo de bots y próximo servicio.
         [
             InlineKeyboardButton("🤖𝑪𝑶𝑴𝑷𝑹𝑨𝑹 𝑩𝑶𝑻", callback_data="tool_bots"),
-            InlineKeyboardButton("🧭 Ruta & Cuenta", callback_data="tool_route_account"),
+            InlineKeyboardButton("𝑷𝒓𝒐𝒙𝒊𝒎𝒂𝒎𝒆𝒏𝒕𝒆", callback_data="bot_coming_soon_1"),
         ],
+        # Servicios secundarios organizados en dos columnas.
         [
+            InlineKeyboardButton("🧭 Ruta & Cuenta", callback_data="tool_route_account"),
             InlineKeyboardButton("👤 Perfiles", callback_data="tool_profiles"),
-            InlineKeyboardButton("📄 Papeles", callback_data="edit_buy_paper"),
         ],
+        [InlineKeyboardButton("📄 Papeles", callback_data="edit_buy_paper")],
 
         [InlineKeyboardButton("💵 Método PyP", callback_data="tool_pyp")],
         [InlineKeyboardButton("📝 Editar y subir papel", callback_data="tool_edit_upload")],
