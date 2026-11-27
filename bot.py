@@ -4141,7 +4141,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🚀 Empezar", callback_data="dayler_start", style="success")],
-                [InlineKeyboardButton("🔐 Soporte VoIP", callback_data="tool_auth")],
+                [InlineKeyboardButton("🔐 Soporte VoIP", callback_data="tool_auth", style="danger")],
             ]),
         )
         return
