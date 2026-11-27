@@ -2904,10 +2904,13 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "botproduct_statement":
         await query.answer()
-        await query.message.reply_text(
-            "💚 UNARED | BOT EXTRATO BANCARIO\n\n"
-            "Servicio para gestionar extractos de cuentas propias o cuentas con autorización del titular.\n\n"
-            "💵 Precio: US$45",
+        await query.message.reply_photo(
+            photo="https://i.ibb.co/JjrJPb5D/585027523-1795792703954278.jpg",
+            caption=(
+                "💚 UNARED | BOT EXTRATO BANCARIO\n\n"
+                "Servicio para gestionar extractos de cuentas propias o cuentas con autorización del titular.\n\n"
+                "💵 Precio: US$45"
+            ),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar US$45", callback_data="botbuy_statement")],
                 [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_statement")],
