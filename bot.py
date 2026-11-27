@@ -397,6 +397,7 @@ def main_menu(user=None):
             InlineKeyboardButton(
                 "💻𝑯𝑬𝑹𝑹𝑨𝑴𝑰𝑬𝑵𝑻𝑨𝑺💸",
                 callback_data="menu_tools",
+                style="success",
             ),
         ],
         [
