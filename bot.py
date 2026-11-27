@@ -680,7 +680,7 @@ def bot_catalog_menu():
         [InlineKeyboardButton("🤖 BOT SSN", callback_data="botproduct_ssn")],
         [InlineKeyboardButton("🤖 BOT CHECK", callback_data="botproduct_check")],
         [InlineKeyboardButton("🤖 BOT LICENCIA", callback_data="botproduct_template")],
-        [InlineKeyboardButton("🤖 BOT PRÓXIMAMENTE", callback_data="botproduct_coming1")],
+        [InlineKeyboardButton("🤖 BOT CHECK", callback_data="botproduct_coming1")],
         [InlineKeyboardButton("🤖 BOT PRÓXIMAMENTE", callback_data="bot_coming_soon_2")],
         back_button("menu_tools"),
     ])
@@ -1894,7 +1894,7 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                     "ssn": "BOT SSN",
                     "check": "BOT CHECK",
                     "template": "LICENCIA",
-                    "coming1": "BOT PRÓXIMAMENTE",
+                    "coming1": "BOT CHECK",
                 }
                 if demo_product == "check":
                     await query.message.reply_text(
@@ -4265,7 +4265,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice.startswith("bothelp_"):
         product = choice.rsplit("_", 1)[-1]
-        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK", "template": "LICENCIA", "coming1": "BOT PRÓXIMAMENTE"}
+        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK", "template": "LICENCIA", "coming1": "BOT CHECK"}
         label = labels.get(product)
         if not label:
             await query.answer("Ayuda no disponible.", show_alert=True)
@@ -4409,7 +4409,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # DEMOS AISLADAS: DATOS SINTÉTICOS; NO HAY CONSULTAS A DATOS REALES
     if choice.startswith("botdemo_buy_"):
         product = choice.rsplit("_", 1)[-1]
-        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK", "template": "LICENCIA", "coming1": "BOT PRÓXIMAMENTE"}
+        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK", "template": "LICENCIA", "coming1": "BOT CHECK"}
         if product not in labels:
             await query.message.reply_text("Producto no disponible.")
             return
@@ -4463,7 +4463,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice.startswith("botdemo_paid_"):
         product = choice.rsplit("_", 1)[-1]
-        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK", "template": "LICENCIA", "coming1": "BOT PRÓXIMAMENTE"}
+        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK", "template": "LICENCIA", "coming1": "BOT CHECK"}
         if product not in labels:
             await query.message.reply_text("Producto no disponible.")
             return
@@ -4490,7 +4490,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice.startswith("botdemo_verify_"):
         product = choice.rsplit("_", 1)[-1]
-        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK", "template": "LICENCIA", "coming1": "BOT PRÓXIMAMENTE"}
+        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK", "template": "LICENCIA", "coming1": "BOT CHECK"}
         if product not in labels:
             await query.message.reply_text("Producto no disponible.")
             return
@@ -6931,7 +6931,7 @@ async def wolvpay_webhook(request):
         admin_detail = "Servicio: Editar y Subir Papel\nImporte confirmado: US$" + str(expected_amount)
     elif invoice_type == "demo":
         telegram_id, expected_amount, product, username, current_status = row
-        product_labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK", "template": "LICENCIA", "coming1": "BOT PRÓXIMAMENTE"}
+        product_labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT CHECK", "template": "LICENCIA", "coming1": "BOT CHECK"}
         product_label = product_labels.get(product, "DEMO SANDBOX")
         customer_description = "Tu pago de US$35 para la demostración sandbox fue confirmado automáticamente."
         order_detail = f"Producto: {product_label} (datos sintéticos únicamente)"
