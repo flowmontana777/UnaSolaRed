@@ -681,7 +681,7 @@ def bot_catalog_menu():
         [InlineKeyboardButton("🤖 BOT BI", callback_data="botproduct_check")],
         [InlineKeyboardButton("🤖 BOT LICENCIA", callback_data="botproduct_template")],
         [InlineKeyboardButton("🤖 BOT CHECK", callback_data="botproduct_coming1")],
-        [InlineKeyboardButton("🤖 BOT PRÓXIMAMENTE", callback_data="bot_coming_soon_2")],
+        [InlineKeyboardButton("🤖 BOT EXTRATO BANCARIO", callback_data="bot_coming_soon_2")],
         back_button("menu_tools"),
     ])
 
@@ -2902,7 +2902,11 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     choice = query.data
 
-    if choice in ("bot_coming_soon_1", "bot_coming_soon_2"):
+    if choice == "bot_coming_soon_2":
+        await query.answer("🤖 BOT EXTRATO BANCARIO — PRÓXIMAMENTE", show_alert=True)
+        return
+
+    if choice == "bot_coming_soon_1":
         await query.answer("🤖 BOT PRÓXIMAMENTE", show_alert=True)
         return
 
