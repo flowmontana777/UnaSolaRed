@@ -734,7 +734,7 @@ def payment_types_menu():
 def tools_menu():
     keyboard = [
         # Cuatro servicios principales en filas completas.
-        [InlineKeyboardButton("📞 Alquilar Línea Dialer", callback_data="tool_dayler")],
+        [InlineKeyboardButton("📞𝐀𝐥𝐪𝐮𝐢𝐥𝐚𝐫 𝐋𝐢𝐧𝐞𝐚 𝐃𝐚𝐲𝐥𝐞𝐫", callback_data="tool_dayler", style="success")],
         [InlineKeyboardButton("🗂️ Páginas Buy CC", callback_data="tool_pages")],
 
         # Servicios secundarios organizados en dos columnas.
@@ -3287,7 +3287,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("📋 Mis solicitudes", callback_data="ssn_status"),
             ],
             [InlineKeyboardButton("👤 Comprar Perfiles", callback_data="tool_profiles")],
-            [InlineKeyboardButton("📞 Alquilar Línea Dialer", callback_data="tool_dayler")],
+            [InlineKeyboardButton("📞𝐀𝐥𝐪𝐮𝐢𝐥𝐚𝐫 𝐋𝐢𝐧𝐞𝐚 𝐃𝐚𝐲𝐥𝐞𝐫", callback_data="tool_dayler", style="success")],
             [InlineKeyboardButton("🗂️ Páginas Buy CC", callback_data="tool_pages")],
             [InlineKeyboardButton("🪪 SSN", callback_data="profile_ssn_info")],
             [InlineKeyboardButton("🪪 LICENCIA", callback_data="profile_license_info")],
