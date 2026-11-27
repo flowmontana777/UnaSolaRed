@@ -735,7 +735,7 @@ def tools_menu():
     keyboard = [
         # Servicios principales en filas completas.
         [InlineKeyboardButton("📞𝐀𝐥𝐪𝐮𝐢𝐥𝐚𝐫 𝐋𝐢𝐧𝐞𝐚 𝐃𝐚𝐲𝐥𝐞𝐫", callback_data="tool_dayler", style="success")],
-        [InlineKeyboardButton("🗂️ Páginas Buy CC", callback_data="tool_pages")],
+        [InlineKeyboardButton("🗂️ 𝐏𝐚𝐠𝐢𝐧𝐚 𝐛𝐮𝐲 𝐂𝐂", callback_data="tool_pages", style="primary")],
         [InlineKeyboardButton("🤖𝑪𝑶𝑴𝑷𝑹𝑨𝑹 𝑩𝑶𝑻", callback_data="tool_bots")],
         [
             InlineKeyboardButton("👤 Perfiles", callback_data="tool_profiles"),
@@ -3286,7 +3286,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ],
             [InlineKeyboardButton("👤 Comprar Perfiles", callback_data="tool_profiles")],
             [InlineKeyboardButton("📞𝐀𝐥𝐪𝐮𝐢𝐥𝐚𝐫 𝐋𝐢𝐧𝐞𝐚 𝐃𝐚𝐲𝐥𝐞𝐫", callback_data="tool_dayler", style="success")],
-            [InlineKeyboardButton("🗂️ Páginas Buy CC", callback_data="tool_pages")],
+            [InlineKeyboardButton("🗂️ 𝐏𝐚𝐠𝐢𝐧𝐚 𝐛𝐮𝐲 𝐂𝐂", callback_data="tool_pages", style="primary")],
             [InlineKeyboardButton("🪪 SSN", callback_data="profile_ssn_info")],
             [InlineKeyboardButton("🪪 LICENCIA", callback_data="profile_license_info")],
             [InlineKeyboardButton("⬅️ Volver al menú principal", callback_data="menu_home")],
