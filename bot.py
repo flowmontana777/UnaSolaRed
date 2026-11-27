@@ -4383,7 +4383,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         COMING1_IMAGE_URL = "https://i.ibb.co/RkZRgV38/516870573-1795201394511117.jpg"
         await query.message.reply_photo(
             photo=COMING1_IMAGE_URL,
-            caption="💚 UNARED | BOT CHECK\\n\\nConsulta información y disponibilidad con nuestro equipo.\\n\\n💵 Precio: US$35",
+            caption="💚 UNARED | BOT CHECK\n\nConsulta información y disponibilidad con nuestro equipo.\n\n💵 Precio: US$35",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_coming1")],
                 [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_coming1")],
