@@ -826,7 +826,7 @@ async def ask_for_details(query, context, service):
 # =====================================
 # PANEL PRIVADO UNARED
 # =====================================
-INVOICE_TABLES = ("bill_invoices", "dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "loans_invoices", "edit_upload_invoices", "ssn_assistance_invoices", "wallet_topup_invoices")
+INVOICE_TABLES = ("bill_invoices", "dayler_invoices", "pyp_invoices", "demo_bot_invoices", "pages_invoices", "icloud_invoices", "loans_invoices", "edit_upload_invoices", "ssn_assistance_invoices", "wallet_topup_invoices", "bank_statement_invoices")
 
 def ensure_wallet_tables(db):
     db.execute("""CREATE TABLE IF NOT EXISTS unared_wallets (
@@ -2906,13 +2906,76 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer()
         await query.message.reply_text(
             "💚 UNARED | BOT EXTRATO BANCARIO\n\n"
-            "Herramienta disponible. Para conocer su funcionamiento y solicitar el servicio, contacta con nuestro equipo.\n\n"
+            "Servicio para gestionar extractos de cuentas propias o cuentas con autorización del titular.\n\n"
             "💵 Precio: US$45",
             reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🛒 Comprar US$45", callback_data="botbuy_statement")],
+                [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_statement")],
                 [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
             ]),
         )
+        return
+
+    if choice == "bothelp_statement":
+        await query.answer()
+        await query.message.reply_text(
+            "❓ AYUDA | BOT EXTRATO BANCARIO\n\n"
+            "El servicio es únicamente para cuentas propias o autorizadas. "
+            "Nunca compartas contraseñas, PIN, CVV ni códigos de verificación. "
+            "El equipo te indicará los documentos y pasos necesarios por un canal seguro."
+        )
+        return
+
+    if choice == "botbuy_statement":
+        await query.answer()
+        if not WOLVPAY_API_KEY:
+            await query.message.reply_text("El pago automático no está configurado. Contacta al equipo.")
+            return
+        user = update.effective_user
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{WOLVPAY_API_URL}/invoices",
+                    headers={"Authorization": f"Bearer {WOLVPAY_API_KEY}", "Content-Type": "application/json"},
+                    json={"amount": 45, "currency": "USD", "coin": "trc20_usdt",
+                          "description": f"UNARED_BANK_STATEMENT|telegram_id={user.id}",
+                          "white_label": False},
+                    timeout=aiohttp.ClientTimeout(total=25),
+                ) as response:
+                    payload = await response.json(content_type=None)
+                    if response.status not in (200, 201) or payload.get("success") is False:
+                        raise RuntimeError("WolvPay invoice creation failed")
+            data = payload.get("data") or payload
+            invoice_id = data.get("invoice_id")
+            invoice_url = data.get("url") or data.get("payment_url")
+            if not invoice_id or not invoice_url:
+                raise RuntimeError("Incomplete invoice response")
+            with sqlite3.connect(DATABASE_PATH) as db:
+                db.execute("""CREATE TABLE IF NOT EXISTS bank_statement_invoices (
+                    invoice_id TEXT PRIMARY KEY, telegram_id INTEGER NOT NULL,
+                    amount TEXT NOT NULL, category TEXT NOT NULL, username TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'PENDING',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )""")
+                db.execute(
+                    "INSERT INTO bank_statement_invoices (invoice_id, telegram_id, amount, category, username, status) VALUES (?, ?, ?, ?, ?, 'PENDING')",
+                    (invoice_id, user.id, "45.00", "BOT EXTRATO BANCARIO", user.username or ""),
+                )
+            await notify_invoice_pending(context.application, user.id, invoice_id, "45", "BOT EXTRATO BANCARIO", "bank_statement_invoices", send_customer=False, send_admin=True, invoice_url=invoice_url)
+            asyncio.create_task(schedule_payment_reminder(context.application, "bank_statement_invoices", invoice_id, user.id, "45", "BOT EXTRATO BANCARIO", invoice_url))
+            await query.message.reply_text(
+                f"💚 UNARED | FACTURA\nProducto: BOT EXTRATO BANCARIO\nImporte: US$45\nFactura: {invoice_id}\n\nEl servicio se procesa tras verificar el pago y revisar la autorización.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔐 Abrir factura y pagar", url=invoice_url)],
+                    [InlineKeyboardButton("🔎 Verificar pago", callback_data=f"iv:{invoice_id}")],
+                    [InlineKeyboardButton("✅ Ya pagué", callback_data=f"ip:{invoice_id}")],
+                    [InlineKeyboardButton("⬅️ Volver", callback_data="tool_bots")],
+                ]),
+            )
+        except Exception:
+            logger.exception("Error creando factura BOT EXTRATO BANCARIO.")
+            await query.message.reply_text("No pudimos generar la factura. Inténtalo más tarde.")
         return
 
     if choice == "bot_coming_soon_1":
@@ -6877,6 +6940,12 @@ async def wolvpay_webhook(request):
                 invoice_type = "demo"
             if not row:
                 row = db.execute(
+                    "SELECT telegram_id, amount, category, username, status FROM bank_statement_invoices WHERE invoice_id = ?",
+                    (invoice_id,),
+                ).fetchone()
+                invoice_type = "bank_statement"
+            if not row:
+                row = db.execute(
                     "SELECT telegram_id, amount, category, username, status FROM bill_invoices WHERE invoice_id = ?",
                     (invoice_id,),
                 ).fetchone()
@@ -6949,6 +7018,11 @@ async def wolvpay_webhook(request):
         customer_description = "Tu pago de US$35 para la demostración sandbox fue confirmado automáticamente."
         order_detail = f"Producto: {product_label} (datos sintéticos únicamente)"
         admin_detail = f"Producto: {product_label}\nCliente: @{username or 'sin_username'}\nImporte confirmado: US$" + str(expected_amount)
+    elif invoice_type == "bank_statement":
+        telegram_id, expected_amount, category, username, current_status = row
+        customer_description = "Tu pago de US$45 por BOT EXTRATO BANCARIO fue confirmado automáticamente."
+        order_detail = "Servicio: BOT EXTRATO BANCARIO (cuenta propia o con autorización del titular)"
+        admin_detail = f"Servicio: BOT EXTRATO BANCARIO\nCliente: @{username or 'sin_username'}\nImporte confirmado: US$" + str(expected_amount)
     else:
         telegram_id, expected_amount, category, username, current_status = row
         customer_description = "Tu pago de servicios fue confirmado automáticamente."
@@ -6981,7 +7055,7 @@ async def wolvpay_webhook(request):
 
     try:
         with sqlite3.connect(DATABASE_PATH) as db:
-            table_name = {"dayler": "dayler_invoices", "pyp": "pyp_invoices", "pages": "pages_invoices", "icloud": "icloud_invoices", "demo": "demo_bot_invoices", "bill": "bill_invoices", "edit_upload": "edit_upload_invoices", "ssn_assistance": "ssn_assistance_invoices", "wallet_topup": "wallet_topup_invoices"}[invoice_type]
+            table_name = {"dayler": "dayler_invoices", "pyp": "pyp_invoices", "pages": "pages_invoices", "icloud": "icloud_invoices", "demo": "demo_bot_invoices", "bill": "bill_invoices", "bank_statement": "bank_statement_invoices", "edit_upload": "edit_upload_invoices", "ssn_assistance": "ssn_assistance_invoices", "wallet_topup": "wallet_topup_invoices"}[invoice_type]
             db.execute(
                 f"UPDATE {table_name} SET status = 'PAID' WHERE invoice_id = ? AND status = 'PENDING'",
                 (invoice_id,),
@@ -7055,7 +7129,7 @@ async def wolvpay_webhook(request):
         ("Tu solicitud está en cola. Puedes consultar el estado desde el botón «Ver estado»." if invoice_type == "ssn_assistance" else "Tu saldo ya está disponible en Mi perfil." if invoice_type == "wallet_topup" else "El equipo de UnaRed continuará con la preparación de tu servicio.")
     )
     admin_text = (
-        "💚 PAGO " + ({"dayler": "DAYLER", "pyp": "MÉTODO PyP", "pages": "PÁGINAS WEB", "icloud": "ICLOUD", "demo": "DEMO SANDBOX", "bill": "PAGO DE SERVICIOS", "edit_upload": "EDITAR Y SUBIR PAPEL", "ssn_assistance": "ASISTENCIA SSN", "wallet_topup": "RECARGA DE SALDO"}[invoice_type]) + " CONFIRMADO | UNARED\n\n"
+        "💚 PAGO " + ({"dayler": "DAYLER", "pyp": "MÉTODO PyP", "pages": "PÁGINAS WEB", "icloud": "ICLOUD", "demo": "DEMO SANDBOX", "bill": "PAGO DE SERVICIOS", "edit_upload": "EDITAR Y SUBIR PAPEL", "bank_statement": "BOT EXTRATO BANCARIO", "ssn_assistance": "ASISTENCIA SSN", "wallet_topup": "RECARGA DE SALDO"}[invoice_type]) + " CONFIRMADO | UNARED\n\n"
         f"Cliente: {customer_username}\n"
         f"Cliente Telegram ID: {telegram_id}\n{admin_detail}\n"
         f"Factura WolvPay: {invoice_id}\n"
