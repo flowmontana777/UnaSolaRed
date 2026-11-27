@@ -2912,7 +2912,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "💵 Precio: US$45"
             ),
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🛒 Comprar US$45", callback_data="botbuy_statement")],
+                [InlineKeyboardButton("🤖𝑪𝑶𝑴𝑷𝑹𝑨𝑹 𝑩𝑶𝑻", callback_data="botbuy_statement")],
                 [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_statement")],
                 [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
@@ -4397,7 +4397,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Después de la confirmación, recibirás el enlace de entrega."
             ),
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_template")],
+                [InlineKeyboardButton("🤖𝑪𝑶𝑴𝑷𝑹𝑨𝑹 𝑩𝑶𝑻", callback_data="botdemo_buy_template")],
                 [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_template")],
                 [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
@@ -4435,7 +4435,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Status: ✅ Online\n\n"
             ),
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_otp")],
+                [InlineKeyboardButton("🤖𝑪𝑶𝑴𝑷𝑹𝑨𝑹 𝑩𝑶𝑻", callback_data="botdemo_buy_otp")],
                 [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_otp")],
                 [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
@@ -4448,7 +4448,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/jZMvm7Mk/51859006-1795198455885885.jpg",
             caption="💚 UNARED | BOT SSN\n\nConsulta información y disponibilidad con nuestro equipo.",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_ssn")],
+                [InlineKeyboardButton("🤖𝑪𝑶𝑴𝑷𝑹𝑨𝑹 𝑩𝑶𝑻", callback_data="botdemo_buy_ssn")],
                 [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_ssn")],
                 [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
@@ -4464,7 +4464,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo=COMING1_IMAGE_URL,
             caption="💚 UNARED | BOT CHECK\n\nConsulta información y disponibilidad con nuestro equipo.\n\n💵 Precio: US$35",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_coming1")],
+                [InlineKeyboardButton("🤖𝑪𝑶𝑴𝑷𝑹𝑨𝑹 𝑩𝑶𝑻", callback_data="botdemo_buy_coming1")],
                 [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_coming1")],
                 [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
@@ -4477,7 +4477,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.ibb.co/Gv7wjKty/188034952-1795790836659010.jpg",
             caption="💚 UNARED | BOT BIN\n\nConsulta información y disponibilidad con nuestro equipo.",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_check")],
+                [InlineKeyboardButton("🤖𝑪𝑶𝑴𝑷𝑹𝑨𝑹 𝑩𝑶𝑻", callback_data="botdemo_buy_check")],
                 [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_check")],
                 [InlineKeyboardButton("📩 Contactar", url="https://t.me/flowmontana777")],
                 [InlineKeyboardButton("⬅️ Volver al catálogo", callback_data="tool_bots")],
