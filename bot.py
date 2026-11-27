@@ -737,7 +737,7 @@ def tools_menu():
 
         # Servicios secundarios organizados en dos columnas.
         [
-            InlineKeyboardButton("🤖 Comprar Bot", callback_data="tool_bots"),
+            InlineKeyboardButton("🤖𝑪𝑶𝑴𝑷𝑹𝑨𝑹 𝑩𝑶𝑻", callback_data="tool_bots"),
             InlineKeyboardButton("🧭 Ruta & Cuenta", callback_data="tool_route_account"),
         ],
         [
