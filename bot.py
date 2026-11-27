@@ -396,7 +396,7 @@ def main_menu(user=None):
         ],
         [
             InlineKeyboardButton(
-                "💻𝙷𝙴𝚁𝚁𝙰𝙼𝙸𝙴𝙽𝚃𝙰𝚂💸",
+                "💻ＨＥＲＲＡＭＩＥＮＴＡＳ💸",
                 callback_data="menu_tools",
                 style="success",
             ),
@@ -914,7 +914,7 @@ def log_customer_interaction(user, button_key):
         "amazon": "🛒 Amazon",
         "apple": "🍎 Apple",
         "vuelos": "✈️ Vuelos",
-        "menu_tools": "💻𝙷𝙴𝚁𝚁𝙰𝙼𝙸𝙴𝙽𝚃𝙰𝚂💸",
+        "menu_tools": "💻ＨＥＲＲＡＭＩＥＮＴＡＳ💸",
         "my_profile": "👤 Mi Perfil",
         "digital": "📟 Modo Digital",
         "menu_home": "🏠 Menú principal",
