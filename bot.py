@@ -23,6 +23,7 @@ from telegram import (
     ReplyKeyboardMarkup,
     KeyboardButton,
 )
+from telegram.constants import KeyboardButtonStyle
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -404,7 +405,7 @@ def main_menu(user=None):
             InlineKeyboardButton(
                 "🥷🏻𝐌𝐈 𝐏𝐄𝐑𝐅𝐈𝐋",
                 callback_data="my_profile",
-                style="primary",
+                style=KeyboardButtonStyle.BLUE,
             ),
         ],
         [
