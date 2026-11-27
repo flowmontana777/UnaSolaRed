@@ -736,7 +736,7 @@ def tools_menu():
         # Servicios principales en filas completas.
         [InlineKeyboardButton("📞𝐀𝐥𝐪𝐮𝐢𝐥𝐚𝐫 𝐋𝐢𝐧𝐞𝐚 𝐃𝐚𝐲𝐥𝐞𝐫", callback_data="tool_dayler", style="success")],
         [InlineKeyboardButton("🗂️ 𝐏𝐚𝐠𝐢𝐧𝐚 𝐛𝐮𝐲 𝐂𝐂", callback_data="tool_pages", style="primary")],
-        [InlineKeyboardButton("🤖𝑪𝑶𝑴𝑷𝑹𝑨𝑹 𝑩𝑶𝑻", callback_data="tool_bots")],
+        [InlineKeyboardButton("🤖 𝐂𝐨𝐦𝐩𝐫𝐚𝐫 𝐁𝐎𝐓", callback_data="tool_bots", style="success")],
         [
             InlineKeyboardButton("👤 Perfiles", callback_data="tool_profiles"),
             InlineKeyboardButton("📄 Papeles", callback_data="edit_buy_paper"),
