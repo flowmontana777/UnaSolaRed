@@ -678,7 +678,7 @@ def bot_catalog_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🤖 BOT OTP", callback_data="botproduct_otp")],
         [InlineKeyboardButton("🤖 BOT SSN", callback_data="botproduct_ssn")],
-        [InlineKeyboardButton("🤖 BOT BI", callback_data="botproduct_check")],
+        [InlineKeyboardButton("🤖 BOT BIN", callback_data="botproduct_check")],
         [InlineKeyboardButton("🤖 BOT LICENCIA", callback_data="botproduct_template")],
         [InlineKeyboardButton("🤖 BOT CHECK", callback_data="botproduct_coming1")],
         [InlineKeyboardButton("🤖 BOT EXTRATO BANCARIO", callback_data="botproduct_statement")],
@@ -1892,7 +1892,7 @@ async def admin_bot_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE
                 demo_product_labels = {
                     "otp": "BOT OTP",
                     "ssn": "BOT SSN",
-                    "check": "BOT BI",
+                    "check": "BOT BIN",
                     "template": "LICENCIA",
                     "coming1": "BOT CHECK",
                 }
@@ -2613,7 +2613,7 @@ async def admin_stats_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "botproduct_template": "🤖 Licencia",
             "botproduct_otp": "🤖 BOT OTP",
             "botproduct_ssn": "🤖 BOT SSN",
-            "botproduct_check": "🤖 BOT CHECK",
+            "botproduct_check": "🤖 BOT BIN",
             "my_profile": "👤 Mi Perfil",
             "start": "🚀 Inició el bot",
             "message_received": "💬 Envió un mensaje",
@@ -3032,7 +3032,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 product_labels = {
                     "otp": "BOT OTP",
                     "ssn": "BOT SSN",
-                    "check": "BOT BI",
+                    "check": "BOT BIN",
                     "template": "LICENCIA",
                 }
                 if product_row:
@@ -4341,7 +4341,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice.startswith("bothelp_"):
         product = choice.rsplit("_", 1)[-1]
-        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT BI", "template": "LICENCIA", "coming1": "BOT CHECK"}
+        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT BIN", "template": "LICENCIA", "coming1": "BOT CHECK"}
         label = labels.get(product)
         if not label:
             await query.answer("Ayuda no disponible.", show_alert=True)
@@ -4455,7 +4455,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "botproduct_coming1":
         await query.answer()
-        # Imagen independiente de BOT BI; se puede sustituir por la imagen definitiva.
+        # Imagen independiente de BOT BIN; se puede sustituir por la imagen definitiva.
         COMING1_IMAGE_URL = "https://i.ibb.co/RkZRgV38/516870573-1795201394511117.jpg"
         await query.message.reply_photo(
             photo=COMING1_IMAGE_URL,
@@ -4471,8 +4471,8 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice == "botproduct_check":
         await query.message.reply_photo(
-            photo="https://i.ibb.co/RkZRgV38/516870573-1795201394511117.jpg",
-            caption="💚 UNARED | BOT CHECK\n\nConsulta información y disponibilidad con nuestro equipo.",
+            photo="https://i.ibb.co/zTCTMrpM/188034952-1795790836659010.jpg",
+            caption="💚 UNARED | BOT BIN\n\nConsulta información y disponibilidad con nuestro equipo.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🛒 Comprar $35", callback_data="botdemo_buy_check")],
                 [InlineKeyboardButton("❓ Ayuda", callback_data="bothelp_check")],
@@ -4485,7 +4485,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # DEMOS AISLADAS: DATOS SINTÉTICOS; NO HAY CONSULTAS A DATOS REALES
     if choice.startswith("botdemo_buy_"):
         product = choice.rsplit("_", 1)[-1]
-        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT BI", "template": "LICENCIA", "coming1": "BOT CHECK"}
+        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT BIN", "template": "LICENCIA", "coming1": "BOT CHECK"}
         if product not in labels:
             await query.message.reply_text("Producto no disponible.")
             return
@@ -4539,7 +4539,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice.startswith("botdemo_paid_"):
         product = choice.rsplit("_", 1)[-1]
-        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT BI", "template": "LICENCIA", "coming1": "BOT CHECK"}
+        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT BIN", "template": "LICENCIA", "coming1": "BOT CHECK"}
         if product not in labels:
             await query.message.reply_text("Producto no disponible.")
             return
@@ -4566,7 +4566,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if choice.startswith("botdemo_verify_"):
         product = choice.rsplit("_", 1)[-1]
-        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT BI", "template": "LICENCIA", "coming1": "BOT CHECK"}
+        labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT BIN", "template": "LICENCIA", "coming1": "BOT CHECK"}
         if product not in labels:
             await query.message.reply_text("Producto no disponible.")
             return
@@ -6000,7 +6000,7 @@ async def receive_admin_profile_reply(update: Update, context: ContextTypes.DEFA
                 raise
             context.user_data.pop("bot_check_delivery_request", None)
             await update.message.reply_text(
-                f"✅ BOT BI · Opción {choice} enviada al cliente. Factura: {invoice_id}"
+                f"✅ BOT BIN · Opción {choice} enviada al cliente. Factura: {invoice_id}"
             )
         except Exception:
             logger.exception("No se pudo entregar BOT CHECK %s.", invoice_id)
@@ -7013,7 +7013,7 @@ async def wolvpay_webhook(request):
         admin_detail = "Servicio: Editar y Subir Papel\nImporte confirmado: US$" + str(expected_amount)
     elif invoice_type == "demo":
         telegram_id, expected_amount, product, username, current_status = row
-        product_labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT BI", "template": "LICENCIA", "coming1": "BOT CHECK"}
+        product_labels = {"otp": "BOT OTP", "ssn": "BOT SSN", "check": "BOT BIN", "template": "LICENCIA", "coming1": "BOT CHECK"}
         product_label = product_labels.get(product, "DEMO SANDBOX")
         customer_description = "Tu pago de US$35 para la demostración sandbox fue confirmado automáticamente."
         order_detail = f"Producto: {product_label} (datos sintéticos únicamente)"
@@ -7112,7 +7112,7 @@ async def wolvpay_webhook(request):
     demo_product_labels = {
         "otp": "BOT OTP",
         "ssn": "BOT SSN",
-        "check": "BOT BI",
+        "check": "BOT BIN",
         "template": "LICENCIA",
     }
     try:
