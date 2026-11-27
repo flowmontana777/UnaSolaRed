@@ -405,6 +405,7 @@ def main_menu(user=None):
             InlineKeyboardButton(
                 "🥷🏻𝐌𝐈 𝐏𝐄𝐑𝐅𝐈𝐋",
                 callback_data="my_profile",
+                style="primary",
             ),
         ],
         [
