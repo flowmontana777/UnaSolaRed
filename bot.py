@@ -4119,8 +4119,7 @@ async def select_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_photo(
             photo="https://i.ibb.co/7xp7rTMV/Create-promotional-image-for-tel-a730da20-2-K.jpg",
             caption=(
-                "💚 UNARED | LA RED QUE MUEVE TU DINERO\n"
-                "📞 ALQUILER DE LÍNEA SIP\n\n"
+                "💚 UNARED | 📞 ALQUILER DE LÍNEA SIP\n\n"
                 "¿Necesitas configurar una línea SIP para realizar llamadas desde MicroSIP?\n\n"
                 "💰 OFERTA DE ACTIVACIÓN\n"
                 "Paga US$150 y recibe US$50 de saldo acreditado en tu panel, para comenzar a realizar llamadas desde YA.\n\n"
